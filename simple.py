@@ -16,6 +16,7 @@
 - loop until no improvements over previous run
 """
 import numpy as np
+import networkx as nx
 import dimod
 from dwave.system.samplers import DWaveSampler
 from dwave.system.composites import EmbeddingComposite
@@ -64,8 +65,11 @@ def updated_sample(sample, replacements):
     return result
 
 
-with open('../qbsolv/tests/qubos/bqp100_1.qubo') as fp:
+with open('../qbsolv/tests/qubos/bqp500_1.qubo') as fp:
     bqm = dimod.BinaryQuadraticModel.from_coo(fp, dimod.BINARY)
+
+G = nx.Graph(bqm.adj)
+print("BQM graph connected?", nx.is_connected(G))
 
 # get QUBO matrix repr, convert to format that our tabu solver accepts
 ud = 0.5 * bqm.to_numpy_matrix()
@@ -75,21 +79,21 @@ qubo = symm.tolist()
 # tabu params
 tenure = min(20, round(len(bqm) / 4))
 scale_factor = 1
-timeout = 1000
+timeout = 20
 
 # hades params
-n_frozen = 40
-num_reads = 10000
-max_iter = 100
+n_frozen = 70
+num_reads = 100
+max_iter = 10
 
 # setup QPU access, get QPU structure
 sampler = DWaveSampler()
 target_nodelist, target_edgelist, target_adjacency = sampler.structure
 
 # try pure QPU approach, for sanity check
-print("Running the complete problem on QPU...")
-resp = EmbeddingComposite(sampler).sample(bqm, num_reads=num_reads)
-print("=> min energy", next(resp.data(['energy'])).energy)
+# print("Running the complete problem on QPU...")
+# resp = EmbeddingComposite(sampler).sample(bqm, num_reads=num_reads)
+# print("=> min energy", next(resp.data(['energy'])).energy)
 
 # initial solution
 best_sample = [0] * len(bqm)
@@ -102,8 +106,11 @@ for iterno in range(max_iter):
     print("\nTabu + QPU iteration #%d..." % iterno)
 
     # freeze high-penalty variables, sample them via QPU
-    frozen = get_frozen(bqm, best_sample)
-    embedding, bqm_embedded = embed(bqm, sampler, best_sample, frozen[:n_frozen])
+    frozen = get_frozen(bqm, best_sample)[:n_frozen]
+    ## inspect subgraph connectivity before embedding
+    H = nx.Graph(G.subgraph(frozen_vars(frozen)))
+    print("subgraph (order %d) connected?" % H.order(), nx.is_connected(H))
+    embedding, bqm_embedded = embed(bqm, sampler, best_sample, frozen)
     response = sampler.sample(bqm_embedded, num_reads=num_reads)
 
     # run tabu for 1sec
