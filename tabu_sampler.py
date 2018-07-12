@@ -43,8 +43,8 @@ class TabuSampler(Sampler):
             tenure (int, optional):
                 Tabu tenure. Defaults to: min(20, num_vars / 4).
             scale_factor (number, optional):
-                Scaling factor for biases/couplings in BQM. Internally, BQM is 
-                converted to QUBO matrix, and elements are stored as long ints 
+                Scaling factor for biases/couplings in BQM. Internally, BQM is
+                converted to QUBO matrix, and elements are stored as long ints
                 using ``internal_q = long int (q * scale_factor)``.
             timeout (int, optional):
                 Total running time in milliseconds.
@@ -131,7 +131,7 @@ if __name__ == "__main__":
     print("ExactSolver:")
     response = dimod.ExactSolver().sample(bqm)
     pprint(list(response.data()))
-    
+
     print("Sampling Ising:")
     response = TabuSampler().sample_ising({'a': -0.5, 'b': 1.0}, {('a', 'b'): -1}, num_reads=10)
     pprint(list(response.data()))

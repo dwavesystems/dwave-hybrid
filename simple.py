@@ -17,12 +17,14 @@
 """
 import numpy as np
 import networkx as nx
+
 import dimod
 from dimod import ExactSolver
 from dwave.system.samplers import DWaveSampler
 from dwave.system.composites import EmbeddingComposite
 import minorminer
-import tabu_solver
+
+from tabu_sampler import TabuSampler
 
 
 def bqm_variables(bqm):
@@ -72,27 +74,15 @@ def updated_sample(sample, replacements):
         result[k] = v
     return result
 
-def bqm_to_tabu_qubo(bqm):
-    varorder = sorted(list(bqm.adj.keys()))
-    ud = 0.5 * bqm.to_numpy_matrix(varorder)
-    symm = ud + ud.T #- np.diag(ud.diagonal())
-    qubo = symm.tolist()
-    return qubo
-
-def tabu_sample_to_bqm_response(sample, bqm):
-    varorder = sorted(list(bqm.adj.keys()))
-    assert len(sample) == len(varorder)
-    return dict(zip(varorder, sample))
+def dict_sample_to_list(sample):
+    return [sample[k] for k in sorted(sample.keys())]
 
 
-with open('../qbsolv/tests/qubos/bqp1000_1.qubo') as fp:
+with open('../qbsolv/tests/qubos/bqp500_1.qubo') as fp:
     bqm = dimod.BinaryQuadraticModel.from_coo(fp, dimod.BINARY)
 
 G = nx.Graph(bqm.adj)
 print("BQM graph connected?", nx.is_connected(G))
-
-# get QUBO matrix repr, convert to format that our tabu solver accepts
-qubo = bqm_to_tabu_qubo(bqm)
 
 # tabu params
 tenure = min(20, round(len(bqm) / 4))
@@ -131,14 +121,15 @@ for iterno in range(max_iter):
     print("subgraph (order %d) connected?" % H.order(), nx.is_connected(H))
 
     subbqm = extract_bqm(bqm, frozen, best_sample)
-    r = tabu_solver.TabuSearch(bqm_to_tabu_qubo(subbqm), [0]*n_frozen, 20, scale_factor, 5000)
-    best_sub_sample = tabu_sample_to_bqm_response(r.bestSolution(), subbqm)
+    response = TabuSampler().sample(subbqm, timeout=1000)
+    best_sub_sample = next(response.samples())
 
     # run tabu for 1sec
     # TODO: run for eta_min from previous step?
-    r = tabu_solver.TabuSearch(qubo, best_sample, tenure, scale_factor, timeout)
-    tabu_energy = r.bestEnergy()
-    tabu_sample = list(r.bestSolution())
+    response = TabuSampler().sample(bqm, init_solution=best_sample, tenure=tenure, scale_factor=scale_factor, timeout=timeout)
+    tabu_sample = next(response.samples())
+    tabu_energy = bqm.energy(tabu_sample)
+    tabu_sample = dict_sample_to_list(tabu_sample)
     print("tabu_energy", tabu_energy)
 
     # get the best QPU solution and check if any QPU subsolution improves the global solution
