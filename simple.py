@@ -18,6 +18,7 @@
 import numpy as np
 import networkx as nx
 import dimod
+from dimod import ExactSolver
 from dwave.system.samplers import DWaveSampler
 from dwave.system.composites import EmbeddingComposite
 import minorminer
@@ -45,13 +46,20 @@ def frozen_edges(bqm, frozen):
 def frozen_vars(frozen):
     return set(i for e, i in frozen)
 
-def embed(bqm, sampler, current_sample, frozen):
+def extract_bqm(bqm, frozen, state):
+    """Return a sub-BQM induced by `variables` on `bqm`, fixing non sub-BQM
+    variables (it's enough to fix only variables on boundary to be off by only
+    a constant)"""
+
     # fix all variables that are not "frozen" according to sample
     fixed = bqm_variables(bqm) - frozen_vars(frozen)
     subbqm = bqm.copy()
     for v in fixed:
-        subbqm.fix_variable(v, current_sample[v])
-    
+        subbqm.fix_variable(v, state[v])
+    return subbqm
+
+def embed(bqm, sampler, current_sample, frozen):
+    subbqm = extract_bqm(bqm, frozen, current_sample)
     source_edgelist = list(subbqm.quadratic) + [(v, v) for v in subbqm.linear]
     _, target_edgelist, target_adjacency = sampler.structure
     embedding = minorminer.find_embedding(source_edgelist, target_edgelist)
@@ -64,17 +72,27 @@ def updated_sample(sample, replacements):
         result[k] = v
     return result
 
+def bqm_to_tabu_qubo(bqm):
+    varorder = sorted(list(bqm.adj.keys()))
+    ud = 0.5 * bqm.to_numpy_matrix(varorder)
+    symm = ud + ud.T #- np.diag(ud.diagonal())
+    qubo = symm.tolist()
+    return qubo
 
-with open('../qbsolv/tests/qubos/bqp500_1.qubo') as fp:
+def tabu_sample_to_bqm_response(sample, bqm):
+    varorder = sorted(list(bqm.adj.keys()))
+    assert len(sample) == len(varorder)
+    return dict(zip(varorder, sample))
+
+
+with open('../qbsolv/tests/qubos/bqp1000_1.qubo') as fp:
     bqm = dimod.BinaryQuadraticModel.from_coo(fp, dimod.BINARY)
 
 G = nx.Graph(bqm.adj)
 print("BQM graph connected?", nx.is_connected(G))
 
 # get QUBO matrix repr, convert to format that our tabu solver accepts
-ud = 0.5 * bqm.to_numpy_matrix()
-symm = ud + ud.T #- np.diag(ud.diagonal())
-qubo = symm.tolist()
+qubo = bqm_to_tabu_qubo(bqm)
 
 # tabu params
 tenure = min(20, round(len(bqm) / 4))
@@ -82,13 +100,14 @@ scale_factor = 1
 timeout = 20
 
 # hades params
-n_frozen = 70
+n_frozen = 100
 num_reads = 100
 max_iter = 10
 
 # setup QPU access, get QPU structure
-sampler = DWaveSampler()
-target_nodelist, target_edgelist, target_adjacency = sampler.structure
+# sampler = DWaveSampler()
+# sampler = ExactSolver()
+#target_nodelist, target_edgelist, target_adjacency = sampler.structure
 
 # try pure QPU approach, for sanity check
 # print("Running the complete problem on QPU...")
@@ -103,15 +122,17 @@ best_energy = bqm.energy(best_sample)
 last_best_energy = best_energy
 for iterno in range(max_iter):
     # based on current best_sample, run tabu and QPU on a subproblem in parallel
-    print("\nTabu + QPU iteration #%d..." % iterno)
+    print("\nTabu + Subsampler, iteration #%d..." % iterno)
 
     # freeze high-penalty variables, sample them via QPU
     frozen = get_frozen(bqm, best_sample)[:n_frozen]
     ## inspect subgraph connectivity before embedding
     H = nx.Graph(G.subgraph(frozen_vars(frozen)))
     print("subgraph (order %d) connected?" % H.order(), nx.is_connected(H))
-    embedding, bqm_embedded = embed(bqm, sampler, best_sample, frozen)
-    response = sampler.sample(bqm_embedded, num_reads=num_reads)
+
+    subbqm = extract_bqm(bqm, frozen, best_sample)
+    r = tabu_solver.TabuSearch(bqm_to_tabu_qubo(subbqm), [0]*n_frozen, 20, scale_factor, 5000)
+    best_sub_sample = tabu_sample_to_bqm_response(r.bestSolution(), subbqm)
 
     # run tabu for 1sec
     # TODO: run for eta_min from previous step?
@@ -121,16 +142,15 @@ for iterno in range(max_iter):
     print("tabu_energy", tabu_energy)
 
     # get the best QPU solution and check if any QPU subsolution improves the global solution
-    subsamples = dimod.iter_unembed(response.samples(), embedding)
-    best_qpu_sample = updated_sample(best_sample, next(subsamples))
-    best_qpu_energy = bqm.energy(best_qpu_sample)
-    print("best tabu + qpu sample energy", best_qpu_energy)
+    best_composed_sample = updated_sample(best_sample, best_sub_sample)
+    best_composed_energy = bqm.energy(best_composed_sample)
+    print("best known + qpu sample energy", best_composed_energy)
 
     # QPU improves tabu solution?
-    if best_qpu_energy < tabu_energy:
-        print("!!! QPU improved tabu solution:", tabu_energy, "=>", best_qpu_energy)
-        best_sample = best_qpu_sample
-        best_energy = best_qpu_energy
+    if best_composed_energy < tabu_energy:
+        print("!!! Sub-solver improved the main solver's solution:", tabu_energy, "=>", best_composed_energy)
+        best_sample = best_composed_sample
+        best_energy = best_composed_energy
     else:
         best_sample = tabu_sample
         best_energy = tabu_energy
