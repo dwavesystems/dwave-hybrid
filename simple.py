@@ -66,7 +66,7 @@ def embed(bqm, sampler, current_sample, frozen):
     _, target_edgelist, target_adjacency = sampler.structure
     embedding = minorminer.find_embedding(source_edgelist, target_edgelist)
     bqm_embedded = dimod.embed_bqm(subbqm, embedding, target_adjacency, chain_strength=1.0)
-    return embedding, bqm_embedded
+    return embedding, bqm_embedded, subbqm
 
 def updated_sample(sample, replacements):
     result = sample.copy()
@@ -90,14 +90,13 @@ scale_factor = 1
 timeout = 20
 
 # hades params
-n_frozen = 100
+n_frozen = 50
 num_reads = 100
 max_iter = 10
 
 # setup QPU access, get QPU structure
-# sampler = DWaveSampler()
+sampler = DWaveSampler()
 # sampler = ExactSolver()
-#target_nodelist, target_edgelist, target_adjacency = sampler.structure
 
 # try pure QPU approach, for sanity check
 # print("Running the complete problem on QPU...")
@@ -120,11 +119,23 @@ for iterno in range(max_iter):
     H = nx.Graph(G.subgraph(frozen_vars(frozen)))
     print("subgraph (order %d) connected?" % H.order(), nx.is_connected(H))
 
-    subbqm = extract_bqm(bqm, frozen, best_sample)
-    response = TabuSampler().sample(subbqm, timeout=1000)
-    best_sub_sample = next(response.samples())
+    ##
+    ## start subsampler
+    ##
 
-    # run tabu for 1sec
+    # tabu subsampler:
+    #subbqm = extract_bqm(bqm, frozen, best_sample)
+    #response = TabuSampler().sample(subbqm, timeout=1000)
+    #best_sub_sample = next(response.samples())
+
+    # qpu subsampler
+    embedding, bqm_embedded, subbqm = embed(bqm, sampler, best_sample, frozen)
+    target_response = sampler.sample(bqm_embedded, num_reads=num_reads)
+
+    ##
+    ## run main sampler
+    ##
+
     # TODO: run for eta_min from previous step?
     response = TabuSampler().sample(bqm, init_solution=best_sample, tenure=tenure, scale_factor=scale_factor, timeout=timeout)
     response_datum = next(response.data())
@@ -132,7 +143,19 @@ for iterno in range(max_iter):
     tabu_sample = dict_sample_to_list(response_datum.sample)
     print("tabu_energy", tabu_energy)
 
-    # get the best QPU solution and check if any QPU subsolution improves the global solution
+    ##
+    ## combine subsample with new main-solver sample
+    ##
+
+    # get the best sub solution (or several) and check if it (they) improve(s) the global solution
+    # tabu subsampler (done above)
+
+    # qpu subsampler
+    response = dimod.unembed_response(target_response, embedding, subbqm)
+    response_datum = next(response.data())
+    best_sub_sample = response_datum.sample
+
+    # common
     best_composed_sample = updated_sample(best_sample, best_sub_sample)
     best_composed_energy = bqm.energy(best_composed_sample)
     print("best known + qpu sample energy", best_composed_energy)
