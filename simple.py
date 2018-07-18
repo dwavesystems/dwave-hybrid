@@ -15,6 +15,8 @@
   - pick the one that improves the energy the most
 - loop until no improvements over previous run
 """
+import random
+
 import numpy as np
 import networkx as nx
 
@@ -78,8 +80,20 @@ def dict_sample_to_list(sample):
     return [sample[k] for k in sorted(sample.keys())]
 
 
-with open('../qbsolv/tests/qubos/bqp500_1.qubo') as fp:
-    bqm = dimod.BinaryQuadraticModel.from_coo(fp, dimod.BINARY)
+# with open('../qbsolv/tests/qubos/bqp500_1.qubo') as fp:
+#     bqm = dimod.BinaryQuadraticModel.from_coo(fp, dimod.BINARY)
+
+
+# setup QPU access, get QPU structure
+sampler = DWaveSampler()
+# sampler = ExactSolver()
+
+# generate a random chimera problem:
+# h = 0, j choose from [-k..+k]
+h = {}
+J = {(n,e): random.randint(-5, 5) for n, edges in sampler.adjacency.items() for e in edges}
+bqm = dimod.BinaryQuadraticModel(h, J, 0, dimod.BINARY)
+
 
 G = nx.Graph(bqm.adj)
 print("BQM graph connected?", nx.is_connected(G))
@@ -90,13 +104,9 @@ scale_factor = 1
 timeout = 20
 
 # hades params
-n_frozen = 50
+n_frozen = 100
 num_reads = 100
 max_iter = 10
-
-# setup QPU access, get QPU structure
-sampler = DWaveSampler()
-# sampler = ExactSolver()
 
 # try pure QPU approach, for sanity check
 # print("Running the complete problem on QPU...")
@@ -104,7 +114,8 @@ sampler = DWaveSampler()
 # print("=> min energy", next(resp.data(['energy'])).energy)
 
 # initial solution
-best_sample = [0] * len(bqm)
+# TODO: add to bqm: max_node?
+best_sample = [0] * (max(bqm.linear.keys()) + 1)
 best_energy = bqm.energy(best_sample)
 
 # iterate
