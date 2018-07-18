@@ -127,9 +127,9 @@ for iterno in range(max_iter):
     # run tabu for 1sec
     # TODO: run for eta_min from previous step?
     response = TabuSampler().sample(bqm, init_solution=best_sample, tenure=tenure, scale_factor=scale_factor, timeout=timeout)
-    tabu_sample = next(response.samples())
-    tabu_energy = bqm.energy(tabu_sample)
-    tabu_sample = dict_sample_to_list(tabu_sample)
+    response_datum = next(response.data())
+    tabu_energy = response_datum.energy
+    tabu_sample = dict_sample_to_list(response_datum.sample)
     print("tabu_energy", tabu_energy)
 
     # get the best QPU solution and check if any QPU subsolution improves the global solution
