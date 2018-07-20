@@ -15,6 +15,7 @@
   - pick the one that improves the energy the most
 - loop until no improvements over previous run
 """
+from enum import Enum
 import random
 
 import numpy as np
@@ -27,6 +28,11 @@ from dwave.system.composites import EmbeddingComposite
 import minorminer
 
 from tabu_sampler import TabuSampler
+
+
+class Subsampler(Enum):
+    QPU = 1
+    TABU = 2
 
 
 def bqm_variables(bqm):
@@ -104,7 +110,7 @@ scale_factor = 1
 timeout = 20
 
 # hades params
-n_frozen = 100
+n_frozen = 70
 num_reads = 100
 max_iter = 10
 
@@ -118,11 +124,13 @@ max_iter = 10
 best_sample = [0] * (max(bqm.linear.keys()) + 1)
 best_energy = bqm.energy(best_sample)
 
+subsampler = Subsampler.TABU
+
 # iterate
 last_best_energy = best_energy
 for iterno in range(max_iter):
     # based on current best_sample, run tabu and QPU on a subproblem in parallel
-    print("\nTabu + Subsampler, iteration #%d..." % iterno)
+    print("\nTabu + Subsampler (%s), iteration #%d..." % (subsampler, iterno))
 
     # freeze high-penalty variables, sample them via QPU
     frozen = get_frozen(bqm, best_sample)[:n_frozen]
@@ -134,14 +142,15 @@ for iterno in range(max_iter):
     ## start subsampler
     ##
 
-    # tabu subsampler:
-    #subbqm = extract_bqm(bqm, frozen, best_sample)
-    #response = TabuSampler().sample(subbqm, timeout=1000)
-    #best_sub_sample = next(response.samples())
-
-    # qpu subsampler
-    embedding, bqm_embedded, subbqm = embed(bqm, sampler, best_sample, frozen)
-    target_response = sampler.sample(bqm_embedded, num_reads=num_reads)
+    if subsampler == Subsampler.QPU:
+        embedding, bqm_embedded, subbqm = embed(bqm, sampler, best_sample, frozen)
+        target_response = sampler.sample(bqm_embedded, num_reads=num_reads)
+    elif subsampler == Subsampler.TABU:
+        subbqm = extract_bqm(bqm, frozen, best_sample)
+        response = TabuSampler().sample(subbqm, timeout=100)
+        best_sub_sample = next(response.samples())
+    else:
+        raise ValueError('invalid subsampler')
 
     ##
     ## run main sampler
@@ -158,20 +167,23 @@ for iterno in range(max_iter):
     ## combine subsample with new main-solver sample
     ##
 
-    # get the best sub solution (or several) and check if it (they) improve(s) the global solution
-    # tabu subsampler (done above)
-
-    # qpu subsampler
-    response = dimod.unembed_response(target_response, embedding, subbqm)
-    response_datum = next(response.data())
-    best_sub_sample = response_datum.sample
+    if subsampler == Subsampler.QPU:
+        response = dimod.unembed_response(target_response, embedding, subbqm)
+        response_datum = next(response.data())
+        best_sub_sample = response_datum.sample
+    elif subsampler == Subsampler.TABU:
+        # no unembed step for tabu
+        pass
+    else:
+        raise ValueError('invalid subsampler')
 
     # common
+    # get the best sub solution (or several) and check if it (they) improve(s) the global solution
     best_composed_sample = updated_sample(best_sample, best_sub_sample)
     best_composed_energy = bqm.energy(best_composed_sample)
     print("best known + qpu sample energy", best_composed_energy)
 
-    # QPU improves tabu solution?
+    # subsampler improves main-solver solution?
     if best_composed_energy < tabu_energy:
         print("!!! Sub-solver improved the main solver's solution:", tabu_energy, "=>", best_composed_energy)
         best_sample = best_composed_sample
