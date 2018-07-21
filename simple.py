@@ -11,7 +11,7 @@
        2) ?
      (TODO: how to handle boundary conditions? initially, fix all non-frozen vars)
 - run X vars on QPU, get S samples back
-- see if any of S samples (sub-samples in terms of complete solution) improve upon the total energy
+- see if any of S samples (sub-samples in terms of complete solution) improves the total energy
   - pick the one that improves the energy the most
 - loop until no improvements over previous run
 """
@@ -86,28 +86,31 @@ def dict_sample_to_list(sample):
     return [sample[k] for k in sorted(sample.keys())]
 
 
-# with open('../qbsolv/tests/qubos/bqp500_1.qubo') as fp:
-#     bqm = dimod.BinaryQuadraticModel.from_coo(fp, dimod.BINARY)
+# load problem from qubo file
+problem = 'problems/random-chimera/2048.01.qubo'
+#problem = 'problems/qbsolv/bqp500_1.qubo'
+
+with open(problem) as fp:
+    bqm = dimod.BinaryQuadraticModel.from_coo(fp, dimod.BINARY)
 
 
-# setup QPU access, get QPU structure
-sampler = DWaveSampler()
-# sampler = ExactSolver()
+# setup subsampler
+subsampler_type = Subsampler.QPU
 
-# generate a random chimera problem:
-# h = 0, j choose from [-k..+k]
-h = {}
-J = {(n,e): random.randint(-5, 5) for n, edges in sampler.adjacency.items() for e in edges}
-bqm = dimod.BinaryQuadraticModel(h, J, 0, dimod.BINARY)
-
+if subsampler_type == Subsampler.TABU:
+    subsampler = TabuSampler()
+elif subsampler_type == Subsampler.QPU:
+    subsampler = DWaveSampler()
+else:
+    raise ValueError('invalid subsampler')
 
 G = nx.Graph(bqm.adj)
-print("BQM graph connected?", nx.is_connected(G))
+print("Problem graph connected?", nx.is_connected(G))
 
 # tabu params
 tenure = min(20, round(len(bqm) / 4))
 scale_factor = 1
-timeout = 20
+timeout = 1000
 
 # hades params
 n_frozen = 70
@@ -116,7 +119,7 @@ max_iter = 10
 
 # try pure QPU approach, for sanity check
 # print("Running the complete problem on QPU...")
-# resp = EmbeddingComposite(sampler).sample(bqm, num_reads=num_reads)
+# resp = EmbeddingComposite(subsampler).sample(bqm, num_reads=num_reads)
 # print("=> min energy", next(resp.data(['energy'])).energy)
 
 # initial solution
@@ -124,13 +127,12 @@ max_iter = 10
 best_sample = [0] * (max(bqm.linear.keys()) + 1)
 best_energy = bqm.energy(best_sample)
 
-subsampler = Subsampler.TABU
 
 # iterate
 last_best_energy = best_energy
 for iterno in range(max_iter):
     # based on current best_sample, run tabu and QPU on a subproblem in parallel
-    print("\nTabu + Subsampler (%s), iteration #%d..." % (subsampler, iterno))
+    print("\nTabu + Subsampler (%s), iteration #%d..." % (subsampler_type, iterno))
 
     # freeze high-penalty variables, sample them via QPU
     frozen = get_frozen(bqm, best_sample)[:n_frozen]
@@ -142,10 +144,10 @@ for iterno in range(max_iter):
     ## start subsampler
     ##
 
-    if subsampler == Subsampler.QPU:
-        embedding, bqm_embedded, subbqm = embed(bqm, sampler, best_sample, frozen)
-        target_response = sampler.sample(bqm_embedded, num_reads=num_reads)
-    elif subsampler == Subsampler.TABU:
+    if subsampler_type == Subsampler.QPU:
+        embedding, bqm_embedded, subbqm = embed(bqm, subsampler, best_sample, frozen)
+        target_response = subsampler.sample(bqm_embedded, num_reads=num_reads)
+    elif subsampler_type == Subsampler.TABU:
         subbqm = extract_bqm(bqm, frozen, best_sample)
         response = TabuSampler().sample(subbqm, timeout=100)
         best_sub_sample = next(response.samples())
@@ -167,11 +169,11 @@ for iterno in range(max_iter):
     ## combine subsample with new main-solver sample
     ##
 
-    if subsampler == Subsampler.QPU:
+    if subsampler_type == Subsampler.QPU:
         response = dimod.unembed_response(target_response, embedding, subbqm)
         response_datum = next(response.data())
         best_sub_sample = response_datum.sample
-    elif subsampler == Subsampler.TABU:
+    elif subsampler_type == Subsampler.TABU:
         # no unembed step for tabu
         pass
     else:
