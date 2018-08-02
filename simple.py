@@ -56,20 +56,72 @@ def frozen_edges(bqm, frozen):
 def frozen_vars(frozen):
     return set(i for e, i in frozen)
 
-def extract_bqm(bqm, frozen, state):
-    """Return a sub-BQM induced by `variables` on `bqm`, fixing non sub-BQM
-    variables (it's enough to fix only variables on boundary to be off by only
-    a constant)"""
+def bqm_reduced_to(bqm, variables, state, keep_offset=True):
+    """Return a sub-BQM, which is ``bqm`` reduced to ``variables``, by fixing
+    all non sub-BQM variables.
 
-    # fix all variables that are not "frozen" according to sample
-    fixed = bqm_variables(bqm) - frozen_vars(frozen)
+    Note:
+        Optimized for ``len(variables) ~ len(bqm)`` (fixing very little vars).
+    """
+
+    # fix complement of ``variables```
+    fixed = bqm_variables(bqm).difference(variables)
     subbqm = bqm.copy()
     for v in fixed:
         subbqm.fix_variable(v, state[v])
+
+    if not keep_offset:
+        subbqm.remove_offset()
+
+    return subbqm
+
+def bqm_induced_with(bqm, variables, state):
+    """Return sub-BQM that includes only ``variables``, and boundary is fixed
+    according to ``state``.
+
+    Args:
+        bqm (:class:`dimod.BinaryQuadraticModel`):
+            Original BQM.
+
+        variables (list/set);
+            Variables of the subgraph.
+
+        state (dict/list):
+            Mapping of variable labels to values. If labels are sequential integers
+            ``state`` may be a list. State is required only for variables on boundary
+            (variables in BQM graph connected with ``variables``).
+
+    Returns:
+        Sub-graph (sub-bqm) induced by ``variables`` on ``bqm``. Only variables on
+        boundary (adjacent to any of internal variables) are fixed according to
+        ``state``. BQM offset is set to zero.
+
+    Note:
+        Optimized for ``len(variables) << len(bqm)`` (fixing majority of vars).
+
+    """
+
+    variables = set(variables)
+
+    # create empty BQM and copy in a subgraph induced by `variables`
+    subbqm = dimod.BinaryQuadraticModel({}, {}, 0.0, bqm.vartype)
+
+    for u in variables:
+        bias = bqm.linear[u]
+        for v, j in bqm.adj[u].items():
+            if v in variables:
+                subbqm.add_interaction(u, v, j / 2.0)
+            else:
+                bias += j * state[v]
+        subbqm.add_variable(u, bias)
+
+    # no point in having offset since we fixing only variables on boundary
+    subbqm.remove_offset()
+
     return subbqm
 
 def embed(bqm, sampler, current_sample, frozen):
-    subbqm = extract_bqm(bqm, frozen, current_sample)
+    subbqm = bqm_induced_with(bqm, frozen, current_sample)
     source_edgelist = list(subbqm.quadratic) + [(v, v) for v in subbqm.linear]
     _, target_edgelist, target_adjacency = sampler.structure
     embedding = minorminer.find_embedding(source_edgelist, target_edgelist)
@@ -93,7 +145,6 @@ problem = 'problems/random-chimera/2048.01.qubo'
 with open(problem) as fp:
     bqm = dimod.BinaryQuadraticModel.from_coo(fp, dimod.BINARY)
 
-
 # setup subsampler
 subsampler_type = Subsampler.QPU
 
@@ -110,10 +161,10 @@ print("Problem graph connected?", nx.is_connected(G))
 # tabu params
 tenure = min(20, round(len(bqm) / 4))
 scale_factor = 1
-timeout = 1000
+timeout = 100
 
 # hades params
-n_frozen = 70
+n_frozen = 100
 num_reads = 100
 max_iter = 10
 
@@ -135,9 +186,9 @@ for iterno in range(max_iter):
     print("\nTabu + Subsampler (%s), iteration #%d..." % (subsampler_type, iterno))
 
     # freeze high-penalty variables, sample them via QPU
-    frozen = get_frozen(bqm, best_sample)[:n_frozen]
+    frozen = frozen_vars(get_frozen(bqm, best_sample)[:n_frozen])
     ## inspect subgraph connectivity before embedding
-    H = nx.Graph(G.subgraph(frozen_vars(frozen)))
+    H = nx.Graph(G.subgraph(frozen))
     print("subgraph (order %d) connected?" % H.order(), nx.is_connected(H))
 
     ##
@@ -148,7 +199,7 @@ for iterno in range(max_iter):
         embedding, bqm_embedded, subbqm = embed(bqm, subsampler, best_sample, frozen)
         target_response = subsampler.sample(bqm_embedded, num_reads=num_reads)
     elif subsampler_type == Subsampler.TABU:
-        subbqm = extract_bqm(bqm, frozen, best_sample)
+        subbqm = bqm_reduced_to(bqm, frozen, best_sample)
         response = TabuSampler().sample(subbqm, timeout=100)
         best_sub_sample = next(response.samples())
     else:
