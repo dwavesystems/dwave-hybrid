@@ -29,7 +29,7 @@ import minorminer
 
 from tabu_sampler import TabuSampler
 
-from hades.utils import bqm_induced_with
+from hades.utils import bqm_induced_by, select_tabu_adversaries
 
 
 class Subsampler(Enum):
@@ -37,26 +37,8 @@ class Subsampler(Enum):
     TABU = 2
 
 
-def get_frozen(bqm, sample):
-    """Returns `list[(energy_gain, flip_index)]` in descending order of energy gain
-    for flipping qubit with flip_index in sample."""
-    frozen = [(bqm.energy(sample[:i] + [1 - bit] + sample[i:]), i) for i, bit in enumerate(sample)]
-    frozen.sort(reverse=True)
-    return frozen
-
-def frozen_edges(bqm, frozen):
-    """Returns a list of all edges in BQM between frozen variables."""
-    active = set(i for e, i in frozen)
-    edges = [(start, end) for (start, end), coupling in bqm.quadratic.items() if start in active and end in active]
-    edges.extend((v, v) for v in bqm.linear if v in active)
-    return edges
-
-def frozen_vars(frozen):
-    return set(i for e, i in frozen)
-
-
 def embed(bqm, sampler, current_sample, frozen):
-    subbqm = bqm_induced_with(bqm, frozen, current_sample)
+    subbqm = bqm_induced_by(bqm, frozen, current_sample)
     source_edgelist = list(subbqm.quadratic) + [(v, v) for v in subbqm.linear]
     _, target_edgelist, target_adjacency = sampler.structure
     embedding = minorminer.find_embedding(source_edgelist, target_edgelist)
@@ -121,7 +103,9 @@ for iterno in range(max_iter):
     print("\nTabu + Subsampler (%s), iteration #%d..." % (subsampler_type, iterno))
 
     # freeze high-penalty variables, sample them via QPU
-    frozen = frozen_vars(get_frozen(bqm, best_sample)[:n_frozen])
+    frozen = select_tabu_adversaries(bqm, best_sample, n_frozen, 0)
+    print("freezing %d variables" % len(frozen))
+
     ## inspect subgraph connectivity before embedding
     H = nx.Graph(G.subgraph(frozen))
     print("subgraph (order %d) connected?" % H.order(), nx.is_connected(H))
@@ -134,7 +118,7 @@ for iterno in range(max_iter):
         embedding, bqm_embedded, subbqm = embed(bqm, subsampler, best_sample, frozen)
         target_response = subsampler.sample(bqm_embedded, num_reads=num_reads)
     elif subsampler_type == Subsampler.TABU:
-        subbqm = bqm_reduced_to(bqm, frozen, best_sample)
+        subbqm = bqm_induced_by(bqm, frozen, best_sample)
         response = TabuSampler().sample(subbqm, timeout=100)
         best_sub_sample = next(response.samples())
     else:

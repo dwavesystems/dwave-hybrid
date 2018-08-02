@@ -28,7 +28,7 @@ def bqm_reduced_to(bqm, variables, state, keep_offset=True):
     return subbqm
 
 
-def bqm_induced_with(bqm, variables, state):
+def bqm_induced_by(bqm, variables, state):
     """Return sub-BQM that includes only ``variables``, and boundary is fixed
     according to ``state``.
 
@@ -68,7 +68,36 @@ def bqm_induced_with(bqm, variables, state):
                 bias += j * state[v]
         subbqm.add_variable(u, bias)
 
-    # no point in having offset since we fixing only variables on boundary
+    # no point in having offset since we're fixing only variables on boundary
     subbqm.remove_offset()
 
     return subbqm
+
+
+def bqm_edges_between_variables(bqm, variables):
+    """Returns a list of all edges as tuples in ``bqm`` between ``variables``.
+    Nodes/variables are included as (v, v).
+    """
+    variables = set(variables)
+    edges = [(start, end) for (start, end), coupling in bqm.quadratic.items() if start in variables and end in variables]
+    edges.extend((v, v) for v in bqm.linear if v in variables)
+    return edges
+
+
+def flip_energy_gains(bqm, sample):
+    """Returns `list[(energy_gain, flip_index)]` in descending order
+    for flipping qubit with flip_index in sample.
+    """
+    base = bqm.energy(sample)
+    energy_gains = [(bqm.energy(sample[:i] + [1 - bit] + sample[i:]) - base, i) for i, bit in enumerate(sample)]
+    energy_gains.sort(reverse=True)
+    return energy_gains
+
+
+def select_tabu_adversaries(bqm, sample, max_n, min_gain=0.0):
+    """Returns a list of up to ``max_n`` variables from ``bqm`` that have a high
+    energy gain (at least ``min_gain``) for single bit flip, and thus are
+    considered tabu for tabu.
+    """
+    variables = [idx for en, idx in flip_energy_gains(bqm, sample) if en >= min_gain]
+    return variables[:max_n]
