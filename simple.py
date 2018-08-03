@@ -16,20 +16,11 @@
 - loop until no improvements over previous run
 """
 from enum import Enum
-import random
-
-import numpy as np
-import networkx as nx
 
 import dimod
-from dimod import ExactSolver
-from dwave.system.samplers import DWaveSampler
-from dwave.system.composites import EmbeddingComposite
-import minorminer
 
-from tabu_sampler import TabuSampler
-
-from hades.utils import bqm_induced_by, select_tabu_adversaries
+from hades.samplers import (
+    Solution, TabuProblemSampler, TabuSubproblemSampler, QPUSubproblemSampler)
 
 
 class Subsampler(Enum):
@@ -37,134 +28,60 @@ class Subsampler(Enum):
     TABU = 2
 
 
-def embed(bqm, sampler, current_sample, frozen):
-    subbqm = bqm_induced_by(bqm, frozen, current_sample)
-    source_edgelist = list(subbqm.quadratic) + [(v, v) for v in subbqm.linear]
-    _, target_edgelist, target_adjacency = sampler.structure
-    embedding = minorminer.find_embedding(source_edgelist, target_edgelist)
-    bqm_embedded = dimod.embed_bqm(subbqm, embedding, target_adjacency, chain_strength=1.0)
-    return embedding, bqm_embedded, subbqm
-
-def updated_sample(sample, replacements):
-    result = sample.copy()
-    for k, v in replacements.items():
-        result[k] = v
-    return result
-
-def dict_sample_to_list(sample):
-    return [sample[k] for k in sorted(sample.keys())]
-
-
 # load problem from qubo file
 problem = 'problems/random-chimera/2048.01.qubo'
-#problem = 'problems/qbsolv/bqp500_1.qubo'
-
 with open(problem) as fp:
     bqm = dimod.BinaryQuadraticModel.from_coo(fp, dimod.BINARY)
+
 
 # setup subsampler
 subsampler_type = Subsampler.QPU
 
 if subsampler_type == Subsampler.TABU:
-    subsampler = TabuSampler()
+    subproblem_sampler = TabuSubproblemSampler(bqm, max_n=100, num_reads=1, timeout=20)
+
 elif subsampler_type == Subsampler.QPU:
-    subsampler = DWaveSampler()
+    subproblem_sampler = QPUSubproblemSampler(bqm, max_n=100, num_reads=100)
+
 else:
     raise ValueError('invalid subsampler')
 
-G = nx.Graph(bqm.adj)
-print("Problem graph connected?", nx.is_connected(G))
 
-# tabu params
-tenure = min(20, round(len(bqm) / 4))
-scale_factor = 1
-timeout = 100
+# setup main branch sampler
+problem_sampler = TabuProblemSampler(bqm, tenure=min(20, round(len(bqm) / 4)), timeout=1000)
 
-# hades params
-n_frozen = 100
-num_reads = 100
-max_iter = 10
-
-# try pure QPU approach, for sanity check
-# print("Running the complete problem on QPU...")
-# resp = EmbeddingComposite(subsampler).sample(bqm, num_reads=num_reads)
-# print("=> min energy", next(resp.data(['energy'])).energy)
 
 # initial solution
 # TODO: add to bqm: max_node?
 best_sample = [0] * (max(bqm.linear.keys()) + 1)
 best_energy = bqm.energy(best_sample)
+best_solution = Solution(best_sample, best_energy)
+
+max_iter = 10
 
 
 # iterate
-last_best_energy = best_energy
+prev_best_solution = best_solution
 for iterno in range(max_iter):
-    # based on current best_sample, run tabu and QPU on a subproblem in parallel
     print("\nTabu + Subsampler (%s), iteration #%d..." % (subsampler_type, iterno))
 
-    # freeze high-penalty variables, sample them via QPU
-    frozen = select_tabu_adversaries(bqm, best_sample, n_frozen, 0)
-    print("freezing %d variables" % len(frozen))
+    subsampling_branch = subproblem_sampler.run(best_solution.sample)
+    sampling_branch = problem_sampler.run(best_solution.sample)
 
-    ## inspect subgraph connectivity before embedding
-    H = nx.Graph(G.subgraph(frozen))
-    print("subgraph (order %d) connected?" % H.order(), nx.is_connected(H))
+    tabu_solution = sampling_branch.result()
+    print("tabu_solution", tabu_solution)
 
-    ##
-    ## start subsampler
-    ##
-
-    if subsampler_type == Subsampler.QPU:
-        embedding, bqm_embedded, subbqm = embed(bqm, subsampler, best_sample, frozen)
-        target_response = subsampler.sample(bqm_embedded, num_reads=num_reads)
-    elif subsampler_type == Subsampler.TABU:
-        subbqm = bqm_induced_by(bqm, frozen, best_sample)
-        response = TabuSampler().sample(subbqm, timeout=100)
-        best_sub_sample = next(response.samples())
-    else:
-        raise ValueError('invalid subsampler')
-
-    ##
-    ## run main sampler
-    ##
-
-    # TODO: run for eta_min from previous step?
-    response = TabuSampler().sample(bqm, init_solution=best_sample, tenure=tenure, scale_factor=scale_factor, timeout=timeout)
-    response_datum = next(response.data())
-    tabu_energy = response_datum.energy
-    tabu_sample = dict_sample_to_list(response_datum.sample)
-    print("tabu_energy", tabu_energy)
-
-    ##
-    ## combine subsample with new main-solver sample
-    ##
-
-    if subsampler_type == Subsampler.QPU:
-        response = dimod.unembed_response(target_response, embedding, subbqm)
-        response_datum = next(response.data())
-        best_sub_sample = response_datum.sample
-    elif subsampler_type == Subsampler.TABU:
-        # no unembed step for tabu
-        pass
-    else:
-        raise ValueError('invalid subsampler')
-
-    # common
-    # get the best sub solution (or several) and check if it (they) improve(s) the global solution
-    best_composed_sample = updated_sample(best_sample, best_sub_sample)
-    best_composed_energy = bqm.energy(best_composed_sample)
-    print("best known + qpu sample energy", best_composed_energy)
-
+    composed_solution = subsampling_branch.result()
+    print("composed_solution", composed_solution)
+    
     # subsampler improves main-solver solution?
-    if best_composed_energy < tabu_energy:
-        print("!!! Sub-solver improved the main solver's solution:", tabu_energy, "=>", best_composed_energy)
-        best_sample = best_composed_sample
-        best_energy = best_composed_energy
+    prev_best_solution = best_solution
+    if composed_solution.energy < tabu_solution.energy:
+        print("!!! Sub-solver improved the main solver's solution:", tabu_solution.energy, "=>", composed_solution.energy)
+        best_solution = composed_solution
     else:
-        best_sample = tabu_sample
-        best_energy = tabu_energy
+        best_solution = tabu_solution
 
-    if best_energy < last_best_energy:
-        last_best_energy = best_energy
-    else:
-        pass
+    # termination criteria
+    if best_solution.energy == prev_best_solution.energy:
+        break
