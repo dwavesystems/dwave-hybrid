@@ -94,10 +94,33 @@ def flip_energy_gains(bqm, sample):
     return energy_gains
 
 
-def select_tabu_adversaries(bqm, sample, max_n, min_gain=0.0):
+def select_localsearch_adversaries(bqm, sample, max_n, min_gain=0.0):
     """Returns a list of up to ``max_n`` variables from ``bqm`` that have a high
     energy gain (at least ``min_gain``) for single bit flip, and thus are
     considered tabu for tabu.
     """
     variables = [idx for en, idx in flip_energy_gains(bqm, sample) if en >= min_gain]
     return variables[:max_n]
+
+
+def updated_sample(sample, replacements):
+    """Returns a copy of ``sample`` (which is a list-like object), with
+    variables changed according to ``replacements.
+    """
+    result = sample.copy()
+    for k, v in replacements.items():
+        result[k] = v
+    return result
+
+
+def sample_dict_to_list(sample):
+    """Convert ``sample``, ``dict: idx -> var``, to ``list: var``."""
+    indices = sorted(sample.keys())
+    if len(indices) > 0 and indices[-1] - indices[0] + 1 != len(indices):
+        raise ValueError("incomplete sample dict")
+    return [sample[k] for k in indices]
+
+
+def sample_list_to_dict(sample):
+    """Convert ``sample``, ``list: var``, to ``dict: idx -> var``."""
+    return dict(enumerate(sample))
