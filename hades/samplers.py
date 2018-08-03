@@ -26,12 +26,13 @@ executor = ThreadPoolExecutor(max_workers=2)
 
 
 # tentative container of (sample, energy, ...) tuple
-Solution = namedtuple('Solution', 'sample energy')
+Solution = namedtuple('Solution', 'sample energy source')
 
 
 class QPUSubproblemSampler(object):
 
     def __init__(self, bqm, max_n, num_reads=100):
+        self.name = self.__class__.__name__
         self.bqm = bqm
         self.max_n = max_n
         self.num_reads = num_reads
@@ -74,7 +75,7 @@ class QPUSubproblemSampler(object):
         best_sub_sample = response_datum.sample
 
         composed_sample = updated_sample(sample, best_sub_sample)
-        return Solution(composed_sample, self.bqm.energy(composed_sample))
+        return Solution(composed_sample, self.bqm.energy(composed_sample), self.__class__.__name__)
 
     def run(self, sample):
         return executor.submit(self._run, sample)
@@ -83,6 +84,7 @@ class QPUSubproblemSampler(object):
 class TabuSubproblemSampler(object):
 
     def __init__(self, bqm, max_n, num_reads=1, tenure=None, timeout=20):
+        self.name = self.__class__.__name__
         self.bqm = bqm
         self.max_n = max_n
         self.num_reads = num_reads
@@ -102,7 +104,7 @@ class TabuSubproblemSampler(object):
 
         # shared
         composed_sample = updated_sample(sample, best_sub_sample)
-        return Solution(composed_sample, self.bqm.energy(composed_sample))
+        return Solution(composed_sample, self.bqm.energy(composed_sample), self.name)
 
     def run(self, sample):
         return executor.submit(self._run, sample)
@@ -111,6 +113,7 @@ class TabuSubproblemSampler(object):
 class TabuProblemSampler(object):
 
     def __init__(self, bqm, num_reads=1, tenure=None, timeout=20):
+        self.name = self.__class__.__name__
         self.bqm = bqm
         self.num_reads = num_reads
         self.tenure = tenure
@@ -124,7 +127,7 @@ class TabuProblemSampler(object):
         response_datum = next(response.data())
         best_sample = sample_dict_to_list(response_datum.sample)
         best_energy = response_datum.energy
-        return Solution(best_sample, best_energy)
+        return Solution(best_sample, best_energy, self.name)
 
     def run(self, sample):
         return executor.submit(self._run, sample)
