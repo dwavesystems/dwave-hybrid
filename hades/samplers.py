@@ -1,3 +1,4 @@
+import time
 import threading
 from collections import namedtuple
 
@@ -27,7 +28,13 @@ executor = ThreadPoolExecutor(max_workers=2)
 
 
 # tentative container of (sample, energy, ...) tuple
-Solution = namedtuple('Solution', 'sample energy source')
+_Solution = namedtuple('Solution', 'sample energy source meta')
+
+class Solution(_Solution):
+    """Identical to _Solution namedtuple, with added default values/kwargs."""
+
+    def __new__(_cls, sample=None, energy=None, source=None, meta=None):
+        return _Solution.__new__(_cls, sample, energy, source, meta)
 
 
 class QPUSubproblemSampler(object):
@@ -145,20 +152,23 @@ class InterruptableTabuSampler(TabuProblemSampler):
         kwargs['timeout'] = quantum_timeout
         super(InterruptableTabuSampler, self).__init__(**kwargs)
         self.max_timeout = timeout
-
         self._stop_event = threading.Event()
 
     def _interruptable_run(self, sample):
         solution = Solution(sample, 0, self.name)
-        # TODO: incorporate max_timeout
-        print('starting', self.name)
+        start = time.time()
+        iterno = 1
         while True:
             solution = self._run(solution.sample)
-            if self._stop_event.is_set():
-                print('stopping', self.name)
-                return solution
+            runtime = time.time() - start
+            timeout = self.max_timeout is not None and runtime >= self.max_timeout
+            if self._stop_event.is_set() or timeout:
+                break
+            iterno += 1
+        return solution._replace(meta=dict(runtime=runtime, iterno=iterno))
 
     def run(self, sample):
+        self._stop_event.clear()
         return executor.submit(self._interruptable_run, sample)
 
     def stop(self):

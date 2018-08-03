@@ -24,7 +24,7 @@ samplers = [
 
 
 max_iter = 10
-best = Solution([0] * (max(bqm.linear.keys()) + 1), 0, 'init')
+best = Solution([0] * (max(bqm.linear.keys()) + 1))
 
 for iterno in range(max_iter):
     branches = [sampler.run(best.sample) for sampler in samplers]
