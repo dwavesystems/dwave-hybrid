@@ -1,3 +1,4 @@
+import threading
 from collections import namedtuple
 
 import numpy as np
@@ -80,6 +81,10 @@ class QPUSubproblemSampler(object):
     def run(self, sample):
         return executor.submit(self._run, sample)
 
+    def stop(self):
+        # TODO
+        pass
+
 
 class TabuSubproblemSampler(object):
 
@@ -131,3 +136,30 @@ class TabuProblemSampler(object):
 
     def run(self, sample):
         return executor.submit(self._run, sample)
+
+
+class InterruptableTabuSampler(TabuProblemSampler):
+
+    def __init__(self, bqm, quantum_timeout=20, timeout=None, **kwargs):
+        kwargs['bqm'] = bqm
+        kwargs['timeout'] = quantum_timeout
+        super(InterruptableTabuSampler, self).__init__(**kwargs)
+        self.max_timeout = timeout
+
+        self._stop_event = threading.Event()
+
+    def _interruptable_run(self, sample):
+        solution = Solution(sample, 0, self.name)
+        # TODO: incorporate max_timeout
+        print('starting', self.name)
+        while True:
+            solution = self._run(solution.sample)
+            if self._stop_event.is_set():
+                print('stopping', self.name)
+                return solution
+
+    def run(self, sample):
+        return executor.submit(self._interruptable_run, sample)
+
+    def stop(self):
+        self._stop_event.set()
