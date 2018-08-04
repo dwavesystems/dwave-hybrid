@@ -84,14 +84,59 @@ def bqm_edges_between_variables(bqm, variables):
     return edges
 
 
-def flip_energy_gains(bqm, sample):
+def flip_energy_gains_naive(bqm, sample):
     """Returns `list[(energy_gain, flip_index)]` in descending order
     for flipping qubit with flip_index in sample.
+
+    Note: Grossly inefficient! Use `flip_energy_gains_iterative` which traverses
+    bits, updating energy delta based on previous bit and neighbors.
     """
     base = bqm.energy(sample)
-    energy_gains = [(bqm.energy(sample[:i] + [1 - bit] + sample[i:]) - base, i) for i, bit in enumerate(sample)]
+    energy_gains = [(bqm.energy(sample[:i] + [1 - bit] + sample[i+1:]) - base, i) for i, bit in enumerate(sample)]
     energy_gains.sort(reverse=True)
     return energy_gains
+
+
+def flip_energy_gains_iterative(bqm, sample):
+    """Returns `list[(energy_gain, flip_index)]` in descending order
+    for flipping qubit with flip_index in sample.
+
+    Args:
+        bqm (:class:`dimod.BinaryQuadraticModel`):
+            BQM of type dimod.BINARY
+
+        sample (list):
+            Perturbation base (as 0/1 binary values)
+
+    Note:
+        Comparison with the naive approach (bqm size ~ 2k, random sample)::
+
+            >>> %timeit flip_energy_gains_naive(bqm, sample)
+            3.35 s ± 37.5 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
+
+            >>> %timeit flip_energy_gains_iterative(bqm, sample)
+            3.52 ms ± 20.4 µs per loop (mean ± std. dev. of 7 runs, 100 loops each)
+
+        Three orders of magnitude faster.
+
+        Subnote: using list comprehension speeds-up the iterative approach by
+        only 2%, so we're using the standard loop (a lot more readable).
+
+    TODO: generalize to support all dimod vartypes (add SPIN).
+    """
+    energy_gains = []
+    for idx, val in enumerate(sample):
+        # val is 0, flips to 1 => delta +1
+        # val is 1, flips to 0 => delta -1
+        delta = 1 - 2 * val
+        contrib = bqm.linear[idx] + sum(w * sample[neigh] for neigh, w in bqm.adj[idx].items())
+        energy_gains.append((contrib * delta, idx))
+
+    energy_gains.sort(reverse=True)
+    return energy_gains
+
+
+flip_energy_gains = flip_energy_gains_iterative
 
 
 def select_localsearch_adversaries(bqm, sample, max_n, min_gain=0.0):
@@ -105,7 +150,7 @@ def select_localsearch_adversaries(bqm, sample, max_n, min_gain=0.0):
 
 def updated_sample(sample, replacements):
     """Returns a copy of ``sample`` (which is a list-like object), with
-    variables changed according to ``replacements.
+    variables changed according to ``replacements``.
     """
     result = sample.copy()
     for k, v in replacements.items():

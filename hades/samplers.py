@@ -121,6 +121,10 @@ class TabuSubproblemSampler(object):
     def run(self, sample):
         return executor.submit(self._run, sample)
 
+    def stop(self):
+        # TODO
+        pass
+
 
 class TabuProblemSampler(object):
 
@@ -143,6 +147,10 @@ class TabuProblemSampler(object):
 
     def run(self, sample):
         return executor.submit(self._run, sample)
+
+    def stop(self):
+        # TODO
+        pass
 
 
 class InterruptableTabuSampler(TabuProblemSampler):
