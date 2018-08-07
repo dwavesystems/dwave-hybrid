@@ -1,3 +1,5 @@
+import random
+
 import six
 import dimod
 
@@ -146,6 +148,10 @@ def select_localsearch_adversaries(bqm, sample, max_n, min_gain=0.0):
     """
     variables = [idx for en, idx in flip_energy_gains(bqm, sample) if en >= min_gain]
     return variables[:max_n]
+
+
+def select_random_subgraph(bqm, n):
+    return random.sample(bqm.linear.keys(), n)
 
 
 def updated_sample(sample, replacements):
