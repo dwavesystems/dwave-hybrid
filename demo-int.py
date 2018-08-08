@@ -8,7 +8,8 @@ from operator import attrgetter
 
 import dimod
 from hades.samplers import (
-    Solution, QPUSubproblemSampler, TabuSubproblemSampler, TabuProblemSampler, InterruptableTabuSampler)
+    QPUSubproblemSampler, TabuSubproblemSampler, TabuProblemSampler, InterruptableTabuSampler)
+from hades.core import BranchState
 
 
 problem = 'problems/random-chimera/2048.01.qubo'
@@ -23,10 +24,12 @@ samplers = [
 
 
 max_iter = 10
-best = Solution([0] * (max(bqm.linear.keys()) + 1))
+best = BranchState([0] * (max(bqm.linear.keys()) + 1))
 
+last = BranchState(energy=1e100)
+cnt = 3
 for iterno in range(max_iter):
-    branches = [sampler.run(best.sample) for sampler in samplers]
+    branches = [sampler.run(best) for sampler in samplers]
 
     solutions = []
     for f in concurrent.futures.as_completed(branches):
@@ -42,3 +45,9 @@ for iterno in range(max_iter):
     for s in solutions:
         print("- energy={s.energy}, source={s.source!r}, meta={s.meta}".format(s=s))
     print("\nBEST: energy={s.energy}, source={s.source!r}, meta={s.meta}\n".format(s=best))
+
+    if best.energy >= last.energy:
+        cnt -= 1
+    if cnt <= 0:
+        break
+    last = best

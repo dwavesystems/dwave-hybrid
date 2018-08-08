@@ -8,7 +8,8 @@ from operator import attrgetter
 
 import dimod
 from hades.samplers import (
-    Solution, QPUSubproblemSampler, TabuSubproblemSampler, TabuProblemSampler)
+    QPUSubproblemSampler, TabuSubproblemSampler, TabuProblemSampler)
+from hades.core import BranchState
 
 
 problem = 'problems/random-chimera/2048.01.qubo'
@@ -18,16 +19,21 @@ with open(problem) as fp:
 
 samplers = [
     TabuProblemSampler(bqm, timeout=1000),
-    TabuSubproblemSampler(bqm, max_n=100, num_reads=1, timeout=1000),
-    QPUSubproblemSampler(bqm, max_n=100, num_reads=100),
+    TabuSubproblemSampler(bqm, max_n=400, num_reads=1, timeout=500),
+    QPUSubproblemSampler(bqm, max_n=400, num_reads=200),
 ]
 
 
 max_iter = 10
-best = Solution([0] * (max(bqm.linear.keys()) + 1))
+best = BranchState([0] * (max(bqm.linear.keys()) + 1))
 
 for iterno in range(max_iter):
-    branches = [sampler.run(best.sample) for sampler in samplers]
-    solutions = [f.result() for f in concurrent.futures.as_completed(branches)]
-    best = min(solutions, key=attrgetter('energy'))
-    print("iterno={}, energy={s.energy}, source={s.source!r}".format(iterno, s=best))
+    branches = [sampler.run(best) for sampler in samplers]
+    states = [f.result() for f in concurrent.futures.as_completed(branches)]
+    best = min(states, key=attrgetter('energy'))
+
+    # debug info
+    print("iterno={}, states:".format(iterno))
+    for s in states:
+        print("- energy={s.energy}, source={s.source!r}, meta={s.meta}".format(s=s))
+    print("\nBEST: energy={s.energy}, source={s.source!r}, meta={s.meta}\n".format(s=best))
