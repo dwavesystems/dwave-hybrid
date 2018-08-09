@@ -13,7 +13,20 @@ except AttributeError:
 
 
 class tictoc(object):
-    """Instrument and log function execution duration."""
+    """Instrument and log function execution duration.
+
+    Examples:
+        @tictoc('function', loglevel=logging.INFO)
+        def f(x, y):
+            a = x * y
+            with tictoc('block'):
+                return [a * a for _ in range(x)]
+
+        class Example(object):
+            @tictoc()
+            def method(self, args):
+                # ...
+    """
 
     def start(self):
         self.tick = perf_counter()
