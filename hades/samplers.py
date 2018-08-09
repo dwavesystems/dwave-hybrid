@@ -15,6 +15,7 @@ import minorminer
 from tabu_sampler import TabuSampler
 
 from hades.core import executor, Runnable, BranchState
+from hades.profiling import tictoc
 from hades.utils import (
     bqm_induced_by, select_localsearch_adversaries, select_random_subgraph,
     updated_sample, sample_dict_to_list)
@@ -36,6 +37,7 @@ class QPUSubproblemSampler(Runnable):
 
         self.sampler = DWaveSampler()
 
+    @tictoc()
     def _embed(self, variables, sample):
         subbqm = bqm_induced_by(self.bqm, variables, sample)
         source_edgelist = list(subbqm.quadratic) + [(v, v) for v in subbqm.linear]
@@ -44,6 +46,7 @@ class QPUSubproblemSampler(Runnable):
         bqm_embedded = dimod.embed_bqm(subbqm, embedding, target_adjacency, chain_strength=1.0)
         return embedding, bqm_embedded, subbqm
 
+    @tictoc(name='qpu_iterate')
     def iterate(self, state):
         """Finds a subproblem to send to QPU, solves it, and returns a proposed
         candidate for new global solution (to replace ``sample``).
@@ -85,6 +88,7 @@ class TabuSubproblemSampler(Runnable):
         self.timeout = timeout
         self.sampler = TabuSampler()
 
+    @tictoc('subtabu_iterate')
     def iterate(self, state):
         sample = state.sample
 
@@ -113,6 +117,7 @@ class TabuProblemSampler(Runnable):
         self.timeout = timeout
         self.sampler = TabuSampler()
 
+    @tictoc('tabu_iterate')
     def iterate(self, state):
         sample = state.sample
         response = self.sampler.sample(
@@ -133,7 +138,8 @@ class InterruptableTabuSampler(TabuProblemSampler):
         self.max_timeout = timeout
         self._stop_event = threading.Event()
 
-    def _interruptable_run(self, state):
+    @tictoc('int_tabu_iterate')
+    def _interruptable_iterate(self, state):
         start = time.time()
         iterno = 1
         while True:
@@ -147,7 +153,7 @@ class InterruptableTabuSampler(TabuProblemSampler):
 
     def run(self, state):
         self._stop_event.clear()
-        return executor.submit(self._interruptable_run, state)
+        return executor.submit(self._interruptable_iterate, state)
 
     def stop(self):
         self._stop_event.set()
