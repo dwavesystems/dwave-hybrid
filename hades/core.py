@@ -28,11 +28,20 @@ class State(_State):
     """
 
     def __new__(_cls, sample=None, ctx=None, debug=None):
+        """`sample` is Sample, `ctx` and `debug` are `dict`."""
         if ctx is None:
             ctx = {}
         if debug is None:
             debug = {}
         return _State.__new__(_cls, sample, ctx, debug)
+
+    def updated(self, **kwargs):
+        """Returns updated state. `sample` should be of type `Sample`, and
+        `ctx`/`debug` dictionaries with items to add/update in state's
+        `ctx`/`debug`."""
+        self.ctx.update(kwargs.pop('ctx', {}))
+        self.debug.update(kwargs.pop('debug', {}))
+        return self._replace(**kwargs)
 
 
 class Runnable(object):
