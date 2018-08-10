@@ -6,8 +6,18 @@ from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 executor = ThreadPoolExecutor(max_workers=4)
 
 
-# TODO: replace `(sample, energy)`` with population of `Sample`s
-_State = namedtuple('State', 'sample energy ctx debug')
+_Sample = namedtuple('_Sample', 'values energy')
+
+class Sample(_Sample):
+    """Sample namedtuple that includes optional energy, in addition to
+    variable values."""
+
+    def __new__(_cls, values, energy=None):
+        return _Sample.__new__(_cls, values, energy)
+
+
+# TODO: replace `sample` with population of `Sample`s
+_State = namedtuple('State', 'sample ctx debug')
 
 class State(_State):
     """Computation state passed along a branch between connected components.
@@ -17,12 +27,12 @@ class State(_State):
     NB: Identical to _State namedtuple, with added default values/kwargs.
     """
 
-    def __new__(_cls, sample=None, energy=None, ctx=None, debug=None):
+    def __new__(_cls, sample=None, ctx=None, debug=None):
         if ctx is None:
             ctx = {}
         if debug is None:
             debug = {}
-        return _State.__new__(_cls, sample, energy, ctx, debug)
+        return _State.__new__(_cls, sample, ctx, debug)
 
 
 class Runnable(object):
