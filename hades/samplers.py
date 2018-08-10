@@ -24,6 +24,20 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+class SimpleQPUSampler(Runnable):
+
+    def __init__(self, bqm, num_reads=100):
+        self.bqm = bqm
+        self.num_reads = num_reads
+        self.sampler = EmbeddingComposite(DWaveSampler())
+
+    def iterate(self, state):
+        response = self.sampler.sample(state.subproblem, num_reads=self.num_reads)
+        best_response = next(response.data())
+        best_sample = best_response.sample
+        return state.updated(ctx=dict(subsample=best_sample))
+
+
 class QPUSubproblemSampler(Runnable):
 
     def __init__(self, bqm, max_n, num_reads=100):

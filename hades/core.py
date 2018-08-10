@@ -10,7 +10,7 @@ _Sample = namedtuple('_Sample', 'values energy')
 
 class Sample(_Sample):
     """Sample namedtuple that includes optional energy, in addition to
-    variable values."""
+    values mapping (bqm variable -> value)."""
 
     def __new__(_cls, values, energy=None):
         return _Sample.__new__(_cls, values, energy)
