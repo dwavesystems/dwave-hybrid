@@ -105,10 +105,10 @@ class TabuSampler(Sampler):
         return response
 
     def _bqm_to_tabu_qubo(self, bqm):
+        # Note: normally, conversion would be: `ud + ud.T - numpy.diag(numpy.diag(ud))`,
+        # but the Tabu solver we're using requires slightly different qubo matrix.
         varorder = sorted(list(bqm.adj.keys()))
         ud = 0.5 * bqm.to_numpy_matrix(varorder)
-        # Note: normally, conversion would be: `ud + ud.T - numpy.diag(ud.diagonal())`,
-        # but the Tabu solver we're using requires slightly different qubo matrix.
         symm = ud + ud.T
         qubo = symm.tolist()
         return qubo

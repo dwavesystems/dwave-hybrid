@@ -10,7 +10,7 @@ from operator import attrgetter
 import dimod
 from hades.samplers import (
     QPUSubproblemSampler, TabuSubproblemSampler, TabuProblemSampler, InterruptableTabuSampler)
-from hades.core import BranchState
+from hades.core import State
 
 
 problem = 'problems/random-chimera/2048.01.qubo'
@@ -20,17 +20,17 @@ with open(problem) as fp:
 
 samplers = [
     InterruptableTabuSampler(bqm),
-    TabuProblemSampler(bqm, timeout=1000),
-    TabuSubproblemSampler(bqm, max_n=400, num_reads=1, timeout=500),
+    TabuProblemSampler(bqm, timeout=1),
+    #TabuSubproblemSampler(bqm, max_n=400, num_reads=1, timeout=500),
     QPUSubproblemSampler(bqm, max_n=400, num_reads=200),
 ]
 
 
-max_iter = 100
-best = BranchState([0] * (max(bqm.linear.keys()) + 1))
+max_iter = 10
+best = State([0] * (max(bqm.linear.keys()) + 1))
 
-last = BranchState(energy=1e100)
-cnt = 3
+last = State(energy=1e100)
+cnt = 10
 for iterno in range(max_iter):
     branches = [sampler.run(best) for sampler in samplers]
 
@@ -46,8 +46,8 @@ for iterno in range(max_iter):
     # debug info
     print("iterno={}, solutions:".format(iterno))
     for s in solutions:
-        print("- energy={s.energy}, source={s.source!r}, meta={s.meta}".format(s=s))
-    print("\nBEST: energy={s.energy}, source={s.source!r}, meta={s.meta}\n".format(s=best))
+        print("- energy={s.energy}, debug={s.debug!r}, context={s.ctx}".format(s=s))
+    print("\nBEST: energy={s.energy}, debug={s.debug!r}, context={s.ctx}\n".format(s=best))
 
     if best.energy >= last.energy:
         cnt -= 1

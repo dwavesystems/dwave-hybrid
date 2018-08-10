@@ -14,7 +14,7 @@ import minorminer
 # TODO: pip-ify
 from tabu_sampler import TabuSampler
 
-from hades.core import executor, Runnable, BranchState
+from hades.core import executor, Runnable, State
 from hades.profiling import tictoc
 from hades.utils import (
     bqm_induced_by, select_localsearch_adversaries, select_random_subgraph,
@@ -74,7 +74,7 @@ class QPUSubproblemSampler(Runnable):
         best_sub_sample = response_datum.sample
 
         composed_sample = updated_sample(sample, best_sub_sample)
-        return BranchState(composed_sample, self.bqm.energy(composed_sample), self.__class__.__name__)
+        return State(composed_sample, self.bqm.energy(composed_sample), self.__class__.__name__)
 
 
 class TabuSubproblemSampler(Runnable):
@@ -104,7 +104,7 @@ class TabuSubproblemSampler(Runnable):
 
         # shared
         composed_sample = updated_sample(sample, best_sub_sample)
-        return BranchState(composed_sample, self.bqm.energy(composed_sample), self.name)
+        return State(composed_sample, self.bqm.energy(composed_sample), self.name)
 
 
 class TabuProblemSampler(Runnable):
@@ -126,7 +126,7 @@ class TabuProblemSampler(Runnable):
         response_datum = next(response.data())
         best_sample = sample_dict_to_list(response_datum.sample)
         best_energy = response_datum.energy
-        return BranchState(best_sample, best_energy, self.name)
+        return State(best_sample, best_energy, self.name)
 
 
 class InterruptableTabuSampler(TabuProblemSampler):
@@ -149,7 +149,7 @@ class InterruptableTabuSampler(TabuProblemSampler):
             if self._stop_event.is_set() or timeout:
                 break
             iterno += 1
-        return state._replace(meta=dict(runtime=runtime, iterno=iterno))
+        return state._replace(debug=dict(runtime=runtime, iterno=iterno))
 
     def run(self, state):
         self._stop_event.clear()

@@ -6,13 +6,23 @@ from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 executor = ThreadPoolExecutor(max_workers=4)
 
 
-_BranchState = namedtuple('BranchState', 'sample energy source meta')
+# TODO: replace `(sample, energy)`` with population of `Sample`s
+_State = namedtuple('State', 'sample energy ctx debug')
 
-class BranchState(_BranchState):
-    """Identical to _BranchState namedtuple, with added default values/kwargs."""
+class State(_State):
+    """Computation state passed along a branch between connected components.
+    The structure is fixed, but fields are mutable. Components can store
+    context into `ctx` and debugging/tracing info into `debug`.
 
-    def __new__(_cls, sample=None, energy=None, source=None, meta=None):
-        return _BranchState.__new__(_cls, sample, energy, source, meta)
+    NB: Identical to _State namedtuple, with added default values/kwargs.
+    """
+
+    def __new__(_cls, sample=None, energy=None, ctx=None, debug=None):
+        if ctx is None:
+            ctx = {}
+        if debug is None:
+            debug = {}
+        return _State.__new__(_cls, sample, energy, ctx, debug)
 
 
 class Runnable(object):
