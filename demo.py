@@ -9,8 +9,11 @@ from operator import attrgetter
 
 import dimod
 from hades.samplers import (
-    QPUSubproblemSampler, TabuSubproblemSampler, TabuProblemSampler, InterruptableTabuSampler)
-from hades.core import State
+    QPUSubproblemSampler, SimpleQPUSampler,
+    TabuSubproblemSampler, TabuProblemSampler, InterruptableTabuSampler)
+from hades.decomposers import RandomSubproblemDecomposer
+from hades.composers import SplatComposer
+from hades.core import State, Sample
 
 
 problem = 'problems/random-chimera/2048.01.qubo'
@@ -19,17 +22,18 @@ with open(problem) as fp:
 
 
 samplers = [
-    InterruptableTabuSampler(bqm),
-    TabuProblemSampler(bqm, timeout=1),
+    #InterruptableTabuSampler(bqm),
+    #TabuProblemSampler(bqm, timeout=1),
     #TabuSubproblemSampler(bqm, max_n=400, num_reads=1, timeout=500),
-    QPUSubproblemSampler(bqm, max_n=400, num_reads=200),
+    #QPUSubproblemSampler(bqm, max_n=400, num_reads=200),
+    RandomSubproblemDecomposer(bqm, size=400) | SimpleQPUSampler(bqm, num_reads=200) | SplatComposer(bqm)
 ]
 
 
 max_iter = 10
-best = State([0] * (max(bqm.linear.keys()) + 1))
+best = State(Sample([0] * (max(bqm.linear.keys()) + 1)))
 
-last = State(energy=1e100)
+last = State(Sample({}, energy=1e100))
 cnt = 10
 for iterno in range(max_iter):
     branches = [sampler.run(best) for sampler in samplers]
@@ -41,15 +45,15 @@ for iterno in range(max_iter):
             s.stop()
         solutions.append(f.result())
 
-    best = min(solutions, key=attrgetter('energy'))
+    best = min(solutions, key=attrgetter('sample.energy'))
 
     # debug info
     print("iterno={}, solutions:".format(iterno))
     for s in solutions:
-        print("- energy={s.energy}, debug={s.debug!r}, context={s.ctx}".format(s=s))
-    print("\nBEST: energy={s.energy}, debug={s.debug!r}, context={s.ctx}\n".format(s=best))
+        print("- energy={s.sample.energy}, debug={s.debug!r}, context={s.ctx}".format(s=s))
+    print("\nBEST: energy={s.sample.energy}, debug={s.debug!r}, context={s.ctx}\n".format(s=best))
 
-    if best.energy >= last.energy:
+    if best.sample.energy >= last.sample.energy:
         cnt -= 1
     if cnt <= 0:
         break

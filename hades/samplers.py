@@ -14,7 +14,7 @@ import minorminer
 # TODO: pip-ify
 from tabu_sampler import TabuSampler
 
-from hades.core import executor, Runnable, State
+from hades.core import executor, Runnable, State, Sample
 from hades.profiling import tictoc
 from hades.utils import (
     bqm_induced_by, select_localsearch_adversaries, select_random_subgraph,
@@ -32,7 +32,7 @@ class SimpleQPUSampler(Runnable):
         self.sampler = EmbeddingComposite(DWaveSampler())
 
     def iterate(self, state):
-        response = self.sampler.sample(state.subproblem, num_reads=self.num_reads)
+        response = self.sampler.sample(state.ctx['subproblem'], num_reads=self.num_reads)
         best_response = next(response.data())
         best_sample = best_response.sample
         return state.updated(ctx=dict(subsample=best_sample))
@@ -140,7 +140,8 @@ class TabuProblemSampler(Runnable):
         response_datum = next(response.data())
         best_sample = sample_dict_to_list(response_datum.sample)
         best_energy = response_datum.energy
-        return State(best_sample, best_energy, self.name)
+        return state.updated(sample=Sample(best_sample, best_energy),
+                             debug=dict(source=self.name))
 
 
 class InterruptableTabuSampler(TabuProblemSampler):
@@ -163,7 +164,7 @@ class InterruptableTabuSampler(TabuProblemSampler):
             if self._stop_event.is_set() or timeout:
                 break
             iterno += 1
-        return state._replace(debug=dict(runtime=runtime, iterno=iterno))
+        return state.updated(debug=dict(source=self.name, runtime=runtime, iterno=iterno))
 
     def run(self, state):
         self._stop_event.clear()
