@@ -44,6 +44,22 @@ class State(_State):
         return self._replace(**kwargs)
 
 
+class Present(object):
+    """Already resolved Future-like object.
+
+    Very limited in Future-compatibility. We implement only the minimum here.
+    """
+
+    def __init__(self, result):
+        self._result = result
+
+    def result(self):
+        return self._result
+
+    def done(self):
+        return True
+
+
 class Runnable(object):
     """Runnable component can be run for one iteration at a time. Iteration
     might be stopped, but implementing stop support is not required."""
@@ -56,6 +72,11 @@ class Runnable(object):
         raise NotImplementedError
 
     def run(self, state):
+        """Accepts a state in future and returns a new state in future."""
+        try:
+            state = state.result()
+        except:
+            pass
         return executor.submit(self.iterate, state)
 
     def stop(self):
@@ -73,7 +94,7 @@ class Branch(Runnable):
 
     def iterate(self, state):
         components = iter(self._components)
-        state = next(components)(state).result()
+        state = next(components).iterate(state)
         for component in components:
-            state = component(state).result()
+            state = component.iterate(state)
         return state
