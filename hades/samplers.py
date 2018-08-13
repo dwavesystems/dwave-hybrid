@@ -35,13 +35,13 @@ class SimpleQPUSampler(Runnable):
         response = self.sampler.sample(state.ctx['subproblem'], num_reads=self.num_reads)
         best_response = next(response.data())
         best_sample = best_response.sample
-        return state.updated(ctx=dict(subsample=best_sample))
+        return state.updated(ctx=dict(subsample=best_sample),
+                             debug=dict(source=self.__class__.__name__))
 
 
 class QPUSubproblemSampler(Runnable):
 
     def __init__(self, bqm, max_n, num_reads=100):
-        self.name = self.__class__.__name__
         self.bqm = bqm
         self.max_n = max_n
         self.num_reads = num_reads
@@ -93,10 +93,8 @@ class QPUSubproblemSampler(Runnable):
 
 class TabuSubproblemSampler(Runnable):
 
-    def __init__(self, bqm, max_n, num_reads=1, tenure=None, timeout=20):
-        self.name = self.__class__.__name__
+    def __init__(self, bqm, num_reads=1, tenure=None, timeout=20):
         self.bqm = bqm
-        self.max_n = max_n
         self.num_reads = num_reads
         self.tenure = tenure
         self.timeout = timeout
@@ -104,27 +102,17 @@ class TabuSubproblemSampler(Runnable):
 
     @tictoc('subtabu_iterate')
     def iterate(self, state):
-        sample = state.sample
-
-        # shared
-        #frozen = select_localsearch_adversaries(self.bqm, sample, self.max_n, min_gain=0)
-        frozen = select_random_subgraph(self.bqm, self.max_n)
-
-        subbqm = bqm_induced_by(self.bqm, frozen, sample)
+        subbqm = state.ctx['subproblem']
         response = self.sampler.sample(
             subbqm, tenure=self.tenure, timeout=self.timeout, num_reads=self.num_reads)
-        best_sub_sample = next(response.samples())
-        # TODO: use .data(), simplify update
-
-        # shared
-        composed_sample = updated_sample(sample, best_sub_sample)
-        return State(composed_sample, self.bqm.energy(composed_sample), self.name)
+        best_subsample = next(response.samples())
+        return state.updated(ctx=dict(subsample=best_subsample),
+                             debug=dict(source=self.__class__.__name__))
 
 
 class TabuProblemSampler(Runnable):
 
     def __init__(self, bqm, num_reads=1, tenure=None, timeout=20):
-        self.name = self.__class__.__name__
         self.bqm = bqm
         self.num_reads = num_reads
         self.tenure = tenure
@@ -133,7 +121,7 @@ class TabuProblemSampler(Runnable):
 
     @tictoc('tabu_iterate')
     def iterate(self, state):
-        sample = state.sample
+        sample = state.sample.values
         response = self.sampler.sample(
             self.bqm, init_solution=sample, tenure=self.tenure,
             timeout=self.timeout, num_reads=self.num_reads)
@@ -141,7 +129,7 @@ class TabuProblemSampler(Runnable):
         best_sample = sample_dict_to_list(response_datum.sample)
         best_energy = response_datum.energy
         return state.updated(sample=Sample(best_sample, best_energy),
-                             debug=dict(source=self.name))
+                             debug=dict(source=self.__class__.__name__))
 
 
 class InterruptableTabuSampler(TabuProblemSampler):
@@ -164,7 +152,8 @@ class InterruptableTabuSampler(TabuProblemSampler):
             if self._stop_event.is_set() or timeout:
                 break
             iterno += 1
-        return state.updated(debug=dict(source=self.name, runtime=runtime, iterno=iterno))
+        return state.updated(debug=dict(source=self.__class__.__name__,
+                                        runtime=runtime, iterno=iterno))
 
     def run(self, state):
         self._stop_event.clear()

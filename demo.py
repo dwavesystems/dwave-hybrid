@@ -22,9 +22,9 @@ with open(problem) as fp:
 
 
 samplers = [
-    #InterruptableTabuSampler(bqm),
+    InterruptableTabuSampler(bqm),
     #TabuProblemSampler(bqm, timeout=1),
-    #TabuSubproblemSampler(bqm, max_n=400, num_reads=1, timeout=500),
+    #RandomSubproblemDecomposer(bqm, size=400) | TabuSubproblemSampler(bqm, num_reads=1, timeout=500) | SplatComposer(bqm),
     #QPUSubproblemSampler(bqm, max_n=400, num_reads=200),
     RandomSubproblemDecomposer(bqm, size=400) | SimpleQPUSampler(bqm, num_reads=200) | SplatComposer(bqm)
 ]
@@ -50,8 +50,8 @@ for iterno in range(max_iter):
     # debug info
     print("iterno={}, solutions:".format(iterno))
     for s in solutions:
-        print("- energy={s.sample.energy}, debug={s.debug!r}, context={s.ctx}".format(s=s))
-    print("\nBEST: energy={s.sample.energy}, debug={s.debug!r}, context={s.ctx}\n".format(s=best))
+        print("- energy={s.sample.energy}, debug={s.debug!r}".format(s=s))
+    print("\nBEST: energy={s.sample.energy}, debug={s.debug!r}\n".format(s=best))
 
     if best.sample.energy >= last.sample.energy:
         cnt -= 1

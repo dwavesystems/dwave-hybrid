@@ -39,9 +39,12 @@ class State(_State):
         """Returns updated state. `sample` should be of type `Sample`, and
         `ctx`/`debug` dictionaries with items to add/update in state's
         `ctx`/`debug`."""
-        self.ctx.update(kwargs.pop('ctx', {}))
-        self.debug.update(kwargs.pop('debug', {}))
-        return self._replace(**kwargs)
+        sample = kwargs.pop('sample', self.sample)
+        ctx = self.ctx.copy()
+        ctx.update(kwargs.pop('ctx', {}))
+        debug = self.debug.copy()
+        debug.update(kwargs.pop('debug', {}))
+        return State(sample, ctx, debug)
 
 
 class Present(object):
