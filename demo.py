@@ -9,8 +9,8 @@ from operator import attrgetter
 
 import dimod
 from hades.samplers import (
-    QPUSubproblemSampler, SimpleQPUSampler,
-    TabuSubproblemSampler, TabuProblemSampler, InterruptableTabuSampler)
+    QPUSubproblemSampler, TabuSubproblemSampler,
+    TabuProblemSampler, InterruptableTabuSampler)
 from hades.decomposers import RandomSubproblemDecomposer
 from hades.composers import SplatComposer
 from hades.core import State, Sample
@@ -25,8 +25,7 @@ samplers = [
     InterruptableTabuSampler(bqm),
     #TabuProblemSampler(bqm, timeout=1),
     #RandomSubproblemDecomposer(bqm, size=400) | TabuSubproblemSampler(bqm, num_reads=1, timeout=500) | SplatComposer(bqm),
-    #QPUSubproblemSampler(bqm, max_n=400, num_reads=200),
-    RandomSubproblemDecomposer(bqm, size=400) | SimpleQPUSampler(bqm, num_reads=200) | SplatComposer(bqm)
+    RandomSubproblemDecomposer(bqm, size=400) | QPUSubproblemSampler(bqm, num_reads=200) | SplatComposer(bqm)
 ]
 
 
