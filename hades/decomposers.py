@@ -1,4 +1,5 @@
 from hades.core import Runnable, State
+from hades.profiling import tictoc
 from hades.utils import (
     bqm_induced_by, select_localsearch_adversaries, select_random_subgraph)
 
@@ -16,6 +17,7 @@ class EnergyImpactDecomposer(Runnable):
         self.max_size = max_size
         self.min_gain = min_gain
 
+    @tictoc('energy_impact_decompose')
     def iterate(self, state):
         variables = select_localsearch_adversaries(
             self.bqm, state.sample.values, self.max_size, min_gain=self.min_gain)
@@ -32,6 +34,7 @@ class RandomSubproblemDecomposer(Runnable):
         self.bqm = bqm
         self.size = size
 
+    @tictoc('random_decompose')
     def iterate(self, state):
         variables = select_random_subgraph(self.bqm, self.size)
         subbqm = bqm_induced_by(self.bqm, variables, state.sample.values)

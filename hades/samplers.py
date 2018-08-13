@@ -23,6 +23,7 @@ class QPUSubproblemSampler(Runnable):
         self.num_reads = num_reads
         self.sampler = EmbeddingComposite(DWaveSampler())
 
+    @tictoc('qpu_sample')
     def iterate(self, state):
         response = self.sampler.sample(state.ctx['subproblem'], num_reads=self.num_reads)
         best_response = next(response.data())
@@ -40,7 +41,7 @@ class TabuSubproblemSampler(Runnable):
         self.timeout = timeout
         self.sampler = TabuSampler()
 
-    @tictoc('subtabu_iterate')
+    @tictoc('subtabu_sample')
     def iterate(self, state):
         subbqm = state.ctx['subproblem']
         response = self.sampler.sample(
@@ -59,7 +60,7 @@ class TabuProblemSampler(Runnable):
         self.timeout = timeout
         self.sampler = TabuSampler()
 
-    @tictoc('tabu_iterate')
+    @tictoc('tabu_sample')
     def iterate(self, state):
         sample = state.sample.values
         response = self.sampler.sample(
@@ -81,7 +82,7 @@ class InterruptableTabuSampler(TabuProblemSampler):
         self.max_timeout = timeout
         self._stop_event = threading.Event()
 
-    @tictoc('int_tabu_iterate')
+    @tictoc('int_tabu_sample')
     def _interruptable_iterate(self, state):
         start = time.time()
         iterno = 1

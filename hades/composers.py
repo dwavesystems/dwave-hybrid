@@ -1,4 +1,5 @@
 from hades.core import Runnable, State, Sample
+from hades.profiling import tictoc
 from hades.utils import updated_sample
 
 import logging
@@ -15,6 +16,7 @@ class SplatComposer(Runnable):
     def __init__(self, bqm):
         self.bqm = bqm
 
+    @tictoc('splat_compose')
     def iterate(self, state):
         composed_sample = updated_sample(state.sample.values, state.ctx['subsample'])
         composed_energy = self.bqm.energy(composed_sample)
