@@ -165,17 +165,23 @@ def updated_sample(sample, replacements):
 
 
 def sample_as_list(sample):
-    """Convert dict-like ``sample``, ``sample: idx -> var``, to ``list: var``."""
+    """Convert dict-like ``sample`` (list/dict/dimod.SampleView),
+    ``map: idx -> var``, to ``list: var``.
+    """
     if isinstance(sample, list):
         return sample
-    indices = sorted(sample.keys())
+    indices = sorted(dict(sample).keys())
     if len(indices) > 0 and indices[-1] - indices[0] + 1 != len(indices):
         raise ValueError("incomplete sample dict")
     return [sample[k] for k in indices]
 
 
 def sample_as_dict(sample):
-    """Convert list-like ``sample``, ``list: var``, to ``dict: idx -> var``."""
+    """Convert list-like ``sample`` (list/dict/dimod.SampleView),
+    ``list: var``, to ``map: idx -> var``.
+    """
     if isinstance(sample, dict):
         return sample
-    return dict(enumerate(sample))
+    if isinstance(sample, list):
+        sample = enumerate(sample)
+    return dict(sample)

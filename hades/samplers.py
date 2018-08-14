@@ -10,7 +10,7 @@ from tabu_sampler import TabuSampler
 
 from hades.core import executor, Runnable, State, Sample
 from hades.profiling import tictoc
-from hades.utils import sample_as_list
+from hades.utils import sample_as_list, sample_as_dict
 
 import logging
 logger = logging.getLogger(__name__)
@@ -27,7 +27,7 @@ class QPUSubproblemSampler(Runnable):
     def iterate(self, state):
         response = self.sampler.sample(state.ctx['subproblem'], num_reads=self.num_reads)
         best_response = next(response.data())
-        best_sample = dict(best_response.sample)
+        best_sample = sample_as_dict(best_response.sample)
         return state.updated(ctx=dict(subsample=best_sample),
                              debug=dict(source=self.__class__.__name__))
 
@@ -46,7 +46,7 @@ class TabuSubproblemSampler(Runnable):
         subbqm = state.ctx['subproblem']
         response = self.sampler.sample(
             subbqm, tenure=self.tenure, timeout=self.timeout, num_reads=self.num_reads)
-        best_subsample = dict(next(response.samples()))
+        best_subsample = sample_as_dict(next(response.samples()))
         return state.updated(ctx=dict(subsample=best_subsample),
                              debug=dict(source=self.__class__.__name__))
 
@@ -67,7 +67,7 @@ class TabuProblemSampler(Runnable):
             self.bqm, init_solution=sample_as_list(sample), tenure=self.tenure,
             timeout=self.timeout, num_reads=self.num_reads)
         response_datum = next(response.data())
-        best_sample = dict(response_datum.sample)
+        best_sample = sample_as_dict(response_datum.sample)
         best_energy = response_datum.energy
         return state.updated(sample=Sample(best_sample, best_energy),
                              debug=dict(source=self.__class__.__name__))
