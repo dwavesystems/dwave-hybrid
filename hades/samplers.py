@@ -7,6 +7,7 @@ from dwave.system.composites import EmbeddingComposite
 
 # TODO: pip-ify
 from tabu_sampler import TabuSampler
+from neal import SimulatedAnnealingSampler
 
 from hades.core import executor, Runnable, State, Sample
 from hades.profiling import tictoc
@@ -29,6 +30,24 @@ class QPUSubproblemSampler(Runnable):
         best_response = next(response.data())
         best_sample = sample_as_dict(best_response.sample)
         return state.updated(ctx=dict(subsample=best_sample),
+                             debug=dict(source=self.__class__.__name__))
+
+
+class SimulatedAnnealingSubproblemSampler(Runnable):
+
+    def __init__(self, bqm, num_reads=1, sweeps=1000):
+        self.bqm = bqm
+        self.num_reads = num_reads
+        self.sweeps = sweeps
+        self.sampler = SimulatedAnnealingSampler()
+
+    @tictoc('subneal_sample')
+    def iterate(self, state):
+        subbqm = state.ctx['subproblem']
+        response = self.sampler.sample(
+            subbqm, num_reads=self.num_reads, sweeps=self.sweeps)
+        best_subsample = sample_as_dict(next(response.samples()))
+        return state.updated(ctx=dict(subsample=best_subsample),
                              debug=dict(source=self.__class__.__name__))
 
 
