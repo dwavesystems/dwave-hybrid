@@ -155,7 +155,7 @@ def select_random_subgraph(bqm, n):
 
 
 def updated_sample(sample, replacements):
-    """Returns a copy of ``sample`` (which is a list-like object), with
+    """Returns a copy of ``sample`` (which is a dict-like object), with
     variables changed according to ``replacements``.
     """
     result = sample.copy()
@@ -164,14 +164,18 @@ def updated_sample(sample, replacements):
     return result
 
 
-def sample_dict_to_list(sample):
-    """Convert ``sample``, ``dict: idx -> var``, to ``list: var``."""
+def sample_as_list(sample):
+    """Convert dict-like ``sample``, ``sample: idx -> var``, to ``list: var``."""
+    if isinstance(sample, list):
+        return sample
     indices = sorted(sample.keys())
     if len(indices) > 0 and indices[-1] - indices[0] + 1 != len(indices):
         raise ValueError("incomplete sample dict")
     return [sample[k] for k in indices]
 
 
-def sample_list_to_dict(sample):
-    """Convert ``sample``, ``list: var``, to ``dict: idx -> var``."""
+def sample_as_dict(sample):
+    """Convert list-like ``sample``, ``list: var``, to ``dict: idx -> var``."""
+    if isinstance(sample, dict):
+        return sample
     return dict(enumerate(sample))
