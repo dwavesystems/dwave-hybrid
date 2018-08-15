@@ -39,3 +39,14 @@ class RandomSubproblemDecomposer(Runnable):
         variables = select_random_subgraph(self.bqm, self.size)
         subbqm = bqm_induced_by(self.bqm, variables, state.sample.values)
         return state.updated(ctx=dict(subproblem=subbqm))
+
+
+class IdentityDecomposer(Runnable):
+    """Copies problem to subproblem."""
+
+    def __init__(self, bqm):
+        self.bqm = bqm
+
+    @tictoc('identity_decompose')
+    def iterate(self, state):
+        return state.updated(ctx=dict(subproblem=self.bqm))
