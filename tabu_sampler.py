@@ -83,8 +83,7 @@ class TabuSampler(Sampler):
         if num_reads < 1:
             raise ValueError("'samples' should be a positive integer")
 
-        bqm = bqm.change_vartype(Vartype.BINARY, inplace=False)
-        qubo = self._bqm_to_tabu_qubo(bqm)
+        qubo = self._bqm_to_tabu_qubo(bqm.binary)
 
         # run Tabu search
         samples = []
@@ -95,8 +94,8 @@ class TabuSampler(Sampler):
             else:
                 init_sample = init_solution
             r = tabu_solver.TabuSearch(qubo, init_sample, tenure, scale_factor, timeout)
-            sample = self._tabu_sample_to_bqm_sample(list(r.bestSolution()), bqm)
-            energy = bqm.energy(sample)
+            sample = self._tabu_sample_to_bqm_sample(list(r.bestSolution()), bqm.binary)
+            energy = bqm.binary.energy(sample)
             samples.append(sample)
             energies.append(energy)
 
