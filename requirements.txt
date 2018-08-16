@@ -1,5 +1,5 @@
 six
-dimod
+dimod>0.7
 minorminer
 dwave-system
 dwave-neal

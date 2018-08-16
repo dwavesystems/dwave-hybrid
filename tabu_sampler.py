@@ -99,7 +99,8 @@ class TabuSampler(Sampler):
             samples.append(sample)
             energies.append(energy)
 
-        response = Response.from_dicts(samples, {'energy': energies}, vartype=Vartype.BINARY)
+        response = Response.from_samples(
+            samples, {'energy': energies}, info={}, vartype=Vartype.BINARY)
         response.change_vartype(bqm.vartype, inplace=True)
         return response
 
