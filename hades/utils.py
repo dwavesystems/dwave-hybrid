@@ -154,6 +154,10 @@ def select_random_subgraph(bqm, n):
     return random.sample(bqm.linear.keys(), n)
 
 
+def select_chimera_subgraph(bqm, size):
+    pass
+
+
 def updated_sample(sample, replacements):
     """Returns a copy of ``sample`` (which is a dict-like object), with
     variables changed according to ``replacements``.
