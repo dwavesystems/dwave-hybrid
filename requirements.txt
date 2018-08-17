@@ -6,3 +6,4 @@ dwave-neal
 # todo: dwave-tabu
 numpy
 networkx
+dwave_networkx
