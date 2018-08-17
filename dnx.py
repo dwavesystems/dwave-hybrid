@@ -1,5 +1,8 @@
+from __future__ import division
+
 import unittest
 import collections
+import math
 
 import dimod
 import dwave_networkx as dnx
@@ -8,12 +11,19 @@ import networkx as nx
 from dwave_networkx.generators.chimera import chimera_coordinates
 
 
-def canonical_chimera_labeling(G, t=4):
+def canonical_chimera_labeling(G, t=None):
     """
     Returns a mapping from the labels of G to chimera-indexed labeling
 
     """
     adj = G.adj
+
+    if t is None:
+        if hasattr(G, 'edges'):
+            num_edges = len(G.edges)
+        else:
+            num_edges = len(G.quadratic)
+        t = _chimera_shore_size(adj, num_edges)
 
     chimera_indices = {}
 
@@ -101,6 +111,34 @@ def rooted_tile(adj, n, t):
     return horiz, vert
 
 
+def _chimera_shore_size(adj, num_edges):
+    # we know |E| = m*n*t*t + (2*m*n-m-n)*t
+
+    num_nodes = len(adj)
+
+    max_degree = max(len(adj[v]) for v in adj)
+
+    if num_nodes == 2 * max_degree:
+        return max_degree
+
+    def a(t):
+        return -2*t
+
+    def b(t):
+        return (t + 2) * num_nodes - 2 * num_edges
+
+    def c(t):
+        return -num_nodes
+
+    t = max_degree - 1
+    m = (-b(t) + math.sqrt(b(t)**2 - 4*a(t)*c(t))) / (2 * a(t))
+
+    if m.is_integer():
+        return t
+
+    return max_degree - 2
+
+
 class TestRootedTile(unittest.TestCase):
 
     def test_C33_tiles(self):
@@ -174,12 +212,32 @@ class TestCanonicalChimeraLabeling(unittest.TestCase):
         assert len(bqm.quadratic) == len(C22.edges)
         assert len(bqm) == len(C22)
 
-        labels = canonical_chimera_labeling(bqm, t=3)
+        labels = canonical_chimera_labeling(bqm)
         labels = {v: alpha[coord.int(labels[v])] for v in labels}
 
         bqm2 = bqm.relabel_variables(labels, inplace=False)
 
         self.assertEqual(bqm, bqm2)
+
+    def test__shore_size_tiles(self):
+        for t in range(1, 8):
+            G = dnx.chimera_graph(1, 1, t)
+            self.assertEqual(_chimera_shore_size(G.adj, len(G.edges)), t)
+
+    def test__shore_size_columns(self):
+        # 2, 1, 1 is the same as 1, 1, 2
+        for m in range(2, 11):
+            for t in range(9, 1, -1):
+                G = dnx.chimera_graph(m, 1, t)
+                self.assertEqual(_chimera_shore_size(G.adj, len(G.edges)), t)
+
+    def test__shore_size_rectangles(self):
+        # 2, 1, 1 is the same as 1, 1, 2
+        for m in range(2, 7):
+            for n in range(2, 7):
+                for t in range(1, 6):
+                    G = dnx.chimera_graph(m, n, t)
+                    self.assertEqual(_chimera_shore_size(G.adj, len(G.edges)), t)
 
 
 if __name__ == '__main__':
