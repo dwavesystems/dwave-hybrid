@@ -8,12 +8,6 @@ import dimod
 from dnx import canonical_chimera_labeling
 
 
-def bqm_variables(bqm):
-    """Returns all BQM variables.
-    To be replaced with BQM.variables in new dimod."""
-    return six.viewkeys(bqm.linear)
-
-
 def bqm_reduced_to(bqm, variables, state, keep_offset=True):
     """Return a sub-BQM, which is ``bqm`` reduced to ``variables``, by fixing
     all non sub-BQM variables.
@@ -23,7 +17,7 @@ def bqm_reduced_to(bqm, variables, state, keep_offset=True):
     """
 
     # fix complement of ``variables```
-    fixed = bqm_variables(bqm).difference(variables)
+    fixed = set(bqm.variables).difference(variables)
     subbqm = bqm.copy()
     for v in fixed:
         subbqm.fix_variable(v, state[v])
