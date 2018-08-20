@@ -25,7 +25,8 @@ class EnergyImpactDecomposer(Runnable):
         variables = select_localsearch_adversaries(
             self.bqm, state.sample.values, self.max_size, min_gain=self.min_gain)
         subbqm = bqm_induced_by(self.bqm, variables, state.sample.values)
-        return state.updated(ctx=dict(subproblem=subbqm))
+        return state.updated(ctx=dict(subproblem=subbqm),
+                             debug=dict(decomposer=self.__class__.__name__))
 
 
 class RandomSubproblemDecomposer(Runnable):
@@ -41,7 +42,8 @@ class RandomSubproblemDecomposer(Runnable):
     def iterate(self, state):
         variables = select_random_subgraph(self.bqm, self.size)
         subbqm = bqm_induced_by(self.bqm, variables, state.sample.values)
-        return state.updated(ctx=dict(subproblem=subbqm))
+        return state.updated(ctx=dict(subproblem=subbqm),
+                             debug=dict(decomposer=self.__class__.__name__))
 
 
 class IdentityDecomposer(Runnable):
@@ -52,7 +54,8 @@ class IdentityDecomposer(Runnable):
 
     @tictoc('identity_decompose')
     def iterate(self, state):
-        return state.updated(ctx=dict(subproblem=self.bqm))
+        return state.updated(ctx=dict(subproblem=self.bqm),
+                             debug=dict(decomposer=self.__class__.__name__))
 
 
 class TilingChimeraDecomposer(Runnable):
@@ -72,4 +75,5 @@ class TilingChimeraDecomposer(Runnable):
         pos, embedding = next(self.blocks)
         variables = embedding.keys()
         subbqm = bqm_induced_by(self.bqm, variables, state.sample.values)
-        return state.updated(ctx=dict(subproblem=subbqm, embedding=embedding))
+        return state.updated(ctx=dict(subproblem=subbqm, embedding=embedding),
+                             debug=dict(decomposer=self.__class__.__name__))
