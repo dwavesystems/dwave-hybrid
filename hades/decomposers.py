@@ -15,15 +15,29 @@ class EnergyImpactDecomposer(Runnable):
     returned.
     """
 
-    def __init__(self, bqm, max_size, min_gain=0.0):
+    def __init__(self, bqm, max_size, min_gain=0.0, stride=1):
         self.bqm = bqm
         self.max_size = max_size
         self.min_gain = min_gain
+        self.stride = stride
+
+        # variables from previous iteration
+        self._prev_vars = set()
 
     @tictoc('energy_impact_decompose')
     def iterate(self, state):
+        # select new subset of max_size variables, making sure they differ from
+        # previous iteration (on collision, move one stride right)
         variables = select_localsearch_adversaries(
-            self.bqm, state.sample.values, self.max_size, min_gain=self.min_gain)
+            self.bqm, state.sample.values, min_gain=self.min_gain)
+        candidate_vars = set(variables[:self.max_size])
+        if candidate_vars == self._prev_vars:
+            variables = set(variables[self.stride:][:self.max_size])
+        else:
+            variables = candidate_vars
+        self._prev_vars = variables
+
+        # induce sub-bqm based on selected variables and global sample
         subbqm = bqm_induced_by(self.bqm, variables, state.sample.values)
         return state.updated(ctx=dict(subproblem=subbqm),
                              debug=dict(decomposer=self.__class__.__name__))
