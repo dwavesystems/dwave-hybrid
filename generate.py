@@ -43,4 +43,4 @@ if __name__ == "__main__":
         path = os.path.join(outdir, '{}.{:0>2}.qubo'.format(len(bqm), k))
 
         with open(path, 'w') as fp:
-            bqm.to_coo(fp)
+            bqm.to_coo(fp, vartype_header=True)
