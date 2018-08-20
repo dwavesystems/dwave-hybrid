@@ -1,4 +1,5 @@
 from collections import namedtuple
+from itertools import chain
 
 
 # TODO: abstract as singleton executor under hades namespace
@@ -91,12 +92,27 @@ class Runnable(object):
 
 
 class Branch(Runnable):
-    def __init__(self, components, *args, **kwargs):
+    def __init__(self, components=(), *args, **kwargs):
+        """Sequentially executed components.
+
+        `components` is an iterable of `Runnable`s.
+        """
         super(Branch, self).__init__(*args, **kwargs)
-        self._components = components
+        self.components = tuple(components)
+
+    def __or__(self, other):
+        """Composition of Branch with runnable components (L-to-R) returns a new
+        runnable Branch.
+        """
+        if isinstance(other, Branch):
+            return Branch(components=chain(self.components, other.components))
+        elif isinstance(other, Runnable):
+            return Branch(components=chain(self.components, (other,)))
+        else:
+            raise TypeError("branch can be composed only with Branch or Runnable")
 
     def iterate(self, state):
-        components = iter(self._components)
+        components = iter(self.components)
         state = next(components).iterate(state)
         for component in components:
             state = component.iterate(state)
