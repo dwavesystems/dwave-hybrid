@@ -3,7 +3,7 @@ import threading
 from collections import namedtuple
 
 from dwave.system.samplers import DWaveSampler
-from dwave.system.composites import EmbeddingComposite
+from dwave.system.composites import EmbeddingComposite, FixedEmbeddingComposite
 
 # TODO: pip-ify
 from tabu_sampler import TabuSampler
@@ -17,14 +17,29 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class QPUSubproblemSampler(Runnable):
+class QPUSubproblemExternalEmbeddingSampler(Runnable):
 
-    def __init__(self, bqm, num_reads=100):
-        self.bqm = bqm
+    def __init__(self, num_reads=100):
+        self.num_reads = num_reads
+        self.sampler = DWaveSampler()
+
+    @tictoc('qpu_ext_embedding_sample')
+    def iterate(self, state):
+        sampler = FixedEmbeddingComposite(self.sampler, embedding=state.ctx['embedding'])
+        response = sampler.sample(state.ctx['subproblem'], num_reads=self.num_reads)
+        best_response = next(response.data())
+        best_sample = sample_as_dict(best_response.sample)
+        return state.updated(ctx=dict(subsample=best_sample),
+                             debug=dict(source=self.__class__.__name__))
+
+
+class QPUSubproblemAutoEmbeddingSampler(Runnable):
+
+    def __init__(self, num_reads=100):
         self.num_reads = num_reads
         self.sampler = EmbeddingComposite(DWaveSampler())
 
-    @tictoc('qpu_sample')
+    @tictoc('qpu_auto_embedding_sample')
     def iterate(self, state):
         response = self.sampler.sample(state.ctx['subproblem'], num_reads=self.num_reads)
         best_response = next(response.data())
@@ -35,8 +50,7 @@ class QPUSubproblemSampler(Runnable):
 
 class SimulatedAnnealingSubproblemSampler(Runnable):
 
-    def __init__(self, bqm, num_reads=1, sweeps=1000):
-        self.bqm = bqm
+    def __init__(self, num_reads=1, sweeps=1000):
         self.num_reads = num_reads
         self.sweeps = sweeps
         self.sampler = SimulatedAnnealingSampler()
@@ -53,8 +67,7 @@ class SimulatedAnnealingSubproblemSampler(Runnable):
 
 class TabuSubproblemSampler(Runnable):
 
-    def __init__(self, bqm, num_reads=1, tenure=None, timeout=20):
-        self.bqm = bqm
+    def __init__(self, num_reads=1, tenure=None, timeout=20):
         self.num_reads = num_reads
         self.tenure = tenure
         self.timeout = timeout
