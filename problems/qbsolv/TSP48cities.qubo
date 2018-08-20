@@ -1,3 +1,5 @@
+# vartype: BINARY
+
 c  best target hit is qbsolv -i problem1.qubo -v1 -T-785519 -S256  /// taking over an hour 5/22/2017
 p qubo 0 2209 2209 201066
 0 0 -15530

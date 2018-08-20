@@ -1,3 +1,5 @@
+# vartype: BINARY
+
 p qubo 0 127 113 703
 0 0 12
 8 8 2

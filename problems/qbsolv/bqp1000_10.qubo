@@ -1,3 +1,5 @@
+# vartype: BINARY
+
 c 
 c qubo problem number 10 from beasley file bqp1000.txt
 c qubo  first line on Beasley problem 1000 49142
