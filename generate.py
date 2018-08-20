@@ -3,7 +3,7 @@ import os
 import random
 
 import dimod
-from dwave.system.samplers import DWaveSampler
+import dwave_networkx as dnx
 
 
 def generate_random_chimera_problem(adjacency, h_range, j_range, offset=0, vartype=dimod.BINARY):
@@ -36,10 +36,10 @@ if __name__ == "__main__":
     # generate 10 random chimera/QPU-structured problems with J's in +/-k
 
     outdir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'problems/random-chimera')
-    qpu = DWaveSampler()
+    adj = dnx.chimera_graph(32, 32, 4).adj
 
     for k in range(1, 11):
-        bqm = generate_random_chimera_problem(qpu.adjacency, (0, 0), (-k, k))
+        bqm = generate_random_chimera_problem(adj, (0, 0), (-k, k))
         path = os.path.join(outdir, '{}.{:0>2}.qubo'.format(len(bqm), k))
 
         with open(path, 'w') as fp:
