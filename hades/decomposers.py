@@ -1,3 +1,4 @@
+import logging
 from itertools import cycle
 
 from hades.core import Runnable, State
@@ -5,6 +6,9 @@ from hades.profiling import tictoc
 from hades.utils import (
     bqm_induced_by, select_localsearch_adversaries, select_random_subgraph,
     chimera_tiles)
+
+
+logger = logging.getLogger(__name__)
 
 
 class EnergyImpactDecomposer(Runnable):
@@ -15,10 +19,11 @@ class EnergyImpactDecomposer(Runnable):
     returned.
     """
 
-    def __init__(self, bqm, max_size, min_gain=0.0, stride=1):
+    def __init__(self, bqm, max_size, min_gain=0.0, min_diff=1, stride=1):
         self.bqm = bqm
         self.max_size = max_size
         self.min_gain = min_gain
+        self.min_diff = min_diff
         self.stride = stride
 
         # variables from previous iteration
@@ -26,19 +31,23 @@ class EnergyImpactDecomposer(Runnable):
 
     @tictoc('energy_impact_decompose')
     def iterate(self, state):
-        # select new subset of max_size variables, making sure they differ from
-        # previous iteration (on collision, move one stride right)
+        # select new subset of `max_size` variables, making sure they differ
+        # from previous iteration by at least `min_diff` variables
         variables = select_localsearch_adversaries(
             self.bqm, state.sample.values, min_gain=self.min_gain)
-        candidate_vars = set(variables[:self.max_size])
-        if candidate_vars == self._prev_vars:
-            variables = set(variables[self.stride:][:self.max_size])
-        else:
-            variables = candidate_vars
-        self._prev_vars = variables
+
+        offset = 0
+        next_vars = set(variables[offset : offset+self.max_size])
+        while len(next_vars ^ self._prev_vars) < self.min_diff:
+            offset += self.stride
+            next_vars = set(variables[offset : offset+self.max_size])
+
+        logger.debug("Select variables: %r (diff from prev = %r)",
+                     next_vars, next_vars ^ self._prev_vars)
+        self._prev_vars = next_vars
 
         # induce sub-bqm based on selected variables and global sample
-        subbqm = bqm_induced_by(self.bqm, variables, state.sample.values)
+        subbqm = bqm_induced_by(self.bqm, next_vars, state.sample.values)
         return state.updated(ctx=dict(subproblem=subbqm),
                              debug=dict(decomposer=self.__class__.__name__))
 
