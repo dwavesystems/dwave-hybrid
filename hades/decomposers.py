@@ -1,8 +1,10 @@
+from itertools import cycle
+
 from hades.core import Runnable, State
 from hades.profiling import tictoc
 from hades.utils import (
     bqm_induced_by, select_localsearch_adversaries, select_random_subgraph,
-    select_chimera_subgraph)
+    chimera_tiles)
 
 
 class EnergyImpactDecomposer(Runnable):
@@ -56,15 +58,18 @@ class IdentityDecomposer(Runnable):
 class TilingChimeraDecomposer(Runnable):
     """Returns sequential tile slices of the initial BQM."""
 
-    def __init__(self, bqm, size=(4,4)):
-        """Size C(n,m) defines the number of Chimera tiles to return per call."""
+    def __init__(self, bqm, size=(4,4,4), loop=True):
+        """Size C(n,m,t) defines a Chimera subgraph returned with each call."""
         self.bqm = bqm
         self.size = size
-        self.blocks = select_chimera_subgraph(self.bqm, self.size)
+        self.blocks = iter(chimera_tiles(self.bqm, *self.size).items())
+        if loop:
+            self.blocks = cycle(self.blocks)
 
     @tictoc('tiling_chimera_decompose')
     def iterate(self, state):
         """Each call returns a subsequent block of size `self.size` Chimera cells."""
-        variables = next(self.blocks)
+        pos, embedding = next(self.blocks)
+        variables = embedding.keys()
         subbqm = bqm_induced_by(self.bqm, variables, state.sample.values)
-        return state.updated(ctx=dict(subproblem=subbqm))
+        return state.updated(ctx=dict(subproblem=subbqm, embedding=embedding))
