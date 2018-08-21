@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import os
+import sys
 import random
 
 import click
@@ -36,13 +37,15 @@ def generate_random_chimera_problem(adjacency, h_range, j_range, offset=0, varty
 @click.command()
 @click.option('--size', type=(int, int, int), default=(16, 16, 4),
               help='Size of generated problems. For Chimera, use three-tuple.')
+@click.option('--vartype', type=click.Choice(['SPIN', 'BINARY']), default='SPIN',
+              help="Generated problems' type (Ising/QUBO).")
 @click.option('--count', type=int, default=10,
               help='Number of generated problems.')
 @click.option('--format', 'fmt', type=click.Choice(['coo', 'json']), default='coo',
               help='Output format.')
 @click.option('--outdir', type=click.Path(exists=True, file_okay=False), required=False,
               help='Output directory. Defaults to stdout.')
-def generate_chimera(size, count, fmt, outdir):
+def generate_chimera(size, vartype, count, fmt, outdir):
     """Generate `count` of random Chimera-structured problems
     with `size` topology, with zero biases and random J's in +/-k range
     (where k goes from 1 to `count`).
@@ -54,13 +57,15 @@ def generate_chimera(size, count, fmt, outdir):
         elif fmt == 'json':
             fp.write(bqm.to_json())
 
+    ext = {'SPIN': 'ising', 'BINARY': 'qubo'}
+
     adj = dnx.chimera_graph(*size).adj
 
     for k in range(1, count+1):
-        bqm = generate_random_chimera_problem(adj, (0, 0), (-k, k))
+        bqm = generate_random_chimera_problem(adj, (0, 0), (-k, k), vartype=vartype)
 
         if outdir:
-            path = os.path.join(outdir, '{}.{:0>2}.qubo'.format(len(bqm), k))
+            path = os.path.join(outdir, '{}.{:0>2}.{}'.format(len(bqm), k, ext[vartype]))
             with open(path, 'w') as fp:
                 store(bqm, fp)
         else:
