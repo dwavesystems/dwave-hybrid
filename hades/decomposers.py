@@ -20,6 +20,11 @@ class EnergyImpactDecomposer(Runnable):
     """
 
     def __init__(self, bqm, max_size, min_gain=0.0, min_diff=1, stride=1):
+        if max_size > len(bqm):
+            raise ValueError("subproblem size cannot be greater than the problem size")
+        if min_diff > max_size or min_diff < 0:
+            raise ValueError("min_diff must be nonnegative and less than max_size")
+
         self.bqm = bqm
         self.max_size = max_size
         self.min_gain = min_gain
@@ -58,6 +63,9 @@ class RandomSubproblemDecomposer(Runnable):
     """
 
     def __init__(self, bqm, size):
+        if size > len(bqm):
+            raise ValueError("subproblem size cannot be greater than the problem size")
+
         self.bqm = bqm
         self.size = size
 
