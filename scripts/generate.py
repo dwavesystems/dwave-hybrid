@@ -35,7 +35,7 @@ def generate_random_chimera_problem(adjacency, h_range, j_range, offset=0, varty
 if __name__ == "__main__":
     # generate 10 random chimera/QPU-structured problems with J's in +/-k
 
-    outdir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'problems/random-chimera')
+    outdir = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.path.pardir, 'problems/random-chimera')
     adj = dnx.chimera_graph(32, 32, 4).adj
 
     for k in range(1, 11):
