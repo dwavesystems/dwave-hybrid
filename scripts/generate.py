@@ -2,6 +2,7 @@
 import os
 import random
 
+import click
 import dimod
 import dwave_networkx as dnx
 
@@ -32,15 +33,39 @@ def generate_random_chimera_problem(adjacency, h_range, j_range, offset=0, varty
     return dimod.BinaryQuadraticModel(h, J, offset, vartype)
 
 
-if __name__ == "__main__":
-    # generate 10 random chimera/QPU-structured problems with J's in +/-k
+@click.command()
+@click.option('--size', type=(int, int, int), default=(16, 16, 4),
+              help='Size of generated problems. For Chimera, use three-tuple.')
+@click.option('--count', type=int, default=10,
+              help='Number of generated problems.')
+@click.option('--format', 'fmt', type=click.Choice(['coo', 'json']), default='coo',
+              help='Output format.')
+@click.option('--outdir', type=click.Path(exists=True, file_okay=False), required=False,
+              help='Output directory. Defaults to stdout.')
+def generate_chimera(size, count, fmt, outdir):
+    """Generate `count` of random Chimera-structured problems
+    with `size` topology, with zero biases and random J's in +/-k range
+    (where k goes from 1 to `count`).
+    """
 
-    outdir = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.path.pardir, 'problems/random-chimera')
-    adj = dnx.chimera_graph(32, 32, 4).adj
+    def store(bqm, fp):
+        if fmt == 'coo':
+            fp.write(bqm.to_coo(vartype_header=True))
+        elif fmt == 'json':
+            fp.write(bqm.to_json())
 
-    for k in range(1, 11):
+    adj = dnx.chimera_graph(*size).adj
+
+    for k in range(1, count+1):
         bqm = generate_random_chimera_problem(adj, (0, 0), (-k, k))
-        path = os.path.join(outdir, '{}.{:0>2}.qubo'.format(len(bqm), k))
 
-        with open(path, 'w') as fp:
-            bqm.to_coo(fp, vartype_header=True)
+        if outdir:
+            path = os.path.join(outdir, '{}.{:0>2}.qubo'.format(len(bqm), k))
+            with open(path, 'w') as fp:
+                store(bqm, fp)
+        else:
+            store(bqm, sys.stdout)
+
+
+if __name__ == '__main__':
+    generate_chimera()
