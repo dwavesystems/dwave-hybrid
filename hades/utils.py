@@ -85,20 +85,28 @@ def bqm_edges_between_variables(bqm, variables):
 
 
 def flip_energy_gains_naive(bqm, sample):
-    """Returns `list[(energy_gain, flip_index)]` in descending order
+    """Return `list[(energy_gain, flip_index)]` in descending order
     for flipping qubit with flip_index in sample.
 
     Note: Grossly inefficient! Use `flip_energy_gains_iterative` which traverses
-    bits, updating energy delta based on previous bit and neighbors.
+    variables, updating energy delta based on previous var value and neighbors.
     """
+
+    if bqm.vartype is dimod.BINARY:
+        flip = lambda val: 1 - val
+    elif bqm.vartype is dimod.SPIN:
+        flip = lambda val: -val
+    else:
+        raise ValueError("vartype not supported")
+
     base = bqm.energy(sample)
-    energy_gains = [(bqm.energy(sample[:i] + [1 - bit] + sample[i+1:]) - base, i) for i, bit in enumerate(sample)]
+    energy_gains = [(bqm.energy(sample[:i] + [flip(val)] + sample[i+1:]) - base, i) for i, val in enumerate(sample)]
     energy_gains.sort(reverse=True)
     return energy_gains
 
 
 def flip_energy_gains_iterative(bqm, sample):
-    """Returns `list[(energy_gain, flip_index)]` in descending order
+    """Return `list[(energy_gain, flip_index)]` in descending order
     for flipping qubit with flip_index in sample.
 
     Args:
@@ -106,7 +114,7 @@ def flip_energy_gains_iterative(bqm, sample):
             BQM of type dimod.BINARY
 
         sample (list):
-            Perturbation base (as 0/1 binary values)
+            Perturbation base (0/1 values for QUBO and -1/+1 for Ising model)
 
     Note:
         Comparison with the naive approach (bqm size ~ 2k, random sample)::
@@ -121,16 +129,23 @@ def flip_energy_gains_iterative(bqm, sample):
 
         Subnote: using list comprehension speeds-up the iterative approach by
         only 2%, so we're using the standard loop (a lot more readable).
-
-    TODO: generalize to support all dimod vartypes (add SPIN).
     """
-    energy_gains = []
-    for idx, val in enumerate(sample):
+
+    if bqm.vartype is dimod.BINARY:
         # val is 0, flips to 1 => delta +1
         # val is 1, flips to 0 => delta -1
-        delta = 1 - 2 * val
+        delta = lambda val: 1 - 2 * val
+    elif bqm.vartype is dimod.SPIN:
+        # val is -1, flips to +1 => delta +2
+        # val is +1, flips to -1 => delta -2
+        delta = lambda val: -2 * val
+    else:
+        raise ValueError("vartype not supported")
+
+    energy_gains = []
+    for idx, val in enumerate(sample):
         contrib = bqm.linear[idx] + sum(w * sample[neigh] for neigh, w in bqm.adj[idx].items())
-        energy_gains.append((contrib * delta, idx))
+        energy_gains.append((contrib * delta(val), idx))
 
     energy_gains.sort(reverse=True)
     return energy_gains
