@@ -249,7 +249,22 @@ def sample_as_dict(sample):
     return dict(sample)
 
 
-def random_sample(size, vartype):
+def random_sample_seq(size, vartype):
     """Return random sample of `size` in length, with values from `vartype`."""
     values = list(vartype.value)
     return {i: random.choice(values) for i in range(size)}
+
+
+def random_sample(bqm):
+    values = list(bqm.vartype.value)
+    return {i: random.choice(values) for i in bqm.variables}
+
+
+def min_sample(bqm):
+    value = min(bqm.vartype.value)
+    return {i: value for i in bqm.variables}
+
+
+def max_sample(bqm):
+    value = max(bqm.vartype.value)
+    return {i: value for i in bqm.variables}

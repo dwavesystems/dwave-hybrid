@@ -18,10 +18,11 @@ from hades.decomposers import (
 from hades.composers import SplatComposer
 from hades.core import State, SampleSet
 from hades.profiling import tictoc
+from hades.utils import min_sample, max_sample, random_sample
 
 
-problem = 'problems/random-chimera/2048.01.qubo'
-#problem = 'problems/random-chimera/8192.01.qubo'
+#problem = 'problems/random-chimera/2048.01.qubo'
+problem = 'problems/random-chimera/8192.01.qubo'
 #problem = 'problems/qbsolv/bqp1000_1.qubo'
 #problem = 'problems/ac3/ac3_00.txt'
 with open(problem) as fp:
@@ -35,16 +36,16 @@ samplers = [
     #RandomSubproblemDecomposer(bqm, size=100) | TabuSubproblemSampler(num_reads=1, timeout=500) | SplatComposer(bqm),
     RandomSubproblemDecomposer(bqm, size=100) | QPUSubproblemAutoEmbeddingSampler(num_reads=200) | SplatComposer(bqm),
     EnergyImpactDecomposer(bqm, max_size=50, min_diff=50) | QPUSubproblemAutoEmbeddingSampler(num_reads=200) | SplatComposer(bqm),
-    #TilingChimeraDecomposer(bqm, size=(16,16,4)) | QPUSubproblemExternalEmbeddingSampler(num_reads=100) | SplatComposer(bqm),
-    #EnergyImpactDecomposer(bqm, max_size=100, min_diff=50) | SimulatedAnnealingSubproblemSampler(num_reads=1, sweeps=1000) | SplatComposer(bqm),
+    TilingChimeraDecomposer(bqm, size=(16,16,4)) | QPUSubproblemExternalEmbeddingSampler(num_reads=100) | SplatComposer(bqm),
+    EnergyImpactDecomposer(bqm, max_size=100, min_diff=50) | SimulatedAnnealingSubproblemSampler(num_reads=1, sweeps=1000) | SplatComposer(bqm),
 ]
 
 
 max_iter = 10
 tries = 3
-_sample = [1] * (max(bqm.linear.keys()) + 1)
+_sample = random_sample(bqm)
 state = State(
-    SampleSet.from_sample(_sample, vartype=dimod.SPIN, energy=bqm.energy(_sample)))
+    SampleSet.from_sample(_sample, vartype=bqm.vartype, energy=bqm.energy(_sample)))
 
 last = state
 cnt = tries
