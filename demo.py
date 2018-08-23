@@ -51,7 +51,7 @@ state = State(
 last = state
 cnt = tries
 for iterno in range(max_iter):
-    branches = [sampler.run(state.replaced(ctx={}, debug={})) for sampler in samplers]
+    branches = [sampler.run(state.updated(ctx=None, debug=None)) for sampler in samplers]
 
     states = [state]
     for f in concurrent.futures.as_completed(branches):

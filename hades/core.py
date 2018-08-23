@@ -6,16 +6,24 @@ from copy import deepcopy
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 executor = ThreadPoolExecutor(max_workers=4)
 
+from plucky import merge
 import dimod
 
 
 class SampleSet(dimod.Response):
+
+    def __eq__(self, other):
+        # TODO: merge into dimod.Response
+        return (self.vartype == other.vartype and self.info == other.info
+            and self.variable_labels == other.variable_labels
+            and self.record == other.record)
 
     @property
     def first(self):
         """Return the `Sample(sample={...}, energy, num_occurrences)` with
         lowest energy.
         """
+        # TODO: merge into dimod.Response
         return next(self.data(sorted_by='energy', name='Sample'))
 
     @classmethod
@@ -49,25 +57,7 @@ class State(_State):
         return _State.__new__(_cls, samples, ctx, debug)
 
     def updated(self, **kwargs):
-        """Return updated state. `sample` should be of type `Sample`, and
-        `ctx`/`debug` dictionaries with items to add/update in state's
-        `ctx`/`debug`.
-        """
-        samples = kwargs.pop('samples', deepcopy(self.samples))
-        ctx = deepcopy(self.ctx)
-        ctx.update(kwargs.pop('ctx', {}))
-        debug = deepcopy(self.debug)
-        debug.update(kwargs.pop('debug', {}))
-        return State(samples, ctx, debug)
-
-    def replaced(self, **kwargs):
-        """Return updated state. Fields are replaced, instead of updated like in
-        `.updated`.
-        """
-        samples = kwargs.pop('samples', self.samples)
-        ctx = kwargs.pop('ctx', self.ctx)
-        debug = kwargs.pop('debug', self.debug)
-        return State(samples, ctx, debug)
+        return State(**merge(self._asdict(), kwargs, op=lambda a, b: b))
 
     def copy(self):
         return deepcopy(self)
