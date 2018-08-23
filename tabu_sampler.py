@@ -5,6 +5,9 @@ from dimod.core.sampler import Sampler
 from dimod.response import Response
 from dimod.vartypes import Vartype
 
+# TODO: re-implement/copy when extracted to dwave-tabu
+from hades.utils import sample_as_list, random_sample
+
 
 class TabuSampler(Sampler):
     """A dimod sampler wrapper for the Tabu solver.
@@ -37,9 +40,9 @@ class TabuSampler(Sampler):
         Args:
             bqm (:obj:`~dimod.BinaryQuadraticModel`):
                 Binary quadratic model to be sampled from.
-            init_solution (list, optional):
-                List of 0/1 values, which defines the initial state of each variable.
-                Defaults to random sample.
+            init_solution (:obj:`~dimod.Response`, optional):
+                Sample set of one which defines the initial state of each variable.
+                Defaults to a random sample.
             tenure (int, optional):
                 Tabu tenure. Defaults to: min(20, num_vars / 4).
             scale_factor (number, optional):
@@ -68,8 +71,18 @@ class TabuSampler(Sampler):
         """
 
         # input checking and defaults calculation
-        if init_solution is not None and len(init_solution) != len(bqm):
-            raise ValueError("'init_solution' dimension different from BQM")
+        # TODO: one "read" per sample in init_solution sampleset
+        if init_solution is not None:
+            if not isinstance(init_solution, Response):
+                raise TypeError("'init_solution' should be a 'dimod.Response' instance")
+            if len(init_solution.record) < 1:
+                raise ValueError("'init_solution' should contain at least one sample")
+            if len(init_solution.record[0].sample) != len(bqm):
+                raise ValueError("'init_solution' sample dimension different from BQM")
+            init_sample = sample_as_list(
+                init_solution.change_vartype(Vartype.BINARY, inplace=False).record[0].sample)
+        else:
+            init_sample = None
 
         if tenure is None:
             tenure = int(max(min(20, len(bqm) / 4), 1))
@@ -89,10 +102,8 @@ class TabuSampler(Sampler):
         samples = []
         energies = []
         for _ in range(num_reads):
-            if init_solution is None:
-                init_sample = [random.randint(0, 1) for _ in range(len(bqm))]
-            else:
-                init_sample = init_solution
+            if init_sample is None:
+                init_sample = sample_as_list(random_sample(len(bqm), Vartype.BINARY))
             r = tabu_solver.TabuSearch(qubo, init_sample, tenure, scale_factor, timeout)
             sample = self._tabu_sample_to_bqm_sample(list(r.bestSolution()), bqm.binary)
             energy = bqm.binary.energy(sample)

@@ -1,4 +1,4 @@
-from hades.core import Runnable, State, Sample
+from hades.core import Runnable, SampleSet
 from hades.profiling import tictoc
 from hades.utils import updated_sample
 
@@ -18,7 +18,12 @@ class SplatComposer(Runnable):
 
     @tictoc('splat_compose')
     def iterate(self, state):
-        composed_sample = updated_sample(state.sample.values, state.ctx['subsample'])
-        composed_energy = self.bqm.energy(composed_sample)
-        return state.updated(sample=Sample(composed_sample, composed_energy),
-                             debug=dict(composer=self.__class__.__name__))
+        # update the first sample in `state.sampleset`, inplace
+        # XXX: assume one global sample, one subsample
+        # TODO: generalize
+        record = state.samples.change_vartype(state.ctx['subsamples'].vartype).record[0]
+        sample = updated_sample(record.sample, state.ctx['subsamples'].record[0].sample)
+        energy = self.bqm.energy(sample)
+        return state.updated(
+            samples=SampleSet.from_sample(sample, state.samples.vartype, energy),
+            debug=dict(composer=self.__class__.__name__))

@@ -9,9 +9,8 @@ from dwave.system.composites import EmbeddingComposite, FixedEmbeddingComposite
 from tabu_sampler import TabuSampler
 from neal import SimulatedAnnealingSampler
 
-from hades.core import executor, Runnable, State, Sample
+from hades.core import executor, Runnable, SampleSet
 from hades.profiling import tictoc
-from hades.utils import sample_as_list, sample_as_dict
 
 import logging
 logger = logging.getLogger(__name__)
@@ -27,9 +26,7 @@ class QPUSubproblemExternalEmbeddingSampler(Runnable):
     def iterate(self, state):
         sampler = FixedEmbeddingComposite(self.sampler, embedding=state.ctx['embedding'])
         response = sampler.sample(state.ctx['subproblem'], num_reads=self.num_reads)
-        best_response = next(response.data())
-        best_sample = sample_as_dict(best_response.sample)
-        return state.updated(ctx=dict(subsample=best_sample),
+        return state.updated(ctx=dict(subsamples=response),
                              debug=dict(sampler=self.__class__.__name__))
 
 
@@ -42,9 +39,7 @@ class QPUSubproblemAutoEmbeddingSampler(Runnable):
     @tictoc('qpu_auto_embedding_sample')
     def iterate(self, state):
         response = self.sampler.sample(state.ctx['subproblem'], num_reads=self.num_reads)
-        best_response = next(response.data())
-        best_sample = sample_as_dict(best_response.sample)
-        return state.updated(ctx=dict(subsample=best_sample),
+        return state.updated(ctx=dict(subsamples=response),
                              debug=dict(sampler=self.__class__.__name__))
 
 
@@ -60,8 +55,7 @@ class SimulatedAnnealingSubproblemSampler(Runnable):
         subbqm = state.ctx['subproblem']
         response = self.sampler.sample(
             subbqm, num_reads=self.num_reads, sweeps=self.sweeps)
-        best_subsample = sample_as_dict(next(response.samples()))
-        return state.updated(ctx=dict(subsample=best_subsample),
+        return state.updated(ctx=dict(subsamples=response),
                              debug=dict(sampler=self.__class__.__name__))
 
 
@@ -78,8 +72,7 @@ class TabuSubproblemSampler(Runnable):
         subbqm = state.ctx['subproblem']
         response = self.sampler.sample(
             subbqm, tenure=self.tenure, timeout=self.timeout, num_reads=self.num_reads)
-        best_subsample = sample_as_dict(next(response.samples()))
-        return state.updated(ctx=dict(subsample=best_subsample),
+        return state.updated(ctx=dict(subsamples=response),
                              debug=dict(sampler=self.__class__.__name__))
 
 
@@ -94,14 +87,10 @@ class TabuProblemSampler(Runnable):
 
     @tictoc('tabu_sample')
     def iterate(self, state):
-        sample = state.sample.values
         response = self.sampler.sample(
-            self.bqm, init_solution=sample_as_list(sample), tenure=self.tenure,
+            self.bqm, init_solution=state.samples, tenure=self.tenure,
             timeout=self.timeout, num_reads=self.num_reads)
-        response_datum = next(response.data())
-        best_sample = sample_as_dict(response_datum.sample)
-        best_energy = response_datum.energy
-        return state.updated(sample=Sample(best_sample, best_energy),
+        return state.updated(samples=SampleSet.from_response(response),
                              debug=dict(sampler=self.__class__.__name__))
 
 

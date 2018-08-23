@@ -1,51 +1,67 @@
 from collections import namedtuple
 from itertools import chain
-
+from copy import deepcopy
 
 # TODO: abstract as singleton executor under hades namespace
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 executor = ThreadPoolExecutor(max_workers=4)
 
-
-_Sample = namedtuple('_Sample', 'values energy')
-
-class Sample(_Sample):
-    """Sample namedtuple that includes optional energy, in addition to
-    values mapping (bqm variable -> value)."""
-
-    def __new__(_cls, values, energy=None):
-        return _Sample.__new__(_cls, values, energy)
+import dimod
 
 
-# TODO: replace `sample` with population of `Sample`s
-_State = namedtuple('State', 'sample ctx debug')
+class SampleSet(dimod.Response):
+
+    @property
+    def first(self):
+        """Return the `Sample(sample={...}, energy, num_occurrences)` with
+        lowest energy.
+        """
+        return next(self.data(sorted_by='energy', name='Sample'))
+
+    @classmethod
+    def from_sample(cls, sample, vartype, energy=None, num_occurrences=1):
+        return cls.from_samples(
+            samples_like=[sample],
+            vectors={'energy': [energy], 'num_occurrences': [num_occurrences]},
+            info={}, vartype=vartype)
+
+    @classmethod
+    def from_response(cls, response):
+        return cls.from_future(response, result_hook=lambda x: x)
+
+
+_State = namedtuple('State', 'samples ctx debug')
 
 class State(_State):
     """Computation state passed along a branch between connected components.
     The structure is fixed, but fields are mutable. Components can store
     context into `ctx` and debugging/tracing info into `debug`.
 
-    NB: Identical to _State namedtuple, with added default values/kwargs.
+    NB: Based on _State namedtuple, with added default values/kwargs.
     """
 
-    def __new__(_cls, sample=None, ctx=None, debug=None):
-        """`sample` is Sample, `ctx` and `debug` are `dict`."""
+    def __new__(_cls, samples=None, ctx=None, debug=None):
+        """`samples` is SampleSet, `ctx` and `debug` are `dict`."""
         if ctx is None:
             ctx = {}
         if debug is None:
             debug = {}
-        return _State.__new__(_cls, sample, ctx, debug)
+        return _State.__new__(_cls, samples, ctx, debug)
 
     def updated(self, **kwargs):
-        """Returns updated state. `sample` should be of type `Sample`, and
+        """Return updated state. `sample` should be of type `Sample`, and
         `ctx`/`debug` dictionaries with items to add/update in state's
-        `ctx`/`debug`."""
-        sample = kwargs.pop('sample', self.sample)
+        `ctx`/`debug`.
+        """
+        samples = kwargs.pop('samples', self.samples)
         ctx = self.ctx.copy()
         ctx.update(kwargs.pop('ctx', {}))
         debug = self.debug.copy()
         debug.update(kwargs.pop('debug', {}))
-        return State(sample, ctx, debug)
+        return State(samples, ctx, debug)
+
+    def copy(self):
+        return deepcopy(self)
 
 
 class Present(object):
@@ -66,17 +82,18 @@ class Present(object):
 
 class Runnable(object):
     """Runnable component can be run for one iteration at a time. Iteration
-    might be stopped, but implementing stop support is not required."""
+    might be stopped, but implementing stop support is not required.
+    """
 
     def __init__(self, *args, **kwargs):
         super(Runnable, self).__init__(*args, **kwargs)
 
     def iterate(self, state):
-        """Accepts a state and returns a new state."""
+        """Accept a state and return a new state."""
         raise NotImplementedError
 
     def run(self, state):
-        """Accepts a state in future and returns a new state in future."""
+        """Accept a state in future and return a new state in future."""
         try:
             state = state.result()
         except:
@@ -87,7 +104,7 @@ class Runnable(object):
         pass
 
     def __or__(self, other):
-        """Composition of runnable components (L-to-R) returns a new Runnable."""
+        """Composition of runnable components (L-to-R) returns a new runnable Branch."""
         return Branch(components=(self, other))
 
 

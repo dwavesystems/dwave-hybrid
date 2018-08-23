@@ -36,10 +36,11 @@ class EnergyImpactDecomposer(Runnable):
 
     @tictoc('energy_impact_decompose')
     def iterate(self, state):
-        # select new subset of `max_size` variables, making sure they differ
+        # select a new subset of `max_size` variables, making sure they differ
         # from previous iteration by at least `min_diff` variables
+        sample = state.samples.change_vartype(self.bqm.vartype).first.sample
         variables = select_localsearch_adversaries(
-            self.bqm, state.sample.values, min_gain=self.min_gain)
+            self.bqm, sample, min_gain=self.min_gain)
 
         offset = 0
         next_vars = set(variables[offset : offset+self.max_size])
@@ -52,7 +53,7 @@ class EnergyImpactDecomposer(Runnable):
         self._prev_vars = next_vars
 
         # induce sub-bqm based on selected variables and global sample
-        subbqm = bqm_induced_by(self.bqm, next_vars, state.sample.values)
+        subbqm = bqm_induced_by(self.bqm, next_vars, sample)
         return state.updated(ctx=dict(subproblem=subbqm),
                              debug=dict(decomposer=self.__class__.__name__))
 
@@ -72,7 +73,8 @@ class RandomSubproblemDecomposer(Runnable):
     @tictoc('random_decompose')
     def iterate(self, state):
         variables = select_random_subgraph(self.bqm, self.size)
-        subbqm = bqm_induced_by(self.bqm, variables, state.sample.values)
+        sample = state.samples.change_vartype(self.bqm.vartype).first.sample
+        subbqm = bqm_induced_by(self.bqm, variables, sample)
         return state.updated(ctx=dict(subproblem=subbqm),
                              debug=dict(decomposer=self.__class__.__name__))
 
@@ -105,6 +107,7 @@ class TilingChimeraDecomposer(Runnable):
         """Each call returns a subsequent block of size `self.size` Chimera cells."""
         pos, embedding = next(self.blocks)
         variables = embedding.keys()
-        subbqm = bqm_induced_by(self.bqm, variables, state.sample.values)
+        sample = state.samples.change_vartype(self.bqm.vartype).first.sample
+        subbqm = bqm_induced_by(self.bqm, variables, sample)
         return state.updated(ctx=dict(subproblem=subbqm, embedding=embedding),
                              debug=dict(decomposer=self.__class__.__name__))

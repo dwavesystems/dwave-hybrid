@@ -9,51 +9,67 @@ from operator import attrgetter
 
 import dimod
 from hades.samplers import (
-    QPUSubproblemSampler, TabuSubproblemSampler,
-    TabuProblemSampler, InterruptableTabuSampler)
-from hades.decomposers import RandomSubproblemDecomposer
+    QPUSubproblemExternalEmbeddingSampler, QPUSubproblemAutoEmbeddingSampler,
+    SimulatedAnnealingSubproblemSampler,
+    TabuSubproblemSampler, TabuProblemSampler, InterruptableTabuSampler)
+from hades.decomposers import (
+    RandomSubproblemDecomposer, IdentityDecomposer,
+    TilingChimeraDecomposer, EnergyImpactDecomposer)
 from hades.composers import SplatComposer
-from hades.core import State, Sample
+from hades.core import State, SampleSet
+from hades.profiling import tictoc
 
 
 problem = 'problems/random-chimera/2048.01.qubo'
+#problem = 'problems/random-chimera/8192.01.qubo'
+#problem = 'problems/qbsolv/bqp1000_1.qubo'
+#problem = 'problems/ac3/ac3_00.txt'
 with open(problem) as fp:
-    bqm = dimod.BinaryQuadraticModel.from_coo(fp, dimod.BINARY)
+    bqm = dimod.BinaryQuadraticModel.from_coo(fp)
 
 
 samplers = [
     InterruptableTabuSampler(bqm),
-    #TabuProblemSampler(bqm, timeout=1),
-    #RandomSubproblemDecomposer(bqm, size=400) | TabuSubproblemSampler(bqm, num_reads=1, timeout=500) | SplatComposer(bqm),
-    RandomSubproblemDecomposer(bqm, size=400) | QPUSubproblemSampler(bqm, num_reads=200) | SplatComposer(bqm)
+    #TabuProblemSampler(bqm, timeout=100),
+    #IdentityDecomposer(bqm) | SimulatedAnnealingSubproblemSampler(num_reads=1, sweeps=1000) | SplatComposer(bqm),
+    #RandomSubproblemDecomposer(bqm, size=100) | TabuSubproblemSampler(num_reads=1, timeout=500) | SplatComposer(bqm),
+    RandomSubproblemDecomposer(bqm, size=100) | QPUSubproblemAutoEmbeddingSampler(num_reads=200) | SplatComposer(bqm),
+    EnergyImpactDecomposer(bqm, max_size=50, min_diff=50) | QPUSubproblemAutoEmbeddingSampler(num_reads=200) | SplatComposer(bqm),
+    #TilingChimeraDecomposer(bqm, size=(16,16,4)) | QPUSubproblemExternalEmbeddingSampler(num_reads=100) | SplatComposer(bqm),
+    #EnergyImpactDecomposer(bqm, max_size=100, min_diff=50) | SimulatedAnnealingSubproblemSampler(num_reads=1, sweeps=1000) | SplatComposer(bqm),
 ]
 
 
 max_iter = 10
-best = State(Sample([0] * (max(bqm.linear.keys()) + 1)))
+tries = 3
+_sample = [1] * (max(bqm.linear.keys()) + 1)
+state = State(
+    SampleSet.from_sample(_sample, vartype=dimod.SPIN, energy=bqm.energy(_sample)))
 
-last = State(Sample({}, energy=1e100))
-cnt = 10
+last = state
+cnt = tries
 for iterno in range(max_iter):
-    branches = [sampler.run(best) for sampler in samplers]
+    branches = [sampler.run(state.copy()) for sampler in samplers]
 
-    solutions = []
+    states = [state]
     for f in concurrent.futures.as_completed(branches):
         # as soon as one is done, stop all others
         for s in samplers:
             s.stop()
-        solutions.append(f.result())
+        states.append(f.result())
 
-    best = min(solutions, key=attrgetter('sample.energy'))
+    state = min(states, key=attrgetter('samples.first.energy'))
 
     # debug info
-    print("iterno={}, solutions:".format(iterno))
-    for s in solutions:
-        print("- energy={s.sample.energy}, debug={s.debug!r}".format(s=s))
-    print("\nBEST: energy={s.sample.energy}, debug={s.debug!r}\n".format(s=best))
+    print("iterno={}, states:".format(iterno))
+    for s in states:
+        print("- energy={s.samples.first.energy}, debug={s.debug!r}".format(s=s))
+    print("\nBEST: energy={s.samples.first.energy}, debug={s.debug!r}\n".format(s=state))
 
-    if best.sample.energy >= last.sample.energy:
+    if state.samples.first.energy == last.samples.first.energy:
         cnt -= 1
+    else:
+        cnt = tries
     if cnt <= 0:
         break
-    last = best
+    last = state
