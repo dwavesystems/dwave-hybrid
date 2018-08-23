@@ -4,9 +4,6 @@ Kerberos prototype: runs N samplers in parallel.
 Some samplers might me interruptable.
 """
 
-import concurrent.futures
-from operator import attrgetter
-
 import dimod
 from hades.samplers import (
     QPUSubproblemExternalEmbeddingSampler, QPUSubproblemAutoEmbeddingSampler,
@@ -17,6 +14,7 @@ from hades.decomposers import (
     TilingChimeraDecomposer, EnergyImpactDecomposer)
 from hades.composers import SplatComposer
 from hades.core import State, SampleSet
+from hades.flow import RacingBranches, ArgMinFold
 from hades.profiling import tictoc
 from hades.utils import min_sample, max_sample, random_sample
 
@@ -29,7 +27,7 @@ with open(problem) as fp:
     bqm = dimod.BinaryQuadraticModel.from_coo(fp)
 
 
-samplers = [
+main = RacingBranches([
     InterruptableTabuSampler(bqm),
     #TabuProblemSampler(bqm, timeout=1000),
     #IdentityDecomposer(bqm) | SimulatedAnnealingSubproblemSampler(num_reads=1, sweeps=1000) | SplatComposer(bqm),
@@ -39,7 +37,7 @@ samplers = [
     #TilingChimeraDecomposer(bqm, size=(16,16,4)) | QPUSubproblemExternalEmbeddingSampler(num_reads=100) | SplatComposer(bqm),
     #TilingChimeraDecomposer(bqm, size=(16,16,4)) | SimulatedAnnealingSubproblemSampler(num_reads=1, sweeps=1000) | SplatComposer(bqm),
     EnergyImpactDecomposer(bqm, max_size=100, min_diff=50) | SimulatedAnnealingSubproblemSampler(num_reads=1, sweeps=1000) | SplatComposer(bqm),
-]
+]) | ArgMinFold()
 
 
 max_iter = 10
@@ -51,21 +49,10 @@ state = State(
 last = state
 cnt = tries
 for iterno in range(max_iter):
-    branches = [sampler.run(state.updated(ctx=None, debug=None)) for sampler in samplers]
-
-    states = [state]
-    for f in concurrent.futures.as_completed(branches):
-        # as soon as one is done, stop all others
-        for s in samplers:
-            s.stop()
-        states.append(f.result())
-
-    state = min(states, key=attrgetter('samples.first.energy'))
-
-    # debug info
     print("iterno={}, states:".format(iterno))
-    for s in states:
-        print("- energy={s.samples.first.energy}, debug={s.debug!r}".format(s=s))
+
+    state = main.iterate(state)
+
     print("\nBEST: energy={s.samples.first.energy}, debug={s.debug!r}\n".format(s=state))
 
     if state.samples.first.energy == last.samples.first.energy:

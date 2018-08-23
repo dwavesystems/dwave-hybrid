@@ -88,11 +88,11 @@ class Runnable(object):
         super(Runnable, self).__init__(*args, **kwargs)
 
     def iterate(self, state):
-        """Accept a state and return a new state."""
+        """Accept a state and return a new state (blocking)."""
         raise NotImplementedError
 
     def run(self, state):
-        """Accept a state in future and return a new state in future."""
+        """Accept a state in future and return a new state in future (async)."""
         try:
             state = state.result()
         except:
