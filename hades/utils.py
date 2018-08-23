@@ -4,6 +4,7 @@ import random
 
 import six
 import dimod
+import numpy
 
 from dnx import canonical_chimera_labeling
 
@@ -100,6 +101,7 @@ def flip_energy_gains_naive(bqm, sample):
         raise ValueError("vartype not supported")
 
     base = bqm.energy(sample)
+    sample = sample_as_list(sample)
     energy_gains = [(bqm.energy(sample[:i] + [flip(val)] + sample[i+1:]) - base, i) for i, val in enumerate(sample)]
     energy_gains.sort(reverse=True)
     return energy_gains
@@ -113,7 +115,7 @@ def flip_energy_gains_iterative(bqm, sample):
         bqm (:class:`dimod.BinaryQuadraticModel`):
             BQM of type dimod.BINARY
 
-        sample (list):
+        sample (list/dict):
             Perturbation base (0/1 values for QUBO and -1/+1 for Ising model)
 
     Note:
@@ -143,7 +145,8 @@ def flip_energy_gains_iterative(bqm, sample):
         raise ValueError("vartype not supported")
 
     energy_gains = []
-    for idx, val in enumerate(sample):
+    sample = sample_as_dict(sample)
+    for idx, val in sample.items():
         contrib = bqm.linear[idx] + sum(w * sample[neigh] for neigh, w in bqm.adj[idx].items())
         energy_gains.append((contrib * delta(val), idx))
 
@@ -216,7 +219,7 @@ def updated_sample(sample, replacements):
     variables changed according to ``replacements``.
     """
     result = sample.copy()
-    for k, v in replacements.items():
+    for k, v in sample_as_dict(replacements).items():
         result[k] = v
     return result
 
@@ -227,6 +230,8 @@ def sample_as_list(sample):
     """
     if isinstance(sample, list):
         return sample
+    if isinstance(sample, numpy.ndarray):
+        return sample.tolist()
     indices = sorted(dict(sample).keys())
     if len(indices) > 0 and indices[-1] - indices[0] + 1 != len(indices):
         raise ValueError("incomplete sample dict")
@@ -239,6 +244,12 @@ def sample_as_dict(sample):
     """
     if isinstance(sample, dict):
         return sample
-    if isinstance(sample, list):
+    if isinstance(sample, (list, numpy.ndarray)):
         sample = enumerate(sample)
     return dict(sample)
+
+
+def random_sample(size, vartype):
+    """Return random sample of `size` in length, with values from `vartype`."""
+    values = list(vartype.value)
+    return {i: random.choice(values) for i in range(size)}
