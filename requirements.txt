@@ -9,3 +9,4 @@ networkx
 dwave_networkx
 click
 plucky
+coverage
