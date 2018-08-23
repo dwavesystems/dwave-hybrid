@@ -22,35 +22,36 @@ from hades.utils import min_sample, max_sample, random_sample
 
 
 #problem = 'problems/random-chimera/2048.01.qubo'
-problem = 'problems/random-chimera/8192.01.qubo'
+#problem = 'problems/random-chimera/8192.01.qubo'
 #problem = 'problems/qbsolv/bqp1000_1.qubo'
-#problem = 'problems/ac3/ac3_00.txt'
+problem = 'problems/ac3/ac3_00.txt'
 with open(problem) as fp:
     bqm = dimod.BinaryQuadraticModel.from_coo(fp)
 
 
 samplers = [
     InterruptableTabuSampler(bqm),
-    #TabuProblemSampler(bqm, timeout=100),
+    #TabuProblemSampler(bqm, timeout=1000),
     #IdentityDecomposer(bqm) | SimulatedAnnealingSubproblemSampler(num_reads=1, sweeps=1000) | SplatComposer(bqm),
     #RandomSubproblemDecomposer(bqm, size=100) | TabuSubproblemSampler(num_reads=1, timeout=500) | SplatComposer(bqm),
-    RandomSubproblemDecomposer(bqm, size=100) | QPUSubproblemAutoEmbeddingSampler(num_reads=200) | SplatComposer(bqm),
+    #RandomSubproblemDecomposer(bqm, size=100) | QPUSubproblemAutoEmbeddingSampler(num_reads=200) | SplatComposer(bqm),
     EnergyImpactDecomposer(bqm, max_size=50, min_diff=50) | QPUSubproblemAutoEmbeddingSampler(num_reads=200) | SplatComposer(bqm),
-    TilingChimeraDecomposer(bqm, size=(16,16,4)) | QPUSubproblemExternalEmbeddingSampler(num_reads=100) | SplatComposer(bqm),
+    #TilingChimeraDecomposer(bqm, size=(16,16,4)) | QPUSubproblemExternalEmbeddingSampler(num_reads=100) | SplatComposer(bqm),
+    #TilingChimeraDecomposer(bqm, size=(16,16,4)) | SimulatedAnnealingSubproblemSampler(num_reads=1, sweeps=1000) | SplatComposer(bqm),
     EnergyImpactDecomposer(bqm, max_size=100, min_diff=50) | SimulatedAnnealingSubproblemSampler(num_reads=1, sweeps=1000) | SplatComposer(bqm),
 ]
 
 
 max_iter = 10
 tries = 3
-_sample = random_sample(bqm)
+_sample = min_sample(bqm)
 state = State(
     SampleSet.from_sample(_sample, vartype=bqm.vartype, energy=bqm.energy(_sample)))
 
 last = state
 cnt = tries
 for iterno in range(max_iter):
-    branches = [sampler.run(state.copy()) for sampler in samplers]
+    branches = [sampler.run(state.replaced(ctx={}, debug={})) for sampler in samplers]
 
     states = [state]
     for f in concurrent.futures.as_completed(branches):

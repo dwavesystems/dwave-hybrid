@@ -53,11 +53,20 @@ class State(_State):
         `ctx`/`debug` dictionaries with items to add/update in state's
         `ctx`/`debug`.
         """
-        samples = kwargs.pop('samples', self.samples)
-        ctx = self.ctx.copy()
+        samples = kwargs.pop('samples', deepcopy(self.samples))
+        ctx = deepcopy(self.ctx)
         ctx.update(kwargs.pop('ctx', {}))
-        debug = self.debug.copy()
+        debug = deepcopy(self.debug)
         debug.update(kwargs.pop('debug', {}))
+        return State(samples, ctx, debug)
+
+    def replaced(self, **kwargs):
+        """Return updated state. Fields are replaced, instead of updated like in
+        `.updated`.
+        """
+        samples = kwargs.pop('samples', self.samples)
+        ctx = kwargs.pop('ctx', self.ctx)
+        debug = kwargs.pop('debug', self.debug)
         return State(samples, ctx, debug)
 
     def copy(self):
