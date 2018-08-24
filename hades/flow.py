@@ -27,15 +27,18 @@ class RacingBranches(Runnable):
 
 class ArgMinFold(Runnable):
 
-    def __init__(self):
-        pass
+    def __init__(self, fn=None):
+        """Return the state which minimizes the objective function `fn`."""
+        if fn is None:
+            fn = attrgetter('samples.first.energy')
+        self.fn = fn
 
     def iterate(self, states):
         # debug info
         for s in states:
             logger.debug("State: energy={s.samples.first.energy}, debug={s.debug!r}".format(s=s))
 
-        return min(states, key=attrgetter('samples.first.energy'))
+        return min(states, key=self.fn)
 
 
 class SimpleIterator(Runnable):
