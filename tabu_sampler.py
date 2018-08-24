@@ -6,7 +6,7 @@ from dimod.response import Response
 from dimod.vartypes import Vartype
 
 # TODO: re-implement/copy when extracted to dwave-tabu
-from hades.utils import sample_as_list, random_sample
+from hades.utils import sample_as_list, sample_as_dict, random_sample
 
 
 class TabuSampler(Sampler):
@@ -79,8 +79,8 @@ class TabuSampler(Sampler):
                 raise ValueError("'init_solution' should contain at least one sample")
             if len(init_solution.record[0].sample) != len(bqm):
                 raise ValueError("'init_solution' sample dimension different from BQM")
-            init_sample = sample_as_list(
-                init_solution.change_vartype(Vartype.BINARY, inplace=False).record[0].sample)
+            init_sample = self._bqm_sample_to_tabu_sample(
+                init_solution.change_vartype(Vartype.BINARY, inplace=False).record[0].sample, bqm.binary)
         else:
             init_sample = None
 
@@ -103,7 +103,7 @@ class TabuSampler(Sampler):
         energies = []
         for _ in range(num_reads):
             if init_sample is None:
-                init_sample = sample_as_list(random_sample(len(bqm), Vartype.BINARY))
+                init_sample = self._bqm_sample_to_tabu_sample(random_sample(bqm.binary), bqm.binary)
             r = tabu_solver.TabuSearch(qubo, init_sample, tenure, scale_factor, timeout)
             sample = self._tabu_sample_to_bqm_sample(list(r.bestSolution()), bqm.binary)
             energy = bqm.binary.energy(sample)
@@ -123,6 +123,11 @@ class TabuSampler(Sampler):
         symm = ud + ud.T
         qubo = symm.tolist()
         return qubo
+
+    def _bqm_sample_to_tabu_sample(self, sample, bqm):
+        assert len(sample) == len(bqm)
+        _, values = zip(*sorted(sample_as_dict(sample).items()))
+        return values
 
     def _tabu_sample_to_bqm_sample(self, sample, bqm):
         varorder = sorted(list(bqm.adj.keys()))
