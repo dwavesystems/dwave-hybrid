@@ -64,6 +64,7 @@ class RandomSubproblemDecomposer(Runnable):
     """
 
     def __init__(self, bqm, size):
+        # TODO: add min_diff support (like in EnergyImpactDecomposer)
         if size > len(bqm):
             raise ValueError("subproblem size cannot be greater than the problem size")
 

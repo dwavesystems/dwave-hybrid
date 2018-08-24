@@ -218,7 +218,7 @@ def updated_sample(sample, replacements):
     """Returns a copy of ``sample`` (which is a dict-like object), with
     variables changed according to ``replacements``.
     """
-    result = sample.copy()
+    result = sample_as_dict(sample).copy()
     for k, v in sample_as_dict(replacements).items():
         result[k] = v
     return result

@@ -127,7 +127,7 @@ class TabuSampler(Sampler):
     def _bqm_sample_to_tabu_sample(self, sample, bqm):
         assert len(sample) == len(bqm)
         _, values = zip(*sorted(sample_as_dict(sample).items()))
-        return values
+        return list(map(int, values))
 
     def _tabu_sample_to_bqm_sample(self, sample, bqm):
         varorder = sorted(list(bqm.adj.keys()))
