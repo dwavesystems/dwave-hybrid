@@ -92,9 +92,9 @@ class TabuSampler(Sampler):
             raise ValueError("'tenure' should be an integer in range [1, num_vars - 1]")
 
         if not isinstance(num_reads, int):
-            raise TypeError("'samples' should be a positive integer")
+            raise TypeError("'num_reads' should be a positive integer")
         if num_reads < 1:
-            raise ValueError("'samples' should be a positive integer")
+            raise ValueError("'num_reads' should be a positive integer")
 
         qubo = self._bqm_to_tabu_qubo(bqm.binary)
 
