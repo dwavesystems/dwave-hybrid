@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 class RacingBranches(Runnable):
 
-    def __init__(self, branches):
+    def __init__(self, *branches):
         self.branches = branches
 
     def iterate(self, state):
@@ -36,3 +36,31 @@ class ArgMinFold(Runnable):
             logger.debug("State: energy={s.samples.first.energy}, debug={s.debug!r}".format(s=s))
 
         return min(states, key=attrgetter('samples.first.energy'))
+
+
+class SimpleIterator(Runnable):
+
+    def __init__(self, runnable, max_iter=1000, convergence=10):
+        self.runnable = runnable
+        self.max_iter = max_iter
+        self.convergence = convergence
+
+    def iterate(self, state):
+        last = state
+        cnt = self.convergence
+
+        for iterno in range(self.max_iter):
+            state = self.runnable.run(state).result()
+
+            logger.info("iterno={i}, State: energy={s.samples.first.energy}, debug={s.debug!r}".format(i=iterno, s=state))
+
+            if state.samples.first.energy == last.samples.first.energy:
+                cnt -= 1
+            else:
+                cnt = self.convergence
+            if cnt <= 0:
+                break
+
+            last = state
+
+        return state.updated(debug=dict(n_iter=iterno+1))

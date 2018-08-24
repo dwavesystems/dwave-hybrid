@@ -14,8 +14,7 @@ from hades.decomposers import (
     TilingChimeraDecomposer, EnergyImpactDecomposer)
 from hades.composers import SplatComposer
 from hades.core import State, SampleSet
-from hades.flow import RacingBranches, ArgMinFold
-from hades.profiling import tictoc
+from hades.flow import RacingBranches, ArgMinFold, SimpleIterator
 from hades.utils import min_sample, max_sample, random_sample
 
 
@@ -27,7 +26,7 @@ with open(problem) as fp:
     bqm = dimod.BinaryQuadraticModel.from_coo(fp)
 
 
-main = RacingBranches([
+iteration = RacingBranches(
     InterruptableTabuSampler(bqm),
     #TabuProblemSampler(bqm, timeout=1000),
     #IdentityDecomposer(bqm) | SimulatedAnnealingSubproblemSampler(num_reads=1, sweeps=1000) | SplatComposer(bqm),
@@ -37,28 +36,13 @@ main = RacingBranches([
     #TilingChimeraDecomposer(bqm, size=(16,16,4)) | QPUSubproblemExternalEmbeddingSampler(num_reads=100) | SplatComposer(bqm),
     #TilingChimeraDecomposer(bqm, size=(16,16,4)) | SimulatedAnnealingSubproblemSampler(num_reads=1, sweeps=1000) | SplatComposer(bqm),
     EnergyImpactDecomposer(bqm, max_size=100, min_diff=50) | SimulatedAnnealingSubproblemSampler(num_reads=1, sweeps=1000) | SplatComposer(bqm),
-]) | ArgMinFold()
+) | ArgMinFold()
 
+main = SimpleIterator(iteration, max_iter=10, convergence=3)
 
-max_iter = 10
-tries = 3
 _sample = min_sample(bqm)
-state = State(
-    SampleSet.from_sample(_sample, vartype=bqm.vartype, energy=bqm.energy(_sample)))
+init_state = State(SampleSet.from_sample(_sample, vartype=bqm.vartype, energy=bqm.energy(_sample)))
 
-last = state
-cnt = tries
-for iterno in range(max_iter):
-    print("iterno={}, states:".format(iterno))
+solution = main.run(init_state).result()
 
-    state = main.iterate(state)
-
-    print("\nBEST: energy={s.samples.first.energy}, debug={s.debug!r}\n".format(s=state))
-
-    if state.samples.first.energy == last.samples.first.energy:
-        cnt -= 1
-    else:
-        cnt = tries
-    if cnt <= 0:
-        break
-    last = state
+print("Solution: energy={s.samples.first.energy}, debug={s.debug!r}".format(s=solution))
