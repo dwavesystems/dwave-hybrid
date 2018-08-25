@@ -53,14 +53,19 @@ class KerberosSampler(dimod.Sampler):
 
         iteration = RacingBranches(
             InterruptableTabuSampler(bqm),
-            IdentityDecomposer(bqm) | SimulatedAnnealingSubproblemSampler(num_reads=1, sweeps=sa_sweeps) | SplatComposer(bqm),
-            RandomSubproblemDecomposer(bqm, size=subproblem_size) | QPUSubproblemAutoEmbeddingSampler(num_reads=qpu_reads) | SplatComposer(bqm),
-            EnergyImpactDecomposer(bqm, max_size=subproblem_size, min_diff=subproblem_size//2) | QPUSubproblemAutoEmbeddingSampler(num_reads=qpu_reads) | SplatComposer(bqm),
+            IdentityDecomposer(bqm)
+                | SimulatedAnnealingSubproblemSampler(num_reads=1, sweeps=sa_sweeps)
+                | SplatComposer(bqm),
+            RandomSubproblemDecomposer(bqm, size=subproblem_size)
+                | QPUSubproblemAutoEmbeddingSampler(num_reads=qpu_reads)
+                | SplatComposer(bqm),
+            EnergyImpactDecomposer(bqm, max_size=subproblem_size, min_diff=subproblem_size//2)
+                | QPUSubproblemAutoEmbeddingSampler(num_reads=qpu_reads)
+                | SplatComposer(bqm),
         ) | ArgMinFold()
         main = SimpleIterator(iteration, max_iter=max_iter, convergence=convergence)
 
-        _sample = random_sample(bqm)
-        init_state = State(SampleSet.from_sample(_sample, vartype=bqm.vartype, energy=bqm.energy(_sample)))
+        init_state = State.from_sample(random_sample(bqm), bqm)
         final_state = main.run(init_state)
 
         return dimod.Response.from_future(final_state, result_hook=lambda f: f.result().samples)
