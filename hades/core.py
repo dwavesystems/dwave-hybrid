@@ -28,6 +28,9 @@ class SampleSet(dimod.Response):
 
     @classmethod
     def from_sample(cls, sample, vartype, energy=None, num_occurrences=1):
+        """Convenience method for constructing a SampleSet from one raw (dict)
+        sample.
+        """
         return cls.from_samples(
             samples_like=[sample],
             vectors={'energy': [energy], 'num_occurrences': [num_occurrences]},
@@ -61,6 +64,15 @@ class State(_State):
 
     def copy(self):
         return deepcopy(self)
+
+    @classmethod
+    def from_sample(cls, sample, bqm):
+        """Convenience method for constructing State from raw (dict) sample;
+        energy is calculated from BQM.
+        """
+        return cls(SampleSet.from_sample(sample,
+                                         vartype=bqm.vartype,
+                                         energy=bqm.energy(sample)))
 
 
 class Present(object):

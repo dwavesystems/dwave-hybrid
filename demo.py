@@ -40,8 +40,7 @@ iteration = RacingBranches(
 
 main = SimpleIterator(iteration, max_iter=10, convergence=3)
 
-_sample = min_sample(bqm)
-init_state = State(SampleSet.from_sample(_sample, vartype=bqm.vartype, energy=bqm.energy(_sample)))
+init_state = State.from_sample(min_sample(bqm), bqm)
 
 solution = main.run(init_state).result()
 
