@@ -3,10 +3,10 @@ dimod>0.7
 minorminer
 dwave-system
 dwave-neal
-# todo: dwave-tabu
+dwave-tabu
 numpy
 networkx
-dwave_networkx
+dwave-networkx
 click
 plucky
 coverage

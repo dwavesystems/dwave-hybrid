@@ -16,8 +16,8 @@ except SyntaxError:
 
 # Package requirements, minimal pinning
 install_requires = ['six>=1.10', 'numpy', 'networkx', 'click>5', 'plucky',
-                    'dimod>0.7', 'minorminer', 'dwave-system', 'dwave-neal',
-                    'dwave-networkx']
+                    'dimod>0.7', 'minorminer', 'dwave-system', 'dwave-networkx',
+                    'dwave-neal', 'dwave-tabu']
 
 # Package extras requirements
 extras_require = {

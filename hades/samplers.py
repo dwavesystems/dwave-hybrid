@@ -5,8 +5,7 @@ from collections import namedtuple
 from dwave.system.samplers import DWaveSampler
 from dwave.system.composites import EmbeddingComposite, FixedEmbeddingComposite
 
-# TODO: pip-ify
-from tabu_sampler import TabuSampler
+from tabu import TabuSampler
 from neal import SimulatedAnnealingSampler
 
 from hades.core import executor, Runnable, SampleSet
