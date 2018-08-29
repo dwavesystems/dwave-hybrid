@@ -24,6 +24,10 @@ class RacingBranches(Runnable):
 
         return states
 
+    def stop(self):
+        for branch in self.branches:
+            branch.stop()
+
 
 class ArgMinFold(Runnable):
 

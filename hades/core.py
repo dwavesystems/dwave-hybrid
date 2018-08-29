@@ -145,3 +145,7 @@ class Branch(Runnable):
         for component in components:
             state = component.iterate(state)
         return state
+
+    def stop(self):
+        for component in self.components:
+            component.stop()
