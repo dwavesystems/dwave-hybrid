@@ -13,7 +13,7 @@ class RacingBranches(Runnable):
         self.branches = branches
 
     def iterate(self, state):
-        futures = [branch.run(state.updated(ctx=None, debug=None)) for branch in self.branches]
+        futures = [branch.run(state.updated(debug=None)) for branch in self.branches]
 
         states = [state]
         for f in concurrent.futures.as_completed(futures):
