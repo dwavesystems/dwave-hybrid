@@ -9,13 +9,20 @@ logger = logging.getLogger(__name__)
 
 class RacingBranches(Runnable):
 
-    def __init__(self, *branches):
+    def __init__(self, *branches, endomorphic=True):
+        """If known upfront codomain for all branches equals domain, state
+        can safely be mixed in with branches' results. Otherwise set
+        `endomorphic=False`.
+        """
         self.branches = branches
+        self.endomorphic = endomorphic
 
     def iterate(self, state):
         futures = [branch.run(state.updated(debug=None)) for branch in self.branches]
 
-        states = [state]
+        states = []
+        if self.endomorphic:
+            states.append(state)
         for f in concurrent.futures.as_completed(futures):
             # as soon as one is done, stop all others
             for branch in self.branches:
@@ -40,7 +47,7 @@ class ArgMinFold(Runnable):
     def iterate(self, states):
         # debug info
         for s in states:
-            logger.debug("State: energy={s.samples.first.energy}, debug={s.debug!r}".format(s=s))
+            logger.debug("State: arg={arg}, debug={s.debug!r}".format(arg=self.fn(s), s=s))
 
         return min(states, key=self.fn)
 
