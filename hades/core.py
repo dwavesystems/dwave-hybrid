@@ -37,6 +37,10 @@ class SampleSet(dimod.Response):
             info={}, vartype=vartype)
 
     @classmethod
+    def from_sample_on_bqm(cls, sample, bqm):
+        return cls.from_sample(sample, bqm.vartype, bqm.energy(sample))
+
+    @classmethod
     def from_response(cls, response):
         return cls.from_future(response, result_hook=lambda x: x)
 

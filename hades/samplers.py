@@ -10,6 +10,7 @@ from neal import SimulatedAnnealingSampler
 
 from hades.core import executor, Runnable, SampleSet
 from hades.profiling import tictoc
+from hades.utils import random_sample
 
 import logging
 logger = logging.getLogger(__name__)
@@ -122,3 +123,14 @@ class InterruptableTabuSampler(TabuProblemSampler):
 
     def stop(self):
         self._stop_event.set()
+
+
+class RandomSubproblemSampler(Runnable):
+
+    @tictoc('random_sample')
+    def iterate(self, state):
+        bqm = state.ctx['subproblem']
+        sample = random_sample(bqm)
+        response = SampleSet.from_sample_on_bqm(sample, bqm)
+        return state.updated(ctx=dict(subsamples=response),
+                             debug=dict(sampler=self.__class__.__name__))
