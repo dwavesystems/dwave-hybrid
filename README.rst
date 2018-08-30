@@ -4,47 +4,68 @@ Hades
 
 .. index-start-marker
 
-Hybrid asynchronous decomposition sampler for quadratic unconstrained binary
-optimization (QUBO) problems.
+Minimal and general Python framework for building hybrid asynchronous
+decomposition samplers for quadratic unconstrained binary optimization (QUBO)
+problems. Enables users to easily experiment with different
+choices (structural and parametric), thus tailoring the decomposition solver
+algorithm to their specific problem. Helps with rapid development and experimenting,
+not real time/wall clock performance (rather: offline performance).
 
 .. index-end-marker
+
 
 Installation or Building
 ========================
 
 .. installation-start-marker
 
-A wheel might be available for your system on PyPI. Source distributions are provided as well.
+Package not yet available on PyPI. Install in developer (edit) mode::
 
-.. code-block:: python
+    pip install -e git+https://github.com/dwavesystems/hades.git#egg=hades
 
-    pip install hybrid-sampler
+or from source::
 
-
-Alternatively, you can build the library with setuptools.
-
-.. code-block:: bash
-
-    pip install -r python/requirements.txt
+    git clone https://github.com/dwavesystems/hades.git
+    cd hades
     python setup.py install
 
 .. installation-end-marker
+
 
 Example
 =======
 
 .. example-start-marker
 
->>> import dimod
->>> from kerberos import KerberosSampler
->>> # Create the problem
->>> Q = {(0, 0): -1, (1, 1): -1, (0, 1): 2}
->>> bqm = dimod.BinaryQuadraticModel.from_qubo(Q, offset = 0.0)
->>> # Run the solver
->>> solution = KerberosSampler().sample(bqm, max_iter=10, convergence=3)
->>> print(solution)   # doctest: +SKIP
-Response(rec.array([([0, 1], -1., 1)],
-         dtype=[('sample', 'i1', (2,)), ('energy', '<f8'), ('num_occurrences', '<i4')]),
-         [0, 1], {}, 'BINARY')
+.. code-block:: python
+
+    import dimod
+    from hades.samplers import (
+        QPUSubproblemAutoEmbeddingSampler, InterruptableTabuSampler)
+    from hades.decomposers import EnergyImpactDecomposer
+    from hades.composers import SplatComposer
+    from hades.core import State
+    from hades.flow import RacingBranches, ArgMinFold, SimpleIterator
+    from hades.utils import min_sample
+
+    # construct a problem
+    bqm = dimod.BinaryQuadraticModel({}, {'ab': 1, 'bc': -1, 'ca': 1}, 0, dimod.SPIN)
+
+    # define the solver
+    iteration = RacingBranches(
+        InterruptableTabuSampler(bqm),
+        EnergyImpactDecomposer(bqm, max_size=2)
+        | QPUSubproblemAutoEmbeddingSampler()
+        | SplatComposer(bqm)
+    ) | ArgMinFold()
+    main = SimpleIterator(iteration, max_iter=10, convergence=3)
+
+    # run solver
+    init_state = State.from_sample(min_sample(bqm), bqm)
+    solution = main.run(init_state).result()
+
+    # show results
+    print("Solution: sample={s.samples.first}, debug={s.debug!r}".format(s=solution))
+
 
 .. example-end-marker
