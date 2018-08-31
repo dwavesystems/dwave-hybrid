@@ -63,8 +63,25 @@ class State(_State):
             debug = {}
         return _State.__new__(_cls, samples, ctx, debug)
 
+    def _update(self, src, upt):
+        # depth-limited recursive plucky.merge (max-depth=2, level 2+ copied)
+        dest = {}
+        for key in set(chain(src.keys(), upt.keys())):
+            if key in src and key in upt:
+                if isinstance(upt[key], dict):
+                    dest[key] = deepcopy(src[key])
+                    for subkey, subval in upt[key].items():
+                        dest[key][subkey] = deepcopy(subval)
+                else:
+                    dest[key] = deepcopy(upt[key])
+            elif key in src:
+                dest[key] = deepcopy(src[key])
+            elif key in upt:
+                dest[key] = deepcopy(upt[key])
+        return dest
+
     def updated(self, **kwargs):
-        return State(**merge(self._asdict(), kwargs, op=lambda a, b: b))
+        return State(**self._update(self._asdict(), kwargs))
 
     def copy(self):
         return deepcopy(self)
