@@ -161,9 +161,7 @@ class Branch(Runnable):
             raise TypeError("branch can be composed only with Branch or Runnable")
 
     def iterate(self, state):
-        components = iter(self.components)
-        state = next(components).iterate(state)
-        for component in components:
+        for component in self.components:
             state = component.iterate(state)
         return state
 
