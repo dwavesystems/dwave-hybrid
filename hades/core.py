@@ -128,7 +128,7 @@ class Runnable(object):
         """Accept a state in future and return a new state in future (async)."""
         try:
             state = state.result()
-        except:
+        except AttributeError:
             pass
         return executor.submit(self.iterate, state)
 
