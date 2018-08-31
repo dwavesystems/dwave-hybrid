@@ -164,6 +164,10 @@ class Branch(Runnable):
         else:
             raise TypeError("branch can be composed only with Branch or Runnable")
 
+    @property
+    def name(self):
+        return " | ".join(component.name for component in self.components)
+
     def iterate(self, state):
         for component in self.components:
             state = component.iterate(state)

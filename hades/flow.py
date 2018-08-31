@@ -17,6 +17,11 @@ class RacingBranches(Runnable):
         self.branches = branches
         self.endomorphic = endomorphic
 
+    @property
+    def name(self):
+        return "{}({})".format(self.__class__.__name__,
+                               ", ".join(branch.name for branch in self.branches))
+
     def iterate(self, state):
         futures = [branch.run(state.updated(debug=None)) for branch in self.branches]
 
@@ -58,6 +63,10 @@ class SimpleIterator(Runnable):
         self.runnable = runnable
         self.max_iter = max_iter
         self.convergence = convergence
+
+    @property
+    def name(self):
+        return "{}({})".format(self.__class__.__name__, self.runnable.name)
 
     def iterate(self, state):
         last = state
