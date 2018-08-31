@@ -55,7 +55,7 @@ class EnergyImpactDecomposer(Runnable):
         # induce sub-bqm based on selected variables and global sample
         subbqm = bqm_induced_by(self.bqm, next_vars, sample)
         return state.updated(ctx=dict(subproblem=subbqm),
-                             debug=dict(decomposer=self.__class__.__name__))
+                             debug=dict(decomposer=self.name))
 
 
 class RandomSubproblemDecomposer(Runnable):
@@ -77,7 +77,7 @@ class RandomSubproblemDecomposer(Runnable):
         sample = state.samples.change_vartype(self.bqm.vartype).first.sample
         subbqm = bqm_induced_by(self.bqm, variables, sample)
         return state.updated(ctx=dict(subproblem=subbqm),
-                             debug=dict(decomposer=self.__class__.__name__))
+                             debug=dict(decomposer=self.name))
 
 
 class IdentityDecomposer(Runnable):
@@ -89,7 +89,7 @@ class IdentityDecomposer(Runnable):
     @tictoc('identity_decompose')
     def iterate(self, state):
         return state.updated(ctx=dict(subproblem=self.bqm),
-                             debug=dict(decomposer=self.__class__.__name__))
+                             debug=dict(decomposer=self.name))
 
 
 class TilingChimeraDecomposer(Runnable):
@@ -111,4 +111,4 @@ class TilingChimeraDecomposer(Runnable):
         sample = state.samples.change_vartype(self.bqm.vartype).first.sample
         subbqm = bqm_induced_by(self.bqm, variables, sample)
         return state.updated(ctx=dict(subproblem=subbqm, embedding=embedding),
-                             debug=dict(decomposer=self.__class__.__name__))
+                             debug=dict(decomposer=self.name))

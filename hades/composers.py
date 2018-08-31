@@ -27,4 +27,4 @@ class SplatComposer(Runnable):
         composed_energy = self.bqm.energy(composed_sample)
         return state.updated(
             samples=SampleSet.from_sample(composed_sample, state.samples.vartype, composed_energy),
-            debug=dict(composer=self.__class__.__name__))
+            debug=dict(composer=self.name))

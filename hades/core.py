@@ -120,6 +120,10 @@ class Runnable(object):
     def __init__(self, *args, **kwargs):
         super(Runnable, self).__init__(*args, **kwargs)
 
+    @property
+    def name(self):
+        return self.__class__.__name__
+
     def iterate(self, state):
         """Accept a state and return a new state (blocking)."""
         raise NotImplementedError
