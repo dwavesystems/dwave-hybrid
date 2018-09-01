@@ -2,6 +2,7 @@
 """Performance tests."""
 
 from itertools import chain
+from collections import OrderedDict
 from glob import glob
 
 import dimod
@@ -55,10 +56,14 @@ solver_factories = [
 
 
 def run(problems, solver_factories):
+    results = OrderedDict()
+
     # reuse the cloud client
     qpu = DWaveSampler()
 
     for problem in problems:
+        results[problem] = OrderedDict()
+
         with open(problem) as fp:
             bqm = dimod.BinaryQuadraticModel.from_coo(fp)
 
@@ -66,7 +71,7 @@ def run(problems, solver_factories):
             case = '{!r} with {!r}'.format(problem, name)
 
             try:
-                solver = factory(bqm)
+                solver = factory(bqm=bqm, qpu=qpu)
                 init_state = State.from_sample(min_sample(bqm), bqm)
 
                 with tictoc(case) as timer:
@@ -74,12 +79,20 @@ def run(problems, solver_factories):
 
             except Exception as exc:
                 print("{case}: {exc!r}".format(**locals()))
+                results[problem][name] = repr(exc)
 
             else:
                 print("case={case!r}"
                       " energy={solution.samples.first.energy!r},"
                       " wallclock={timer.dt!r}".format(**locals()))
+                results[problem][name] = dict(
+                    energy=solution.samples.first.energy,
+                    wallclock=timer.dt)
+
+    return results
 
 
 if __name__ == "__main__":
-    run(problems, solver_factories)
+    import json
+    results = run(problems, solver_factories)
+    print(json.dumps(results))
