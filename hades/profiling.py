@@ -33,12 +33,18 @@ class tictoc(object):
         logger.log(self.loglevel, "tic(%r)", self.name, extra={"tic": self.name})
 
     def stop(self):
-        dt = perf_counter() - self.tick
-        logger.log(self.loglevel, "toc(%r) = %r", self.name, dt,
-                   extra={"toc": self.name, "duration": dt})
+        self.dt = perf_counter() - self.tick
+        logger.log(self.loglevel, "toc(%r) = %r", self.name, self.dt,
+                   extra={"toc": self.name, "duration": self.dt})
 
     def __init__(self, name=None, loglevel=logging.DEBUG):
+        if name is None:
+            # TODO: use file/lineno
+            pass
         self.name = name
+
+        if loglevel is None:
+            loglevel = logging.NOTSET
         self.loglevel = loglevel
 
     def __call__(self, fn):
@@ -55,7 +61,7 @@ class tictoc(object):
 
         return wrapper
 
-    def __enter__(self, name=None, loglevel=logging.DEBUG):
+    def __enter__(self):
         self.start()
         return self
 
