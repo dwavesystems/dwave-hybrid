@@ -18,9 +18,11 @@ logger = logging.getLogger(__name__)
 
 class QPUSubproblemExternalEmbeddingSampler(Runnable):
 
-    def __init__(self, num_reads=100):
+    def __init__(self, num_reads=100, qpu_sampler=None):
         self.num_reads = num_reads
-        self.sampler = DWaveSampler()
+        if qpu_sampler is None:
+            qpu_sampler = DWaveSampler()
+        self.sampler = qpu_sampler
 
     @tictoc('qpu_ext_embedding_sample')
     def iterate(self, state):
@@ -32,9 +34,11 @@ class QPUSubproblemExternalEmbeddingSampler(Runnable):
 
 class QPUSubproblemAutoEmbeddingSampler(Runnable):
 
-    def __init__(self, num_reads=100):
+    def __init__(self, num_reads=100, qpu_sampler=None):
         self.num_reads = num_reads
-        self.sampler = EmbeddingComposite(DWaveSampler())
+        if qpu_sampler is None:
+            qpu_sampler = DWaveSampler()
+        self.sampler = EmbeddingComposite(qpu_sampler)
 
     @tictoc('qpu_auto_embedding_sample')
     def iterate(self, state):
