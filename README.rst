@@ -4,12 +4,14 @@ Hades
 
 .. index-start-marker
 
-Minimal and general Python framework for building hybrid asynchronous
-decomposition samplers for quadratic unconstrained binary optimization (QUBO)
-problems. Enables users to easily experiment with different
-choices (structural and parametric), thus tailoring the decomposition solver
-algorithm to their specific problem. Helps with rapid development and experimenting,
-not real time/wall clock performance (rather: offline performance).
+A general, minimal Python framework for building hybrid asynchronous decomposition
+samplers for quadratic unconstrained binary optimization (QUBO) problems.
+It facilitates experimentation with structures and parameters for
+tailoring a decomposition solver to a problem.
+
+The framework enables rapid development and insight into expected performance
+of productized versions of its experimental prototypes.
+It does not provide real-time performance.
 
 .. index-end-marker
 
@@ -19,7 +21,7 @@ Installation or Building
 
 .. installation-start-marker
 
-Package not yet available on PyPI. Install in developer (edit) mode::
+**Package not yet available on PyPI.** Install in developer (edit) mode::
 
     pip install -e git+https://github.com/dwavesystems/hades.git#egg=hades
 
@@ -48,10 +50,10 @@ Example
     from hades.flow import RacingBranches, ArgMinFold, SimpleIterator
     from hades.utils import min_sample
 
-    # construct a problem
+    # Construct a problem
     bqm = dimod.BinaryQuadraticModel({}, {'ab': 1, 'bc': -1, 'ca': 1}, 0, dimod.SPIN)
 
-    # define the solver
+    # Define the solver
     iteration = RacingBranches(
         InterruptableTabuSampler(bqm),
         EnergyImpactDecomposer(bqm, max_size=2)
@@ -60,11 +62,11 @@ Example
     ) | ArgMinFold()
     main = SimpleIterator(iteration, max_iter=10, convergence=3)
 
-    # run solver
+    # Solve the problem
     init_state = State.from_sample(min_sample(bqm), bqm)
     solution = main.run(init_state).result()
 
-    # show results
+    # Print results
     print("Solution: sample={s.samples.first}, debug={s.debug!r}".format(s=solution))
 
 
