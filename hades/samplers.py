@@ -254,6 +254,8 @@ class TabuProblemSampler(Runnable):
     """A tabu sampler for a binary quadratic problem.
 
     Args:
+        bqm (:obj:`.BinaryQuadraticModel`):
+            Binary quadratic model.
         num_reads (int, optional, default=1):
             Number of states (output solutions) to read from the sampler.
         tenure (int, optional):
@@ -274,7 +276,7 @@ class TabuProblemSampler(Runnable):
         >>> import dimod
         >>> from tabu import TabuSampler
         ...
-        >>> # Define a problem and a subproblem
+        >>> # Define a problem
         >>> bqm = dimod.BinaryQuadraticModel({'x': 0.0, 'y': 0.0, 'z': 8.0, 'a': 2.0, 'b': 0.0, 'c': 6.0},
         ...                                  {('y', 'x'): 2.0, ('z', 'x'): -4.0, ('z', 'y'): -4.0,
         ...                                  ('b', 'a'): 2.0, ('c', 'a'): -4.0, ('c', 'b'): -4.0, ('a', 'z'): -4.0},
@@ -308,6 +310,58 @@ class TabuProblemSampler(Runnable):
 
 
 class InterruptableTabuSampler(TabuProblemSampler):
+    """An interruptable tabu sampler for a binary quadratic problem.
+
+    Args:
+        bqm (:obj:`.BinaryQuadraticModel`):
+            Binary quadratic model.
+        num_reads (int, optional, default=1):
+            Number of states (output solutions) to read from the sampler.
+        tenure (int, optional):
+            Tabu tenure, which is the length of the tabu list, or number of recently
+            explored solutions kept in memory. Default is a quarter of the number
+            of problem variables up to a maximum value of 20.
+        quantum_timeout (int, optional, default=20):
+            Timeout for non-interruptable operation of tabu search. At the completion of
+            each loop of tabu search through its problem variables, if this time interval
+            has been exceeded, the search can be stopped by an interrupt signal or
+            expiration of the `timeout` parameter.
+        timeout (int, optional, default=20):
+            Total running time in milliseconds.
+
+    Examples:
+        This example works on a binary quadratic model of two AND gates in series, where
+        output :math:`z` of gate :math:`z = x \wedge y` connects to input :math:`a`
+        of gate :math:`c = a \wedge b`. An initial state is manually set with invalid
+        solution :math:`x=y=0, z=1; a=b=1, c=0`. The state is updated by a tabu search.
+        The execution results shown here was a valid solution to the problem:
+        example, :math:`x=y=z=a=b=c=1`.
+
+        >>> import dimod
+        >>> from tabu import TabuSampler
+        ...
+        >>> # Define a problem
+        >>> bqm = dimod.BinaryQuadraticModel({'x': 0.0, 'y': 0.0, 'z': 8.0, 'a': 2.0, 'b': 0.0, 'c': 6.0},
+        ...                                  {('y', 'x'): 2.0, ('z', 'x'): -4.0, ('z', 'y'): -4.0,
+        ...                                  ('b', 'a'): 2.0, ('c', 'a'): -4.0, ('c', 'b'): -4.0, ('a', 'z'): -4.0},
+        ...                                  -1.0, 'BINARY')
+        >>> # Set up the sampler with an initial state
+        >>> sampler = samplers.InterruptableTabuSampler(bqm, tenure=2, quantum_timeout=30, timeout=5000)
+        >>> state = core.State().from_sample({'x': 0, 'y': 0, 'z': 1, 'a': 1, 'b': 1, 'c': 0}, bqm)
+        >>> # Sample the problem
+        >>> new_state = sampler.run(state)
+        >>> new_state  # doctest: +SKIP
+        <Future at 0x179eae59898 state=running>
+        >>> sampler.stop()
+        >>> new_state  # doctest: +SKIP
+        <Future at 0x179eae59898 state=finished returned State>
+        >>> print(new_state.result())      # doctest: +SKIP
+        State(samples=Response(rec.array([([1, 1, 1, 1, 1, 1], -1., 1)],
+          dtype=[('sample', 'i1', (6,)), ('energy', '<f8'), ('num_occurrences', '<i4')]),
+          ['a', 'b', 'c', 'x', 'y', 'z'], {}, 'BINARY'), ctx={},
+          debug={'sampler': 'InterruptableTabuSampler', 'runtime': 62.85970854759216, 'iterno': 2082})
+
+    """
 
     def __init__(self, bqm, quantum_timeout=20, timeout=None, **kwargs):
         kwargs['bqm'] = bqm
