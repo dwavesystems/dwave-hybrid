@@ -167,7 +167,7 @@ class SimulatedAnnealingSubproblemSampler(Runnable):
         >>> sampler = samplers.SimulatedAnnealingSubproblemSampler(num_reads=10)
         >>> state = core.State().from_sample({'x': 0, 'y': 0, 'z': 1, 'a': 1, 'b': 1, 'c': 0}, bqm)
         >>> state.ctx.update(subproblem=sub_bqm)
-        >>> # Sample the subproblem on the QPU
+        >>> # Sample the subproblem
         >>> new_state = sampler.iterate(state)
         >>> print(new_state.ctx['subsamples'].record)      # doctest: +SKIP
         [([0, 1, 0], -1., 1) ([0, 1, 0], -1., 1) ([0, 0, 0], -1., 1)
@@ -228,7 +228,7 @@ class TabuSubproblemSampler(Runnable):
         >>> sampler = samplers.TabuSubproblemSampler(tenure=2, timeout=5)
         >>> state = core.State().from_sample({'x': 0, 'y': 0, 'z': 1, 'a': 1, 'b': 1, 'c': 0}, bqm)
         >>> state.ctx.update(subproblem=sub_bqm)
-        >>> # Sample the subproblem on the QPU
+        >>> # Sample the subproblem
         >>> new_state = sampler.iterate(state)
         >>> print(new_state.ctx['subsamples'].record)      # doctest: +SKIP
         [([0, 1, 0], -1., 1)]
@@ -251,6 +251,45 @@ class TabuSubproblemSampler(Runnable):
 
 
 class TabuProblemSampler(Runnable):
+    """A tabu sampler for a binary quadratic problem.
+
+    Args:
+        num_reads (int, optional, default=1):
+            Number of states (output solutions) to read from the sampler.
+        tenure (int, optional):
+            Tabu tenure, which is the length of the tabu list, or number of recently
+            explored solutions kept in memory. Default is a quarter of the number
+            of problem variables up to a maximum value of 20.
+        timeout (int, optional, default=20):
+            Total running time in milliseconds.
+
+    Examples:
+        This example works on a binary quadratic model of two AND gates in series, where
+        output :math:`z` of gate :math:`z = x \wedge y` connects to input :math:`a`
+        of gate :math:`c = a \wedge b`. An initial state is manually set with invalid
+        solution :math:`x=y=0, z=1; a=b=1, c=0`. The state is updated by a tabu search.
+        The execution results shown here was a valid solution to the problem:
+        example, :math:`x=y=z=a=b=c=1`.
+
+        >>> import dimod
+        >>> from tabu import TabuSampler
+        ...
+        >>> # Define a problem and a subproblem
+        >>> bqm = dimod.BinaryQuadraticModel({'x': 0.0, 'y': 0.0, 'z': 8.0, 'a': 2.0, 'b': 0.0, 'c': 6.0},
+        ...                                  {('y', 'x'): 2.0, ('z', 'x'): -4.0, ('z', 'y'): -4.0,
+        ...                                  ('b', 'a'): 2.0, ('c', 'a'): -4.0, ('c', 'b'): -4.0, ('a', 'z'): -4.0},
+        ...                                  -1.0, 'BINARY')
+        >>> # Set up the sampler with an initial state
+        >>> sampler = samplers.TabuProblemSampler(bqm, tenure=2, timeout=5)
+        >>> state = core.State().from_sample({'x': 0, 'y': 0, 'z': 1, 'a': 1, 'b': 1, 'c': 0}, bqm)
+        >>> # Sample the problem
+        >>> new_state = sampler.iterate(state)
+        >>> print(new_state.samples)      # doctest: +SKIP
+        Response(rec.array([([1, 1, 1, 1, 1, 1], -1., 1)],
+          dtype=[('sample', 'i1', (6,)), ('energy', '<f8'), ('num_occurrences', '<i4')]),
+          ['a', 'b', 'c', 'x', 'y', 'z'], {}, 'BINARY')
+
+    """
 
     def __init__(self, bqm, num_reads=1, tenure=None, timeout=20):
         self.bqm = bqm
