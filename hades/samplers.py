@@ -1,3 +1,7 @@
+"""
+Classical and quantum :class:`.Runnable` `dimod <http://dimod.readthedocs.io/en/stable/>`_
+samplers for problems and subproblems.
+"""
 import time
 import threading
 from collections import namedtuple
@@ -134,7 +138,7 @@ class SimulatedAnnealingSubproblemSampler(Runnable):
     """A simulated annealing sampler for a subproblem.
 
     Args:
-        num_reads (int, optional, default=100):
+        num_reads (int, optional, default=1):
             Number of states (output solutions) to read from the sampler.
         sweeps (int, optional, default=1000):
             Number of sweeps or steps.
@@ -188,6 +192,48 @@ class SimulatedAnnealingSubproblemSampler(Runnable):
 
 
 class TabuSubproblemSampler(Runnable):
+    """A tabu sampler for a subproblem.
+
+    Args:
+        num_reads (int, optional, default=1):
+            Number of states (output solutions) to read from the sampler.
+        tenure (int, optional):
+            Tabu tenure, which is the length of the tabu list, or number of recently
+            explored solutions kept in memory. Default is a quarter of the number
+            of problem variables up to a maximum value of 20.
+        timeout (int, optional, default=20):
+            Total running time in milliseconds.
+
+    Examples:
+        This example works on a binary quadratic model of two AND gates in series
+        by sampling a BQM representing just one of the gates. Output :math:`z` of gate
+        :math:`z = x \wedge y` connects to input :math:`a` of gate :math:`c = a \wedge b`.
+        An initial state is manually set with invalid solution :math:`x=y=0, z=1; a=b=1, c=0`.
+        The state is updated by a tabu search on the subproblem.
+        The execution results shown here was a valid solution to the subproblem:
+        example, :math:`x=0, y=1, z=0`.
+
+        >>> import dimod
+        >>> from tabu import TabuSampler
+        ...
+        >>> # Define a problem and a subproblem
+        >>> bqm = dimod.BinaryQuadraticModel({'x': 0.0, 'y': 0.0, 'z': 8.0, 'a': 2.0, 'b': 0.0, 'c': 6.0},
+        ...                                  {('y', 'x'): 2.0, ('z', 'x'): -4.0, ('z', 'y'): -4.0,
+        ...                                  ('b', 'a'): 2.0, ('c', 'a'): -4.0, ('c', 'b'): -4.0, ('a', 'z'): -4.0},
+        ...                                  -1.0, 'BINARY')
+        >>> sub_bqm = dimod.BinaryQuadraticModel({'x': 0.0, 'y': 0.0, 'z': 8.0},
+        ...                                      {('x', 'y'): 2.0, ('x', 'z'): -4.0, ('y', 'z'): -4.0},
+        ...                                      -1.0, dimod.Vartype.BINARY)
+        >>> # Set up the sampler with an initial state
+        >>> sampler = samplers.TabuSubproblemSampler(tenure=2, timeout=5)
+        >>> state = core.State().from_sample({'x': 0, 'y': 0, 'z': 1, 'a': 1, 'b': 1, 'c': 0}, bqm)
+        >>> state.ctx.update(subproblem=sub_bqm)
+        >>> # Sample the subproblem on the QPU
+        >>> new_state = sampler.iterate(state)
+        >>> print(new_state.ctx['subsamples'].record)      # doctest: +SKIP
+        [([0, 1, 0], -1., 1)]
+
+    """
 
     def __init__(self, num_reads=1, tenure=None, timeout=20):
         self.num_reads = num_reads
