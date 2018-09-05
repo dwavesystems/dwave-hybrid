@@ -76,6 +76,46 @@ class QPUSubproblemExternalEmbeddingSampler(Runnable):
 
 
 class QPUSubproblemAutoEmbeddingSampler(Runnable):
+    """A quantum sampler for a subproblem with automated heuristic minor-embedding.
+
+    Args:
+        num_reads (int, optional, default=100):
+            Number of states (output solutions) to read from the sampler.
+        qpu_sampler (:class:`dimod.Sampler`, optional, default=DWaveSampler()):
+            Quantum sampler such as a D-Wave system.
+
+    Examples:
+        This example works on a binary quadratic model of two AND gates in series
+        by sampling a BQM representing just one of the gates. Output :math:`z` of gate
+        :math:`z = x \wedge y` connects to input :math:`a` of gate :math:`c = a \wedge b`.
+        An initial state is manually set with invalid solution :math:`x=y=0, z=1; a=b=1, c=0`.
+        The state is updated by sampling the subproblem 100 times on a D-Wave system.
+        The execution results shown here were four valid solutions to the subproblem; for
+        example, :math:`x=0, y=0, z=0` occurred 53 times.
+
+        >>> import dimod
+        >>> from dwave.system.samplers import DWaveSampler
+        ...
+        >>> # Define a problem and a subproblem
+        >>> bqm = dimod.BinaryQuadraticModel({'x': 0.0, 'y': 0.0, 'z': 8.0, 'a': 2.0, 'b': 0.0, 'c': 6.0},
+        ...                                  {('y', 'x'): 2.0, ('z', 'x'): -4.0, ('z', 'y'): -4.0,
+        ...                                  ('b', 'a'): 2.0, ('c', 'a'): -4.0, ('c', 'b'): -4.0, ('a', 'z'): -4.0},
+        ...                                  -1.0, 'BINARY')
+        >>> sub_bqm = dimod.BinaryQuadraticModel({'x': 0.0, 'y': 0.0, 'z': 8.0},
+        ...                                      {('x', 'y'): 2.0, ('x', 'z'): -4.0, ('y', 'z'): -4.0},
+        ...                                      -1.0, dimod.Vartype.BINARY)
+        >>> # Set up the sampler with an initial state
+        >>> sampler = samplers.QPUSubproblemAutoEmbeddingSampler(num_reads=100)
+        >>> state = core.State().from_sample({'x': 0, 'y': 0, 'z': 1, 'a': 1, 'b': 1, 'c': 0}, bqm)
+        >>> state.ctx.update(subproblem=sub_bqm)
+        >>> # Sample the subproblem on the QPU
+        >>> new_state = sampler.iterate(state)
+        >>> print(new_state.ctx['subsamples'].record)      # doctest: +SKIP
+        [([0, 0, 0], -1., 53) ([0, 1, 0], -1., 15) ([1, 0, 0], -1., 31)
+         ([1, 1, 1],  1.,  1)]
+
+
+    """
 
     def __init__(self, num_reads=100, qpu_sampler=None):
         self.num_reads = num_reads
