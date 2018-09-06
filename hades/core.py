@@ -11,9 +11,27 @@ import dimod
 
 
 class SampleSet(dimod.Response):
+    """Set of samples and any other data returned by dimod samplers.
+
+    Args:
+        record (:obj:`numpy.recarray`)
+            Samples and data as a NumPy record array. The 'sample', 'energy' and 'num_occurrences'
+            fields are required. 'sample' field is a 2D NumPy int8 array where each row is a
+            sample and each column represents the value of a variable.
+        labels (list):
+            List of variable labels.
+        info (dict):
+            Information about the response as a whole formatted as a dict.
+        vartype (:class:`.Vartype`/str/set):
+            Variable type for the response. Accepted input values:
+
+            * :class:`.Vartype.SPIN`, ``'SPIN'``, ``{-1, 1}``
+            * :class:`.Vartype.BINARY`, ``'BINARY'``, ``{0, 1}``
+
+    """
 
     def __eq__(self, other):
-        # TODO: merge into dimod.Response
+        # TODO: merge into dimod.Response together with the updated docstring
         return (self.vartype == other.vartype and self.info == other.info
             and self.variable_labels == other.variable_labels
             and self.record == other.record)
