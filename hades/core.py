@@ -56,10 +56,15 @@ class SampleSet(dimod.Response):
 
     @classmethod
     def from_sample_on_bqm(cls, sample, bqm):
+        """Convenience method for constructing a SampleSet from one raw (dict)
+        sample with energy calculated from the BQM.
+        """
         return cls.from_sample(sample, bqm.vartype, bqm.energy(sample))
 
     @classmethod
     def from_response(cls, response):
+        """Convenience method for constructing a SampleSet from a dimod response.
+        """
         return cls.from_future(response, result_hook=lambda x: x)
 
 
@@ -131,8 +136,28 @@ class Present(object):
 
 
 class Runnable(object):
-    """Runnable component can be run for one iteration at a time. Iteration
-    might be stopped, but implementing stop support is not required.
+    """Component that can be run for an iteration such as samplers and branches.
+
+    Implementations must support the iterate or run methods, stop is not required.
+
+    Examples:
+        This example runs a tabu search on a binary quadratic model. An initial state is
+        manually set with invalid solution :math:`x=y=0, z=1; a=b=1, c=0` and an updated
+        state is created by running the sampler for one iteration.
+
+        >>> import dimod           # Create a binary quadratic model
+        >>> bqm = dimod.BinaryQuadraticModel({'x': 0.0, 'y': 0.0, 'z': 8.0, 'a': 2.0, 'b': 0.0, 'c': 6.0},
+        ...                                  {('y', 'x'): 2.0, ('z', 'x'): -4.0, ('z', 'y'): -4.0,
+        ...                                  ('b', 'a'): 2.0, ('c', 'a'): -4.0, ('c', 'b'): -4.0, ('a', 'z'): -4.0},
+        ...                                  -1.0, 'BINARY')
+        >>> # Set up the sampler runnable
+        >>> sampler = samplers.TabuProblemSampler(bqm, tenure=2, timeout=5)
+        >>> # Run one iteration of the sampler
+        >>> new_state = sampler.iterate(core.State().from_sample({'x': 0, 'y': 0, 'z': 1, 'a': 1, 'b': 1, 'c': 0}, bqm))
+        >>> print(new_state.samples)      # doctest: +SKIP
+        Response(rec.array([([1, 1, 1, 1, 1, 1], -1., 1)],
+          dtype=[('sample', 'i1', (6,)), ('energy', '<f8'), ('num_occurrences', '<i4')]),
+          ['a', 'b', 'c', 'x', 'y', 'z'], {}, 'BINARY')
     """
 
     def __init__(self, *args, **kwargs):
@@ -140,14 +165,47 @@ class Runnable(object):
 
     @property
     def name(self):
+        """Return the class name of an instantiated :class:`Runnable`.
+
+        Examples:
+            This code-snippet returns the class name of an instantiated sampler.
+
+            >>> print(sampler.name)      # doctest: +SKIP
+            TabuProblemSampler
+
+        """
         return self.__class__.__name__
 
     def iterate(self, state):
-        """Accept a state and return a new state (blocking)."""
+        """Start a blocking iteration of an instantiated :class:`Runnable`.
+
+        Accepts a state and returns a new state.
+
+        Args:
+            state (:class:`State`): Computation state passed between connected components.
+
+        Examples:
+            This code snippet runs one iteration of a sampler to produce a new state::
+
+                new_state = sampler.iterate(core.State().from_sample({'x': 0, 'y': 0}, bqm))
+
+        """
         raise NotImplementedError
 
     def run(self, state):
-        """Accept a state in future and return a new state in future (async)."""
+        """Start an asynchronous iteration of an instantiated :class:`Runnable`.
+
+        Accepts a state in a :class:`future` and return a new state in a :class:`future`.
+
+        Args:
+            state (:class:`State`): Computation state passed between connected components.
+
+        Examples:
+            This code snippet runs one iteration of a sampler to produce a new state::
+
+                new_state = sampler.run(core.State().from_sample({'x': 0, 'y': 0}, bqm))
+
+        """
         try:
             state = state.result()
         except AttributeError:
@@ -155,6 +213,7 @@ class Runnable(object):
         return executor.submit(self.iterate, state)
 
     def stop(self):
+        """Terminate an iteration of an instantiated :class:`Runnable`."""
         pass
 
     def __or__(self, other):
