@@ -220,13 +220,37 @@ class Runnable(object):
         """Composition of runnable components (L-to-R) returns a new runnable Branch."""
         return Branch(components=(self, other))
 
-
 class Branch(Runnable):
-    def __init__(self, components=(), *args, **kwargs):
-        """Sequentially executed components.
+    """Sequentially executed :class:`Runnable` components.
 
-        `components` is an iterable of `Runnable`s.
-        """
+    Args:
+        components (iterable of :class:`Runnable`): Complete processing sequence to
+            update a current set of samples, such as: :code:`decomposer | sampler | composer`.
+
+    Examples:
+        This example runs one iteration of a branch comprising a decomposer, a D-Wave system,
+        and a composer. A 10-variable binary quadratic model is decomposed by the energy
+        impact of its variables into a 6-variable subproblem to be sampled twice
+        with a manually set initial state of all -1 values.
+
+        >>> import dimod           # Create a binary quadratic model
+        >>> bqm = dimod.BinaryQuadraticModel({t: 0 for t in range(10)},
+        ...                                  {(t, (t+1) % 10): 1 for t in range(10)},
+        ...                                  0, 'SPIN')
+        >>> # Run one iteration on a branch
+        >>> branch = EnergyImpactDecomposer(bqm, max_size=6, min_gain=-10) |
+        ...                  QPUSubproblemAutoEmbeddingSampler(num_reads=2) |
+        ...                  SplatComposer(bqm)
+        >>> new_state = branch.iterate(core.State.from_sample(min_sample(bqm), bqm)
+        >>> print(new_state.ctx['subsamples'])      # doctest: +SKIP
+        Response(rec.array([([-1,  1, -1,  1, -1,  1], -5., 1),
+           ([ 1, -1,  1, -1, -1,  1], -5., 1)],
+        >>> # Above response snipped for brevity
+
+    """
+
+    def __init__(self, components=(), *args, **kwargs):
+
         super(Branch, self).__init__(*args, **kwargs)
         self.components = tuple(components)
 
@@ -243,13 +267,36 @@ class Branch(Runnable):
 
     @property
     def name(self):
+        """Return the :class:`Runnable` classes in a branch.
+
+        Examples:
+            This code-snippet returns the classes in an instantiated branch.
+
+            >>> print(branch.name)      # doctest: +SKIP
+            EnergyImpactDecomposer | QPUSubproblemAutoEmbeddingSampler | SplatComposer
+        """
         return " | ".join(component.name for component in self.components)
 
     def iterate(self, state):
+        """Start an iteration of an instantiated :class:`Branch`.
+
+        Accepts a state and returns a new state.
+
+        Args:
+            state (:class:`State`):
+                Computation state passed to the first component of the branch.
+
+        Examples:
+            This code snippet runs one iteration of a branch to produce a new state::
+
+                new_state = branch.iterate(core.State.from_sample(min_sample(bqm), bqm)
+
+        """
         for component in self.components:
             state = component.iterate(state)
         return state
 
     def stop(self):
+        """Try terminating all components in an instantiated :class:`Branch`."""
         for component in self.components:
             component.stop()
