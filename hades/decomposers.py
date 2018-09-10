@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class EnergyImpactDecomposer(Runnable):
-    """Select a subproblem of variables maximally contributing to the problem energy.
+    """Selects a subproblem of variables maximally contributing to the problem energy.
 
     The selection currently implemented does not ensure that the variables are connected
     in the problem graph.
@@ -59,7 +59,6 @@ class EnergyImpactDecomposer(Runnable):
         >>> state2 = decomposer.iterate(state1)
         >>> print(state2.ctx['subproblem'])      # doctest: +SKIP
         BinaryQuadraticModel({1: 1, 3: 1}, {}, 0.0, Vartype.BINARY)
-
 
     """
 
@@ -108,8 +107,30 @@ class EnergyImpactDecomposer(Runnable):
 
 
 class RandomSubproblemDecomposer(Runnable):
-    """Selects a random subproblem of size `size`. The subproblem is possibly
-    not connected.
+    """Select a subproblem of `size` random variables.
+
+    The selection currently implemented does not ensure that the variables are connected
+    in the problem graph.
+
+    Args:
+        bqm (:obj:`.BinaryQuadraticModel`):
+            Binary quadratic model (BQM).
+        size (int):
+            Number of variables in the subproblem.
+
+    Examples:
+        This example decomposes a 6-variable binary quadratic model with a
+        random initial sample set to create a 3-variable subproblem.
+
+        >>> import dimod           # Create a binary quadratic model
+        >>> bqm = dimod.BinaryQuadraticModel({t: 0 for t in range(6)},
+        ...             {(t, (t+1) % 6): 1 for t in range(6)}, 0, 'BINARY')
+        >>> decomposer = RandomSubproblemDecomposer(bqm, size=3)
+        >>> state0 = core.State.from_sample(random_sample(bqm), bqm)
+        >>> state1 = decomposer.iterate(state0)
+        >>> print(state1.ctx['subproblem'])
+        BinaryQuadraticModel({2: 1.0, 3: 0.0, 4: 0.0}, {(2, 3): 1.0, (3, 4): 1.0}, 0.0, Vartype.BINARY)
+
     """
 
     def __init__(self, bqm, size):
