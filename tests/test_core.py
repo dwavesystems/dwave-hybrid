@@ -34,4 +34,4 @@ class TestState(unittest.TestCase):
         self.assertEqual(s2.updated(ctx=None).updated(ctx={'x': 1}).ctx, {'x': 1})
         self.assertEqual(s2.updated(ctx={'a': 2}).ctx, {'a': 2})
         self.assertEqual(s2.updated(ctx={'a': {'b': 2}}).ctx, {'a': {'b': 2}})
-        self.assertEqual(s2.updated(ctx={'a': {'c': 2}}).ctx, {'a': {'b': 1, 'c': 2}})
+        self.assertEqual(s2.updated(ctx={'a': {'c': 2}}).ctx, {'a': {'c': 2}})
