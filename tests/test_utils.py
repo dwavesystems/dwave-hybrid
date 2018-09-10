@@ -3,7 +3,8 @@ import unittest
 import dimod
 import dwave_networkx as dnx
 
-from hades.utils import chimera_tiles, flip_energy_gains
+from hades.utils import (
+    chimera_tiles, flip_energy_gains, select_localsearch_adversaries)
 
 
 class TestEnergyFlipGainUtils(unittest.TestCase):
@@ -32,6 +33,22 @@ class TestEnergyFlipGainUtils(unittest.TestCase):
         # flipping B is the worst
         gains = flip_energy_gains(self.notb, {'a': 1, 'b': 1, 'c': 1})
         self.assertEqual(gains, [(0.0, 'c'), (0.0, 'a'), (-4.0, 'b')])
+
+    def test_localsearch_adversaries(self):
+        defvar = select_localsearch_adversaries(self.notall, {'a': 1, 'b': 1, 'c': -1})
+        self.assertEqual(defvar, ['c', 'b', 'a'])
+
+        allvar = select_localsearch_adversaries(self.notall, {'a': 1, 'b': 1, 'c': -1}, max_n=3, min_gain=-1)
+        self.assertEqual(allvar, ['c', 'b', 'a'])
+
+        subvar = select_localsearch_adversaries(self.notall, {'a': 1, 'b': 1, 'c': -1}, max_n=2, min_gain=-1)
+        self.assertEqual(subvar, ['c', 'b'])
+
+        subvar = select_localsearch_adversaries(self.notall, {'a': 1, 'b': 1, 'c': -1}, min_gain=1)
+        self.assertEqual(subvar, ['c'])
+
+        nonevar = select_localsearch_adversaries(self.notall, {'a': 1, 'b': 1, 'c': -1}, min_gain=10)
+        self.assertEqual(nonevar, [])
 
 
 class TestChimeraTiles(unittest.TestCase):
