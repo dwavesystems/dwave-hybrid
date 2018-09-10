@@ -16,11 +16,51 @@ logger = logging.getLogger(__name__)
 
 
 class EnergyImpactDecomposer(Runnable):
-    """Selects up to `max_size` variables that contribute the most to energy
-    increase.
+    """Select a subproblem of variables maximally contributing to the problem energy.
 
-    Note: currently, list of variables not connected in problem graph might be
-    returned.
+    The selection currently implemented does not ensure that the variables are connected
+    in the problem graph.
+
+    Args:
+        bqm (:obj:`.BinaryQuadraticModel`):
+            Binary quadratic model (BQM).
+        max_size (int):
+            Maximum number of variables in the subproblem.
+        min_gain (int, optional, default=0):
+            Minimum reduction required to BQM energy, given the current sample. A variable
+            is included in the subproblem only if inverting its sample value reduces energy
+            by at least this ammount.
+        min_diff (int, optional, default=1):
+            Minimum number of variables that did not partake in the previous iteration.
+        stride (int, optional, default=1):
+            Number of variables to shift each step of identifying subproblem variables that meet
+            the `min_diff` criteria. A shift of 3, for example, skips three high
+            contributors to the current and previous iteration in favor of selecting three
+            variables not in the previous iteration.
+
+    Examples:
+        This example iterates twice on a 10-variable binary quadratic model with a
+        random initial sample set. `min_gain` configuration limits the subproblem
+        in the first iteration to the first 4 variables shown in the output of
+        `flip_energy_gains`; `min_diff` configuration should bring in new variables
+        (this edge case worsens the second pick)
+
+        >>> import dimod           # Create a binary quadratic model
+        >>> bqm = dimod.BinaryQuadraticModel({t: 0 for t in range(10)},
+        ...                                  {(t, (t+1) % 10): 1 for t in range(10)},
+        ...                                  0, 'BINARY')
+        >>> decomposer = EnergyImpactDecomposer(bqm, max_size=8, min_gain=1, min_diff=2)
+        >>> state0 = core.State.from_sample(random_sample(bqm), bqm)
+        >>> flip_energy_gains(bqm, state0.samples.first.sample)     # doctest: +SKIP
+        [(1, 8), (1, 6), (1, 2), (1, 1), (0, 7), (-1, 9), (-1, 5), (-1, 3), (-1, 0), (-2, 4)]
+        >>> state1 = decomposer.iterate(state0)
+        >>> print(state1.ctx['subproblem'])       # doctest: +SKIP
+        BinaryQuadraticModel({9: 2, 3: 1, 5: 2, 1: 1}, {}, 0.0, Vartype.BINARY)
+        >>> state2 = decomposer.iterate(state1)
+        >>> print(state2.ctx['subproblem'])      # doctest: +SKIP
+        BinaryQuadraticModel({1: 1, 3: 1}, {}, 0.0, Vartype.BINARY)
+
+
     """
 
     def __init__(self, bqm, max_size, min_gain=0.0, min_diff=1, stride=1):
