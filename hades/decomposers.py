@@ -1,5 +1,9 @@
 import logging
 from itertools import cycle
+import collections
+import random
+
+import networkx as nx
 
 from hades.core import Runnable, State
 from hades.profiling import tictoc
@@ -111,4 +115,70 @@ class TilingChimeraDecomposer(Runnable):
         sample = state.samples.change_vartype(self.bqm.vartype).first.sample
         subbqm = bqm_induced_by(self.bqm, variables, sample)
         return state.updated(ctx=dict(subproblem=subbqm, embedding=embedding),
+                             debug=dict(decomposer=self.name))
+
+
+class RandomConstraintDecomposer(Runnable):
+    """Pick variables randomly by chunks
+
+    Args:
+        bqm:
+
+        size:
+
+        constraints (list[set]):
+            A list of sets where each set is a group of variables in the bqm associated with a
+            constraint.
+
+    """
+
+    def __init__(self, bqm, size, constraints):
+        self.bqm = bqm
+
+        if size > len(bqm):
+            raise ValueError("subproblem size cannot be greater than the problem size")
+        self.size = size
+
+        if not isinstance(constraints, collections.Sequence):
+            raise TypeError("constraints should be a list of containers")
+        if any(len(const) > size for const in constraints):
+            raise ValueError("size must be able to contain the largest constraint")
+        self.constraints = constraints
+
+        # get the connectivity between the constraint components
+        self.constraint_graph = CG = nx.Graph()
+        for ci, const in enumerate(constraints):
+            for i in range(ci+1, len(constraints)):
+                if any(v in const for v in constraints[i]):
+                    CG.add_edge(i, ci)
+
+    @tictoc('random_constraint_decomposer')
+    def iterate(self, state):
+        CG = self.constraint_graph
+        size = self.size
+        bqm = self.bqm
+        constraints = self.constraints
+
+        # get a random constraint to start with.
+        # for some reason random.choice(CG.nodes) does not work, so we rely on the fact that our
+        # graph is index-labeled
+        n = random.choice(range(len(CG)))
+
+        if len(constraints[n]) > size:
+            raise NotImplementedError
+
+        # starting from our constraint, do a breadth-first search adding constraints until our max
+        # size is reached
+        variables = set(constraints[n])
+        for _, ci in nx.bfs_edges(CG, n):
+            proposed = [v for v in constraints[ci] if v not in variables]
+            if len(proposed) + len(variables) <= size:
+                variables.add(proposed)
+            if len(variables) == size:
+                # can exit early
+                break
+
+        sample = state.samples.change_vartype(self.bqm.vartype).first.sample
+        subbqm = bqm_induced_by(self.bqm, variables, sample)
+        return state.updated(ctx=dict(subproblem=subbqm),
                              debug=dict(decomposer=self.name))
