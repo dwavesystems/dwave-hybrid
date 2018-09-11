@@ -94,15 +94,39 @@ class State(PliableDict):
     """Computation state passed along a branch between connected components."""
 
     def __init__(self, *args, **kwargs):
+        """State is a `PliableDict` (`dict` subclass) which always contains
+        at least three keys: `samples`, `problem` and `debug`.
+        """
         super(State, self).__init__(*args, **kwargs)
         self.setdefault('samples', None)
         self.setdefault('problem', None)
         self.setdefault('debug', PliableDict())
 
     def copy(self):
+        """Simple deep copy if itself. Functionally identical to
+        `State.updated()`.
+        """
         return deepcopy(self)
 
     def updated(self, **kwargs):
+        """Return a (deep) copy of itself, updated from `kwargs`.
+
+        It has `dict.update` semantics with immutability of `sorted`. One
+        exception (currently) is for the `debug` key, for which we do a
+        depth-unlimited recursive merge.
+
+        Example:
+
+            >>> state = State()
+            >>> state
+            {'debug': {}, 'problem': None, 'samples': None}
+
+            >>> newstate = state.updated(problem="test")
+            >>> newstate
+            {'debug': {}, 'problem': 'test', 'samples': None}
+
+        """
+
         overwrite = lambda a,b: b
 
         # use a special merge strategy for `debug` (op=overwrite, max_depth=None)
