@@ -105,14 +105,11 @@ class State(PliableDict):
     def updated(self, **kwargs):
         overwrite = lambda a,b: b
 
-        # use a special merge strategy for `debug` (op=add, max_depth=None),
-        # but handle merge conflicts by defaulting to a simple deep copy
-        try:
-            debug = merge(self.get('debug', {}), kwargs.get('debug', {}), op=operator.add)
-        except TypeError:
-            debug = merge(self.get('debug', {}), kwargs.get('debug', {}), op=overwrite)
+        # use a special merge strategy for `debug` (op=overwrite, max_depth=None)
+        debug = merge(self.get('debug', {}), kwargs.get('debug', {}), op=overwrite)
+        if debug is not None:
+            kwargs['debug'] = PliableDict(debug)
 
-        kwargs['debug'] = PliableDict(debug)
         return State(merge(self, kwargs, max_depth=1, op=overwrite))
 
     @classmethod
@@ -214,7 +211,7 @@ class Runnable(object):
         """
         try:
             state = state.result()
-        except AttributeError:
+        except:
             pass
         return executor.submit(self.iterate, state)
 
@@ -249,7 +246,7 @@ class Branch(Runnable):
         ...                  QPUSubproblemAutoEmbeddingSampler(num_reads=2) |
         ...                  SplatComposer(bqm)
         >>> new_state = branch.iterate(core.State.from_sample(min_sample(bqm), bqm)
-        >>> print(new_state.ctx['subsamples'])      # doctest: +SKIP
+        >>> print(new_state.subsamples)      # doctest: +SKIP
         Response(rec.array([([-1,  1, -1,  1, -1,  1], -5., 1),
            ([ 1, -1,  1, -1, -1,  1], -5., 1)],
         >>> # Above response snipped for brevity

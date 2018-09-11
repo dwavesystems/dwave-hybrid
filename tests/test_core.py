@@ -55,3 +55,7 @@ class TestState(unittest.TestCase):
 
         self.assertDictEqual(s3.updated(debug={'x': {'y': {'z': [2]}}}).debug, {'x': {'y': {'z': [1, 2]}}})
         self.assertDictEqual(s3.updated(debug={'x': {'y': {'w': 2}}}).debug, {'x': {'y': {'z': [1], 'w': 2}}})
+
+        # test clear
+        self.assertEqual(s2.updated(emb=None).emb, None)
+        self.assertEqual(s2.updated(debug=None).debug, None)
