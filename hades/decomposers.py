@@ -151,7 +151,7 @@ class RandomSubproblemDecomposer(Runnable):
 
 
 class IdentityDecomposer(Runnable):
-    """Copies problem to subproblem."""
+    """Selects a subproblem that is a copy of the problem."""
 
     def __init__(self, bqm):
         self.bqm = bqm
@@ -163,7 +163,40 @@ class IdentityDecomposer(Runnable):
 
 
 class TilingChimeraDecomposer(Runnable):
-    """Returns sequential tile slices of the initial BQM."""
+    """Returns sequential Chimera lattices that tile the initial problem.
+
+    A Chimera lattice is an m-by-n grid of Chimera tiles, where each tile is a bipartite graph
+    with shores of size t. The problem is decomposed into a sequence of subproblems with variables
+    belonging to the Chimera lattices that tile the problem Chimera lattice. For example,
+    a 2x2 Chimera lattice could be tiled 64 times (8x8) on a fully-yielded D-Wave 2000Q system (16x16).
+
+    Args:
+        bqm (:obj:`.BinaryQuadraticModel`):
+            Binary quadratic model (BQM).
+        size (int, optional, default=(4,4,4)):
+            Size of the Chimera lattice as (m, n, t), where m is the number of rows,
+            n the columns, and t the size of shore in the Chimera lattice.
+        loop (Bool, optional, default=True):
+            Cycle continually through the tiles.
+
+    Examples:
+        This example decomposes a 2048-variable Chimera structured binary quadratic model
+        read from a file into 2x2x4-lattice subproblems.
+
+        >>> import dimod           # Import a Chimera-structured binary quadratic model
+        >>> with open('2048.09.qubo', 'r') as file:    # doctest: +SKIP
+        ...     bqm = dimod.BinaryQuadraticModel.from_coo(file)
+        >>> decomposer = TilingChimeraDecomposer(bqm, size=(2,2,4))   # doctest: +SKIP
+        >>> state0 = core.State.from_sample(random_sample(bqm), bqm)  # doctest: +SKIP
+        >>> state1 = decomposer.iterate(state0)    # doctest: +SKIP
+        >>> print(state1.ctx['subproblem'])        # doctest: +SKIP
+        BinaryQuadraticModel({0: 0.0, 4: 0.0, 5: 0.0, 6: 0.0, 7: -3.0, 1: 0.0, 2: 0.0, 3: -4.0, 1024: -7.0, 1028: 0.0,
+        >>> # Snipped above response for brevity
+        >>> state1 = decomposer.iterate(state0)    # doctest: +SKIP
+        >>> print(state1.ctx['subproblem'])        # doctest: +SKIP
+        BinaryQuadraticModel({8: 3.0, 12: 0.0, 13: 2.0, 14: -11.0, 15: -3.0, 9: 4.0, 10: 0.0, 11: 0.0, 1032: 0.0,
+
+    """
 
     def __init__(self, bqm, size=(4,4,4), loop=True):
         """Size C(n,m,t) defines a Chimera subgraph returned with each call."""
