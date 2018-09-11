@@ -136,6 +136,15 @@ class State(PliableDict):
 
         return State(merge(self, kwargs, max_depth=1, op=overwrite))
 
+    def result(self):
+        """Implement `concurrent.Future`-compatible result resolution interface.
+
+        Also, explicitly defining this method prevents accidental definition of
+        `State.result` method via attribute setters, which might prevent result
+        resolution in some edge cases.
+        """
+        return self
+
     @classmethod
     def from_sample(cls, sample, bqm):
         """Convenience method for constructing State from raw (dict) sample;
