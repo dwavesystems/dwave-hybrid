@@ -46,6 +46,11 @@ class EnergyImpactDecomposer(Runnable):
         variables = select_localsearch_adversaries(
             self.bqm, sample, min_gain=self.min_gain)
 
+        # TODO: soft fail strategy? skip one iteration or relax vars selection?
+        if len(variables) < self.min_diff:
+            raise ValueError("less than min_diff variables identified as"
+                             " contributors to min_gain energy increase")
+
         offset = 0
         next_vars = set(variables[offset : offset+self.max_size])
         while len(next_vars ^ self._prev_vars) < self.min_diff:
