@@ -68,6 +68,27 @@ class SampleSet(dimod.Response):
         return cls.from_future(response, result_hook=lambda x: x)
 
 
+class PliableDict(dict):
+    """Dictionary subclass with attribute accessors acting as item accessors.
+
+    Example:
+
+        >>> d = PliableDict(x=1)
+        >>> d.y = 2
+        >>> d
+        {'x': 1, 'y': 2}
+
+        >>> d.z is None
+        True
+    """
+
+    def __getattr__(self, name):
+        return self.get(name)
+
+    def __setattr__(self, name, value):
+        self[name] = value
+
+
 _State = namedtuple('State', 'samples ctx debug')
 
 class State(_State):
@@ -219,6 +240,7 @@ class Runnable(object):
     def __or__(self, other):
         """Composition of runnable components (L-to-R) returns a new runnable Branch."""
         return Branch(components=(self, other))
+
 
 class Branch(Runnable):
     """Sequentially executed :class:`Runnable` components.

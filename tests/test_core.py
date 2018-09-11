@@ -1,10 +1,29 @@
 import unittest
 
-from hades.core import State, SampleSet
+from hades.core import PliableDict, State, SampleSet
 
 
 class TestSampleSet(unittest.TestCase):
     pass
+
+
+class TestPliableDict(unittest.TestCase):
+
+    def test_construction(self):
+        self.assertDictEqual(PliableDict(), {})
+        self.assertDictEqual(PliableDict(x=1), {'x': 1})
+        self.assertDictEqual(PliableDict(**{'x': 1}), {'x': 1})
+        self.assertDictEqual(PliableDict({'x': 1, 'y': 2}), {'x': 1, 'y': 2})
+
+    def test_setter(self):
+        d = PliableDict()
+        d.x = 1
+        self.assertDictEqual(d, {'x': 1})
+
+    def test_getter(self):
+        d = PliableDict(x=1)
+        self.assertEqual(d.x, 1)
+        self.assertEqual(d.y, None)
 
 
 class TestState(unittest.TestCase):
