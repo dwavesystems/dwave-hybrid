@@ -1,6 +1,7 @@
 from collections import namedtuple
 from itertools import chain
 from copy import deepcopy
+import operator
 
 # TODO: abstract as singleton executor under hades namespace
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
@@ -89,55 +90,39 @@ class PliableDict(dict):
         self[name] = value
 
 
-_State = namedtuple('State', 'samples ctx debug')
+class State(PliableDict):
+    """Computation state passed along a branch between connected components."""
 
-class State(_State):
-    """Computation state passed along a branch between connected components.
-    The structure is fixed, but fields are mutable. Components can store
-    context into `ctx` and debugging/tracing info into `debug`.
-
-    NB: Based on _State namedtuple, with added default values/kwargs.
-    """
-
-    def __new__(_cls, samples=None, ctx=None, debug=None):
-        """`samples` is SampleSet, `ctx` and `debug` are `dict`."""
-        if ctx is None:
-            ctx = {}
-        if debug is None:
-            debug = {}
-        return _State.__new__(_cls, samples, ctx, debug)
-
-    def _update(self, src, upt):
-        # depth-limited recursive plucky.merge (max-depth=2, level 2+ copied)
-        dest = {}
-        for key in set(chain(src.keys(), upt.keys())):
-            if key in src and key in upt:
-                if isinstance(upt[key], dict):
-                    dest[key] = deepcopy(src[key])
-                    for subkey, subval in upt[key].items():
-                        dest[key][subkey] = deepcopy(subval)
-                else:
-                    dest[key] = deepcopy(upt[key])
-            elif key in src:
-                dest[key] = deepcopy(src[key])
-            elif key in upt:
-                dest[key] = deepcopy(upt[key])
-        return dest
-
-    def updated(self, **kwargs):
-        return State(**self._update(self._asdict(), kwargs))
+    def __init__(self, *args, **kwargs):
+        super(State, self).__init__(*args, **kwargs)
+        self.setdefault('samples', None)
+        self.setdefault('problem', None)
+        self.setdefault('debug', PliableDict())
 
     def copy(self):
         return deepcopy(self)
+
+    def updated(self, **kwargs):
+        overwrite = lambda a,b: b
+
+        # use a special merge strategy for `debug` (op=add, max_depth=None),
+        # but handle merge conflicts by defaulting to a simple deep copy
+        try:
+            debug = merge(self.get('debug', {}), kwargs.get('debug', {}), op=operator.add)
+        except TypeError:
+            debug = merge(self.get('debug', {}), kwargs.get('debug', {}), op=overwrite)
+
+        kwargs['debug'] = PliableDict(debug)
+        return State(merge(self, kwargs, max_depth=1, op=overwrite))
 
     @classmethod
     def from_sample(cls, sample, bqm):
         """Convenience method for constructing State from raw (dict) sample;
         energy is calculated from BQM.
         """
-        return cls(SampleSet.from_sample(sample,
-                                         vartype=bqm.vartype,
-                                         energy=bqm.energy(sample)))
+        return cls(samples=SampleSet.from_sample(sample,
+                                                 vartype=bqm.vartype,
+                                                 energy=bqm.energy(sample)))
 
 
 class Present(object):

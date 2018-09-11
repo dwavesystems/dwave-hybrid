@@ -8,5 +8,5 @@ numpy
 networkx
 dwave-networkx
 click
-plucky
+plucky>=0.4.3
 coverage
