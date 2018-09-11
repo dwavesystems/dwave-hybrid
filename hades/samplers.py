@@ -55,11 +55,11 @@ class QPUSubproblemExternalEmbeddingSampler(Runnable):
         >>> sub_embedding = minorminer.find_embedding(list(sub_bqm.quadratic.keys()), qpu_sampler.edgelist)
         >>> # Set up the sampler with an initial state
         >>> sampler = samplers.QPUSubproblemExternalEmbeddingSampler(num_reads=100)
-        >>> state = core.State().from_sample({'x': 0, 'y': 0, 'z': 1, 'a': 1, 'b': 1, 'c': 0}, bqm)
-        >>> state.ctx.update(subproblem=sub_bqm, embedding=sub_embedding)
+        >>> state = core.State.from_sample({'x': 0, 'y': 0, 'z': 1, 'a': 1, 'b': 1, 'c': 0}, bqm)
+        >>> state.update(subproblem=sub_bqm, embedding=sub_embedding)
         >>> # Sample the subproblem on the QPU
         >>> new_state = sampler.iterate(state)
-        >>> print(new_state.ctx['subsamples'].record)      # doctest: +SKIP
+        >>> print(new_state.subsamples.record)      # doctest: +SKIP
         [([0, 1, 0], -1., 22) ([0, 0, 0], -1., 47) ([1, 0, 0], -1., 31)]
 
 
@@ -73,9 +73,9 @@ class QPUSubproblemExternalEmbeddingSampler(Runnable):
 
     @tictoc('qpu_ext_embedding_sample')
     def iterate(self, state):
-        sampler = FixedEmbeddingComposite(self.sampler, embedding=state.ctx['embedding'])
-        response = sampler.sample(state.ctx['subproblem'], num_reads=self.num_reads)
-        return state.updated(ctx=dict(subsamples=response),
+        sampler = FixedEmbeddingComposite(self.sampler, embedding=state.embedding)
+        response = sampler.sample(state.subproblem, num_reads=self.num_reads)
+        return state.updated(subsamples=response,
                              debug=dict(sampler=self.name))
 
 
@@ -110,11 +110,11 @@ class QPUSubproblemAutoEmbeddingSampler(Runnable):
         ...                                      -1.0, dimod.Vartype.BINARY)
         >>> # Set up the sampler with an initial state
         >>> sampler = samplers.QPUSubproblemAutoEmbeddingSampler(num_reads=100)
-        >>> state = core.State().from_sample({'x': 0, 'y': 0, 'z': 1, 'a': 1, 'b': 1, 'c': 0}, bqm)
-        >>> state.ctx.update(subproblem=sub_bqm)
+        >>> state = core.State.from_sample({'x': 0, 'y': 0, 'z': 1, 'a': 1, 'b': 1, 'c': 0}, bqm)
+        >>> state.update(subproblem=sub_bqm)
         >>> # Sample the subproblem on the QPU
         >>> new_state = sampler.iterate(state)
-        >>> print(new_state.ctx['subsamples'].record)      # doctest: +SKIP
+        >>> print(new_state.subsamples.record)      # doctest: +SKIP
         [([0, 0, 0], -1., 53) ([0, 1, 0], -1., 15) ([1, 0, 0], -1., 31)
          ([1, 1, 1],  1.,  1)]
 
@@ -129,8 +129,8 @@ class QPUSubproblemAutoEmbeddingSampler(Runnable):
 
     @tictoc('qpu_auto_embedding_sample')
     def iterate(self, state):
-        response = self.sampler.sample(state.ctx['subproblem'], num_reads=self.num_reads)
-        return state.updated(ctx=dict(subsamples=response),
+        response = self.sampler.sample(state.subproblem, num_reads=self.num_reads)
+        return state.updated(subsamples=response,
                              debug=dict(sampler=self.name))
 
 
@@ -165,11 +165,11 @@ class SimulatedAnnealingSubproblemSampler(Runnable):
         ...                                      -1.0, dimod.Vartype.BINARY)
         >>> # Set up the sampler with an initial state
         >>> sampler = samplers.SimulatedAnnealingSubproblemSampler(num_reads=10)
-        >>> state = core.State().from_sample({'x': 0, 'y': 0, 'z': 1, 'a': 1, 'b': 1, 'c': 0}, bqm)
-        >>> state.ctx.update(subproblem=sub_bqm)
+        >>> state = core.State.from_sample({'x': 0, 'y': 0, 'z': 1, 'a': 1, 'b': 1, 'c': 0}, bqm)
+        >>> state.update(subproblem=sub_bqm)
         >>> # Sample the subproblem
         >>> new_state = sampler.iterate(state)
-        >>> print(new_state.ctx['subsamples'].record)      # doctest: +SKIP
+        >>> print(new_state.subsamples.record)      # doctest: +SKIP
         [([0, 1, 0], -1., 1) ([0, 1, 0], -1., 1) ([0, 0, 0], -1., 1)
         ([0, 0, 0], -1., 1) ([0, 0, 0], -1., 1) ([1, 0, 0], -1., 1)
         ([1, 0, 0], -1., 1) ([0, 0, 0], -1., 1) ([0, 1, 0], -1., 1)
@@ -184,10 +184,10 @@ class SimulatedAnnealingSubproblemSampler(Runnable):
 
     @tictoc('subneal_sample')
     def iterate(self, state):
-        subbqm = state.ctx['subproblem']
+        subbqm = state.subproblem
         response = self.sampler.sample(
             subbqm, num_reads=self.num_reads, sweeps=self.sweeps)
-        return state.updated(ctx=dict(subsamples=response),
+        return state.updated(subsamples=response,
                              debug=dict(sampler=self.name))
 
 
@@ -226,11 +226,11 @@ class TabuSubproblemSampler(Runnable):
         ...                                      -1.0, dimod.Vartype.BINARY)
         >>> # Set up the sampler with an initial state
         >>> sampler = samplers.TabuSubproblemSampler(tenure=2, timeout=5)
-        >>> state = core.State().from_sample({'x': 0, 'y': 0, 'z': 1, 'a': 1, 'b': 1, 'c': 0}, bqm)
-        >>> state.ctx.update(subproblem=sub_bqm)
+        >>> state = core.State.from_sample({'x': 0, 'y': 0, 'z': 1, 'a': 1, 'b': 1, 'c': 0}, bqm)
+        >>> state.update(subproblem=sub_bqm)
         >>> # Sample the subproblem
         >>> new_state = sampler.iterate(state)
-        >>> print(new_state.ctx['subsamples'].record)      # doctest: +SKIP
+        >>> print(new_state.subsamples.record)      # doctest: +SKIP
         [([0, 1, 0], -1., 1)]
 
     """
@@ -243,10 +243,10 @@ class TabuSubproblemSampler(Runnable):
 
     @tictoc('subtabu_sample')
     def iterate(self, state):
-        subbqm = state.ctx['subproblem']
+        subbqm = state.subproblem
         response = self.sampler.sample(
             subbqm, tenure=self.tenure, timeout=self.timeout, num_reads=self.num_reads)
-        return state.updated(ctx=dict(subsamples=response),
+        return state.updated(subsamples=response,
                              debug=dict(sampler=self.name))
 
 
@@ -283,7 +283,7 @@ class TabuProblemSampler(Runnable):
         ...                                  -1.0, 'BINARY')
         >>> # Set up the sampler with an initial state
         >>> sampler = samplers.TabuProblemSampler(bqm, tenure=2, timeout=5)
-        >>> state = core.State().from_sample({'x': 0, 'y': 0, 'z': 1, 'a': 1, 'b': 1, 'c': 0}, bqm)
+        >>> state = core.State.from_sample({'x': 0, 'y': 0, 'z': 1, 'a': 1, 'b': 1, 'c': 0}, bqm)
         >>> # Sample the problem
         >>> new_state = sampler.iterate(state)
         >>> print(new_state.samples)      # doctest: +SKIP
@@ -347,7 +347,7 @@ class InterruptableTabuSampler(TabuProblemSampler):
         ...                                  -1.0, 'BINARY')
         >>> # Set up the sampler with an initial state
         >>> sampler = samplers.InterruptableTabuSampler(bqm, tenure=2, quantum_timeout=30, timeout=5000)
-        >>> state = core.State().from_sample({'x': 0, 'y': 0, 'z': 1, 'a': 1, 'b': 1, 'c': 0}, bqm)
+        >>> state = core.State.from_sample({'x': 0, 'y': 0, 'z': 1, 'a': 1, 'b': 1, 'c': 0}, bqm)
         >>> # Sample the problem
         >>> new_state = sampler.run(state)
         >>> new_state  # doctest: +SKIP
@@ -358,7 +358,7 @@ class InterruptableTabuSampler(TabuProblemSampler):
         >>> print(new_state.result())      # doctest: +SKIP
         State(samples=Response(rec.array([([1, 1, 1, 1, 1, 1], -1., 1)],
           dtype=[('sample', 'i1', (6,)), ('energy', '<f8'), ('num_occurrences', '<i4')]),
-          ['a', 'b', 'c', 'x', 'y', 'z'], {}, 'BINARY'), ctx={},
+          ['a', 'b', 'c', 'x', 'y', 'z'], {}, 'BINARY'),
           debug={'sampler': 'InterruptableTabuSampler', 'runtime': 62.85970854759216, 'iterno': 2082})
 
     """
@@ -413,22 +413,22 @@ class RandomSubproblemSampler(Runnable):
         ...                                      -1.0, dimod.Vartype.BINARY)
         >>> # Set up the sampler with an initial state
         >>> sampler = samplers.RandomSubproblemSampler()
-        >>> state = core.State().from_sample({'x': 0, 'y': 0, 'z': 1, 'a': 1, 'b': 1, 'c': 0}, bqm)
-        >>> state.ctx.update(subproblem=sub_bqm)
+        >>> state = core.State.from_sample({'x': 0, 'y': 0, 'z': 1, 'a': 1, 'b': 1, 'c': 0}, bqm)
+        >>> state.update(subproblem=sub_bqm)
         >>> # Sample the subproblem a couple of times
         >>> new_state = sampler.iterate(state)
-        >>> print(new_state.ctx['subsamples'].record)      # doctest: +SKIP
+        >>> print(new_state.subsamples.record)      # doctest: +SKIP
         [([0, 0, 0], -1., 1)]
         >>> new_state = sampler.iterate(state)
-        >>> print(new_state.ctx['subsamples'].record)      # doctest: +SKIP
+        >>> print(new_state.subsamples.record)      # doctest: +SKIP
         [([1, 1, 1], 1., 1)]
 
     """
 
     @tictoc('random_sample')
     def iterate(self, state):
-        bqm = state.ctx['subproblem']
+        bqm = state.subproblem
         sample = random_sample(bqm)
         response = SampleSet.from_sample_on_bqm(sample, bqm)
-        return state.updated(ctx=dict(subsamples=response),
+        return state.updated(subsamples=response,
                              debug=dict(sampler=self.name))

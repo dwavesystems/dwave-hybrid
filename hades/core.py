@@ -1,6 +1,7 @@
 from collections import namedtuple
 from itertools import chain
 from copy import deepcopy
+import operator
 
 # TODO: abstract as singleton executor under hades namespace
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
@@ -68,55 +69,81 @@ class SampleSet(dimod.Response):
         return cls.from_future(response, result_hook=lambda x: x)
 
 
-_State = namedtuple('State', 'samples ctx debug')
+class PliableDict(dict):
+    """Dictionary subclass with attribute accessors acting as item accessors.
 
-class State(_State):
-    """Computation state passed along a branch between connected components.
-    The structure is fixed, but fields are mutable. Components can store
-    context into `ctx` and debugging/tracing info into `debug`.
+    Example:
 
-    NB: Based on _State namedtuple, with added default values/kwargs.
+        >>> d = PliableDict(x=1)
+        >>> d.y = 2
+        >>> d
+        {'x': 1, 'y': 2}
+
+        >>> d.z is None
+        True
     """
 
-    def __new__(_cls, samples=None, ctx=None, debug=None):
-        """`samples` is SampleSet, `ctx` and `debug` are `dict`."""
-        if ctx is None:
-            ctx = {}
-        if debug is None:
-            debug = {}
-        return _State.__new__(_cls, samples, ctx, debug)
+    def __getattr__(self, name):
+        return self.get(name)
 
-    def _update(self, src, upt):
-        # depth-limited recursive plucky.merge (max-depth=2, level 2+ copied)
-        dest = {}
-        for key in set(chain(src.keys(), upt.keys())):
-            if key in src and key in upt:
-                if isinstance(upt[key], dict):
-                    dest[key] = deepcopy(src[key])
-                    for subkey, subval in upt[key].items():
-                        dest[key][subkey] = deepcopy(subval)
-                else:
-                    dest[key] = deepcopy(upt[key])
-            elif key in src:
-                dest[key] = deepcopy(src[key])
-            elif key in upt:
-                dest[key] = deepcopy(upt[key])
-        return dest
+    def __setattr__(self, name, value):
+        self[name] = value
 
-    def updated(self, **kwargs):
-        return State(**self._update(self._asdict(), kwargs))
+
+class State(PliableDict):
+    """Computation state passed along a branch between connected components."""
+
+    def __init__(self, *args, **kwargs):
+        """State is a `PliableDict` (`dict` subclass) which always contains
+        at least three keys: `samples`, `problem` and `debug`.
+        """
+        super(State, self).__init__(*args, **kwargs)
+        self.setdefault('samples', None)
+        self.setdefault('problem', None)
+        self.setdefault('debug', PliableDict())
 
     def copy(self):
+        """Simple deep copy if itself. Functionally identical to
+        `State.updated()`.
+        """
         return deepcopy(self)
+
+    def updated(self, **kwargs):
+        """Return a (deep) copy of itself, updated from `kwargs`.
+
+        It has `dict.update` semantics with immutability of `sorted`. One
+        exception (currently) is for the `debug` key, for which we do a
+        depth-unlimited recursive merge.
+
+        Example:
+
+            >>> state = State()
+            >>> state
+            {'debug': {}, 'problem': None, 'samples': None}
+
+            >>> newstate = state.updated(problem="test")
+            >>> newstate
+            {'debug': {}, 'problem': 'test', 'samples': None}
+
+        """
+
+        overwrite = lambda a,b: b
+
+        # use a special merge strategy for `debug` (op=overwrite, max_depth=None)
+        debug = merge(self.get('debug', {}), kwargs.get('debug', {}), op=overwrite)
+        if debug is not None:
+            kwargs['debug'] = PliableDict(debug)
+
+        return State(merge(self, kwargs, max_depth=1, op=overwrite))
 
     @classmethod
     def from_sample(cls, sample, bqm):
         """Convenience method for constructing State from raw (dict) sample;
         energy is calculated from BQM.
         """
-        return cls(SampleSet.from_sample(sample,
-                                         vartype=bqm.vartype,
-                                         energy=bqm.energy(sample)))
+        return cls(samples=SampleSet.from_sample(sample,
+                                                 vartype=bqm.vartype,
+                                                 energy=bqm.energy(sample)))
 
 
 class Present(object):
@@ -208,7 +235,7 @@ class Runnable(object):
         """
         try:
             state = state.result()
-        except AttributeError:
+        except:
             pass
         return executor.submit(self.iterate, state)
 
@@ -219,6 +246,7 @@ class Runnable(object):
     def __or__(self, other):
         """Composition of runnable components (L-to-R) returns a new runnable Branch."""
         return Branch(components=(self, other))
+
 
 class Branch(Runnable):
     """Sequentially executed :class:`Runnable` components.
@@ -242,7 +270,7 @@ class Branch(Runnable):
         ...                  QPUSubproblemAutoEmbeddingSampler(num_reads=2) |
         ...                  SplatComposer(bqm)
         >>> new_state = branch.iterate(core.State.from_sample(min_sample(bqm), bqm)
-        >>> print(new_state.ctx['subsamples'])      # doctest: +SKIP
+        >>> print(new_state.subsamples)      # doctest: +SKIP
         Response(rec.array([([-1,  1, -1,  1, -1,  1], -5., 1),
            ([ 1, -1,  1, -1, -1,  1], -5., 1)],
         >>> # Above response snipped for brevity

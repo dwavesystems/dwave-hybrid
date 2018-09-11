@@ -24,7 +24,7 @@ class SplatComposer(Runnable):
         >>> state0 = core.State.from_sample(min_sample(bqm), bqm)
         >>> subsamples = dimod.Response.from_samples([{3: 1, 4: 1, 5: 1}],
         ...                                         {'energy': [-20]}, {}, dimod.BINARY)
-        >>> state1.updated(ctx=dict(subsamples=subsamples, debug=dict(sampler="Manual update")))
+        >>> state1.updated(subsamples=subsamples, debug=dict(sampler="Manual update"))
         >>> composed_state = SplatComposer(bqm).iterate(state1)
         >>> print(composed_state.samples)      # doctest: +SKIP
         Response(rec.array([([0, 0, 0, 1, 1, 1], 2, 1)],
@@ -46,8 +46,8 @@ class SplatComposer(Runnable):
         # update the first sample in `state.sampleset`, inplace
         # XXX: assume one global sample, one subsample
         # TODO: generalize
-        sample = next(state.samples.change_vartype(state.ctx['subsamples'].vartype).samples())
-        subsample = next(state.ctx['subsamples'].samples())
+        sample = next(state.samples.change_vartype(state.subsamples.vartype).samples())
+        subsample = next(state.subsamples.samples())
         composed_sample = updated_sample(sample, subsample)
         composed_energy = self.bqm.energy(composed_sample)
         return state.updated(

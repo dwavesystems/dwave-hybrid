@@ -26,7 +26,7 @@ iteration = RacingBranches(
             TabuSubproblemSampler(tenure=20, timeout=10),
             endomorphic=False
         )
-        | ArgMinFold(lambda state: state.ctx['subsamples'].record[0].energy)
+        | ArgMinFold(lambda state: state.subsamples.record[0].energy)
         | SplatComposer(bqm)
 ) | ArgMinFold()
 
