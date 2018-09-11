@@ -1,15 +1,53 @@
 import itertools
 import unittest
-import math
 
 import dimod
 
-from hades.decomposers import RandomConstraintDecomposer
+from hades.decomposers import EnergyImpactDecomposer, RandomConstraintDecomposer
 from hades.core import State
 from hades.utils import min_sample
 
 
-class TestConstraintDecompser(unittest.TestCase):
+class TestEnergyImpactDecomposer(unittest.TestCase):
+    # minimized when not all vars are equal
+    notall = dimod.BinaryQuadraticModel({}, {'ab': 1, 'bc': 1, 'ca': 1}, 0, dimod.SPIN)
+
+    def test_one_var(self):
+        """First-variable selection works."""
+
+        state = State.from_sample({'a': 1, 'b': 1, 'c': -1}, self.notall)
+        eid = EnergyImpactDecomposer(self.notall, max_size=1, min_gain=0)
+        nextstate = eid.iterate(state)
+        self.assertDictEqual(nextstate.ctx['subproblem'].linear, {'c': 2})
+        self.assertDictEqual(nextstate.ctx['subproblem'].quadratic, {})
+
+    def test_multi_vars(self):
+        """Multiple variables subproblem selection works, without gain limit."""
+
+        state = State.from_sample({'a': 1, 'b': 1, 'c': -1}, self.notall)
+        eid = EnergyImpactDecomposer(self.notall, max_size=3, min_gain=None)
+        nextstate = eid.iterate(state)
+        self.assertDictEqual(nextstate.ctx['subproblem'].adj, self.notall.adj)
+
+    def test_adaptive_vars(self):
+        """Multiple variables subproblem selection works, with gain limit."""
+
+        state = State.from_sample({'a': 1, 'b': 1, 'c': -1}, self.notall)
+        eid = EnergyImpactDecomposer(self.notall, max_size=3, min_gain=2.0)
+        nextstate = eid.iterate(state)
+        self.assertDictEqual(nextstate.ctx['subproblem'].linear, {'c': 2})
+        self.assertDictEqual(nextstate.ctx['subproblem'].quadratic, {})
+
+    def test_no_vars(self):
+        """Failure due to no sub vars available."""
+
+        state = State.from_sample({'a': 1, 'b': 1, 'c': -1}, self.notall)
+        eid = EnergyImpactDecomposer(self.notall, max_size=3, min_gain=5.0)
+        with self.assertRaises(ValueError):
+            nextstate = eid.iterate(state)
+
+
+class TestConstraintDecomposer(unittest.TestCase):
     def test_typical_construction(self):
         bqm = dimod.BinaryQuadraticModel.empty(dimod.SPIN)
 
