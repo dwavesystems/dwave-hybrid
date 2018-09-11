@@ -14,7 +14,9 @@ class TestEnergyFlipGainUtils(unittest.TestCase):
     # minimized when B is different from A and C
     notb = dimod.BinaryQuadraticModel({}, {'ab': 1, 'bc': 1, 'ca': -1}, 0, dimod.SPIN)
 
-    def test_asc(self):
+    def test_pos(self):
+        """Correctly orders positive gains."""
+
         # flipping C makes for the highest energy gain
         gains = flip_energy_gains(self.notall, {'a': 1, 'b': 1, 'c': -1})
         self.assertEqual(gains, [(4.0, 'c'), (0.0, 'b'), (0.0, 'a')])
@@ -25,7 +27,9 @@ class TestEnergyFlipGainUtils(unittest.TestCase):
         gains = flip_energy_gains(self.notb, {'a': 1, 'b': -1, 'c': 1})
         self.assertEqual(gains, [(4.0, 'c'), (4.0, 'b'), (4.0, 'a')])
 
-    def test_desc(self):
+    def test_neg(self):
+        """Correctly orders negative gains."""
+
         # flipping any is equally good
         gains = flip_energy_gains(self.notall, {'a': 1, 'b': 1, 'c': 1})
         self.assertEqual(gains, [(-4.0, 'c'), (-4.0, 'b'), (-4.0, 'a')])
@@ -35,6 +39,8 @@ class TestEnergyFlipGainUtils(unittest.TestCase):
         self.assertEqual(gains, [(0.0, 'c'), (0.0, 'a'), (-4.0, 'b')])
 
     def test_localsearch_adversaries(self):
+        """When var flip increases energy."""
+
         defvar = select_localsearch_adversaries(self.notall, {'a': 1, 'b': 1, 'c': -1})
         self.assertEqual(defvar, ['c', 'b', 'a'])
 
@@ -49,6 +55,21 @@ class TestEnergyFlipGainUtils(unittest.TestCase):
 
         nonevar = select_localsearch_adversaries(self.notall, {'a': 1, 'b': 1, 'c': -1}, min_gain=10)
         self.assertEqual(nonevar, [])
+
+    def test_localsearch_friends(self):
+        """When var flip decreases energy."""
+
+        allvar = select_localsearch_adversaries(self.notb, {'a': 1, 'b': 1, 'c': 1}, min_gain=None)
+        self.assertEqual(allvar, ['c', 'a', 'b'])
+
+        neutral = select_localsearch_adversaries(self.notb, {'a': 1, 'b': 1, 'c': 1}, min_gain=0.0)
+        self.assertEqual(neutral, ['c', 'a'])
+
+        nonevar = select_localsearch_adversaries(self.notb, {'a': 1, 'b': 1, 'c': 1}, min_gain=1.0)
+        self.assertEqual(nonevar, [])
+
+        friends = select_localsearch_adversaries(self.notb, {'a': 1, 'b': 1, 'c': 1}, min_gain=-10)
+        self.assertEqual(friends, ['c', 'a', 'b'])
 
 
 class TestChimeraTiles(unittest.TestCase):

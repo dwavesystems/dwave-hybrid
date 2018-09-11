@@ -157,14 +157,20 @@ def flip_energy_gains_iterative(bqm, sample):
 flip_energy_gains = flip_energy_gains_iterative
 
 
-def select_localsearch_adversaries(bqm, sample, max_n=None, min_gain=0.0):
+def select_localsearch_adversaries(bqm, sample, max_n=None, min_gain=None):
     """Returns a list of up to ``max_n`` variables from ``bqm`` that have a high
     energy gain (at least ``min_gain``) for single bit flip, and thus are
     considered tabu for tabu.
     """
+    var_gains = flip_energy_gains(bqm, sample)
+
     if max_n is None:
         max_n = len(sample)
-    variables = [idx for en, idx in flip_energy_gains(bqm, sample) if en >= min_gain]
+    if min_gain is None:
+        variables = [var for _, var in var_gains]
+    else:
+        variables = [var for en, var in var_gains if en >= min_gain]
+
     return variables[:max_n]
 
 
