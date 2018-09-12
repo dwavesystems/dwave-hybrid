@@ -49,11 +49,11 @@ class TestState(unittest.TestCase):
 
         # test recursive merge of `debug`
         self.assertDictEqual(s1.updated(debug=dict(x=1)).debug, {'x': 1})
-        self.assertDictEqual(s2.updated(debug=dict(x=2)).debug, {'x': 3})
+        self.assertDictEqual(s2.updated(debug=dict(x=2)).debug, {'x': 2})
         self.assertDictEqual(s2.updated(debug=dict(y=2)).debug, {'x': 1, 'y': 2})
         self.assertDictEqual(s2.updated(debug=dict(y=2)).debug, {'x': 1, 'y': 2})
 
-        self.assertDictEqual(s3.updated(debug={'x': {'y': {'z': [2]}}}).debug, {'x': {'y': {'z': [1, 2]}}})
+        self.assertDictEqual(s3.updated(debug={'x': {'y': {'z': [2]}}}).debug, {'x': {'y': {'z': [2]}}})
         self.assertDictEqual(s3.updated(debug={'x': {'y': {'w': 2}}}).debug, {'x': {'y': {'z': [1], 'w': 2}}})
 
         # test clear
