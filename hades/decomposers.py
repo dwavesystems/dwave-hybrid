@@ -54,10 +54,10 @@ class EnergyImpactDecomposer(Runnable):
         >>> flip_energy_gains(bqm, state0.samples.first.sample)     # doctest: +SKIP
         [(1, 8), (1, 6), (1, 2), (1, 1), (0, 7), (-1, 9), (-1, 5), (-1, 3), (-1, 0), (-2, 4)]
         >>> state1 = decomposer.iterate(state0)
-        >>> print(state1.ctx['subproblem'])       # doctest: +SKIP
+        >>> print(state1.subproblem)       # doctest: +SKIP
         BinaryQuadraticModel({9: 2, 3: 1, 5: 2, 1: 1}, {}, 0.0, Vartype.BINARY)
         >>> state2 = decomposer.iterate(state1)
-        >>> print(state2.ctx['subproblem'])      # doctest: +SKIP
+        >>> print(state2.subproblem)      # doctest: +SKIP
         BinaryQuadraticModel({1: 1, 3: 1}, {}, 0.0, Vartype.BINARY)
 
     """
@@ -128,7 +128,7 @@ class RandomSubproblemDecomposer(Runnable):
         >>> decomposer = RandomSubproblemDecomposer(bqm, size=3)
         >>> state0 = core.State.from_sample(random_sample(bqm), bqm)
         >>> state1 = decomposer.iterate(state0)
-        >>> print(state1.ctx['subproblem'])
+        >>> print(state1.subproblem)
         BinaryQuadraticModel({2: 1.0, 3: 0.0, 4: 0.0}, {(2, 3): 1.0, (3, 4): 1.0}, 0.0, Vartype.BINARY)
 
     """
@@ -189,11 +189,11 @@ class TilingChimeraDecomposer(Runnable):
         >>> decomposer = TilingChimeraDecomposer(bqm, size=(2,2,4))   # doctest: +SKIP
         >>> state0 = core.State.from_sample(random_sample(bqm), bqm)  # doctest: +SKIP
         >>> state1 = decomposer.iterate(state0)    # doctest: +SKIP
-        >>> print(state1.ctx['subproblem'])        # doctest: +SKIP
+        >>> print(state1.subproblem)        # doctest: +SKIP
         BinaryQuadraticModel({0: 0.0, 4: 0.0, 5: 0.0, 6: 0.0, 7: -3.0, 1: 0.0, 2: 0.0, 3: -4.0, 1024: -7.0, 1028: 0.0,
         >>> # Snipped above response for brevity
         >>> state1 = decomposer.iterate(state0)    # doctest: +SKIP
-        >>> print(state1.ctx['subproblem'])        # doctest: +SKIP
+        >>> print(state1.subproblem)        # doctest: +SKIP
         BinaryQuadraticModel({8: 3.0, 12: 0.0, 13: 2.0, 14: -11.0, 15: -3.0, 9: 4.0, 10: 0.0, 11: 0.0, 1032: 0.0,
 
     """
@@ -218,16 +218,16 @@ class TilingChimeraDecomposer(Runnable):
 
 
 class RandomConstraintDecomposer(Runnable):
-    """Pick variables randomly by chunks
+    """Selects variables randomly in groupings by constraints.
 
     Args:
-        bqm:
-
-        size:
-
+        bqm (:obj:`.BinaryQuadraticModel`):
+            Binary quadratic model (BQM).
+        size (int):
+            Number of variables in the subproblem.
         constraints (list[set]):
-            A list of sets where each set is a group of variables in the bqm associated with a
-            constraint.
+            Groups of variables in the BQM, as a list of sets, where each set is associated
+            with a constraint.
 
     """
 
