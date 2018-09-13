@@ -4,7 +4,7 @@ from copy import deepcopy
 import operator
 
 # TODO: abstract as singleton executor under hades namespace
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, Future
 executor = ThreadPoolExecutor(max_workers=4)
 
 from plucky import merge
@@ -155,20 +155,24 @@ class State(PliableDict):
                                                  energy=bqm.energy(sample)))
 
 
-class Present(object):
-    """Already resolved Future-like object.
+class Present(Future):
+    """Already resolved Future object."""
 
-    Very limited in Future-compatibility. We implement only the minimum here.
-    """
+    def __init__(self, result=None, exception=None):
+        super(Present, self).__init__()
+        if exception:
+            self.set_exception(exception)
+        else:
+            self.set_result(result)
 
-    def __init__(self, result):
-        self._result = result
 
-    def result(self):
-        return self._result
+class RunnableError(Exception):
+    """Generic Runnable exception error that includes the error context, in
+    particular, the `State` that caused the runnable component to fail."""
 
-    def done(self):
-        return True
+    def __init__(self, message, state):
+        super(RunnableError, self).__init__(message)
+        self.state = state
 
 
 class Runnable(object):
@@ -228,13 +232,38 @@ class Runnable(object):
         """
         raise NotImplementedError
 
+    def error(self, exc):
+        """Called when previous component raised an exception (instead of new state).
+
+        Default to re-raise. Runnable errors must be explicitly silenced.
+        """
+        raise exc
+
+    def dispatch(self, future):
+        """Dispatch `state` got by resolving `future` to either `iterate` or `error`.
+
+        Args:
+            state (:class:`concurrent.futures.Future`-like object): :class:`State` future.
+
+        Returns (sync) state from `iterate`/`error`, or passes-thru an exception raised there.
+        Blocks on `state` resolution.
+        """
+        try:
+            state = future.result()
+        except Exception as exc:
+            return self.error(exc)
+
+        return self.iterate(state)
+
     def run(self, state):
         """Start an asynchronous iteration of an instantiated :class:`Runnable`.
 
-        Accepts a state in a :class:`future` and return a new state in a :class:`future`.
+        Accepts a state in a :class:`~concurrent.futures.Future`-like object and
+        return a new state in a :class:`~concurrent.futures.Future`-like object.
 
         Args:
-            state (:class:`State`): Computation state passed between connected components.
+            state (:class:`State`):
+                Computation state future-lookalike passed between connected components.
 
         Examples:
             This code snippet runs one iteration of a sampler to produce a new state::
@@ -242,11 +271,16 @@ class Runnable(object):
                 new_state = sampler.run(core.State.from_sample({'x': 0, 'y': 0}, bqm))
 
         """
+        return self.run_async(state)
+
+    def run_async(self, state):
+        return executor.submit(self.dispatch, state)
+
+    def run_sync(self, state):
         try:
-            state = state.result()
-        except:
-            pass
-        return executor.submit(self.iterate, state)
+            return Present(result=self.dispatch(state))
+        except Exception as exc:
+            return Present(exception=exc)
 
     def stop(self):
         """Terminate an iteration of an instantiated :class:`Runnable`."""
@@ -287,7 +321,6 @@ class Branch(Runnable):
     """
 
     def __init__(self, components=(), *args, **kwargs):
-
         super(Branch, self).__init__(*args, **kwargs)
         self.components = tuple(components)
 
