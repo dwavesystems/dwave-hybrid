@@ -2,13 +2,27 @@ from collections import namedtuple
 from itertools import chain
 from copy import deepcopy
 import operator
-
-# TODO: abstract as singleton executor under hades namespace
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, Future
-executor = ThreadPoolExecutor(max_workers=4)
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, Future, Executor
 
 from plucky import merge
 import dimod
+
+
+class ImmediateExecutor(Executor):
+
+    def submit(self, fn, *args, **kwargs):
+        """Blocking version of `Executor.submit()`. Returns resolved `Future`."""
+        # TODO: (re)combine with our global async_executor object, probably introduce
+        # customizable underlying executor (e.g. thread/process/celery/network)
+        try:
+            return Present(result=fn(*args, **kwargs))
+        except Exception as exc:
+            return Present(exception=exc)
+
+
+# TODO: abstract and make customizable to support other types of executors
+async_executor = ThreadPoolExecutor(max_workers=4)
+immediate_executor = ImmediateExecutor()
 
 
 class SampleSet(dimod.Response):
@@ -256,15 +270,6 @@ class Runnable(object):
             return self.error(exc)
         return self.iterate(state)
 
-    def immediate_submit(self, fn, *args, **kwargs):
-        """Blocking version of `Executor.submit()`. Returns resolved `Future`."""
-        # TODO: (re)combine with our global executor object, probably introduce
-        # customizable underlying executor (e.g. thread/process/celery/network)
-        try:
-            return Present(result=fn(*args, **kwargs))
-        except Exception as exc:
-            return Present(exception=exc)
-
     def run(self, state, defer=True):
         """Execute the next step/iteration of an instantiated :class:`Runnable`.
 
@@ -286,9 +291,11 @@ class Runnable(object):
 
         """
         if defer:
-            return executor.submit(self.dispatch, state)
+            executor = async_executor
         else:
-            return self.immediate_submit(self.dispatch, state)
+            executor = immediate_executor
+
+        return executor.submit(self.dispatch, state)
 
     def stop(self):
         """Terminate an iteration of an instantiated :class:`Runnable`."""
