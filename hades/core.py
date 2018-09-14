@@ -235,7 +235,9 @@ class Runnable(object):
     def error(self, exc):
         """Called when previous component raised an exception (instead of new state).
 
-        Default to re-raise. Runnable errors must be explicitly silenced.
+        Must return a valid new `State`, or raise an exception.
+
+        Default to re-raise of input exception. Runnable errors must be explicitly silenced.
         """
         raise exc
 
@@ -245,18 +247,26 @@ class Runnable(object):
         Args:
             state (:class:`concurrent.futures.Future`-like object): :class:`State` future.
 
-        Returns (sync) state from `iterate`/`error`, or passes-thru an exception raised there.
-        Blocks on `state` resolution.
+        Returns state from `iterate`/`error`, or passes-thru an exception raised there.
+        Blocks on `state` resolution and `iterate`/`error` execution .
         """
         try:
             state = future.result()
         except Exception as exc:
             return self.error(exc)
-
         return self.iterate(state)
 
-    def run(self, state):
-        """Start an asynchronous iteration of an instantiated :class:`Runnable`.
+    def immediate_submit(self, fn, *args, **kwargs):
+        """Blocking version of `Executor.submit()`. Returns resolved `Future`."""
+        # TODO: (re)combine with our global executor object, probably introduce
+        # customizable underlying executor (e.g. thread/process/celery/network)
+        try:
+            return Present(result=fn(*args, **kwargs))
+        except Exception as exc:
+            return Present(exception=exc)
+
+    def run(self, state, defer=True):
+        """Execute the next step/iteration of an instantiated :class:`Runnable`.
 
         Accepts a state in a :class:`~concurrent.futures.Future`-like object and
         return a new state in a :class:`~concurrent.futures.Future`-like object.
@@ -265,22 +275,20 @@ class Runnable(object):
             state (:class:`State`):
                 Computation state future-lookalike passed between connected components.
 
+            defer (bool, optional, default=True):
+                Return result future immediately, and run the computation asynchronously.
+                If set to false, block on computation, and return the resolved future.
+
         Examples:
             This code snippet runs one iteration of a sampler to produce a new state::
 
                 new_state = sampler.run(core.State.from_sample({'x': 0, 'y': 0}, bqm))
 
         """
-        return self.run_async(state)
-
-    def run_async(self, state):
-        return executor.submit(self.dispatch, state)
-
-    def run_sync(self, state):
-        try:
-            return Present(result=self.dispatch(state))
-        except Exception as exc:
-            return Present(exception=exc)
+        if defer:
+            return executor.submit(self.dispatch, state)
+        else:
+            return self.immediate_submit(self.dispatch, state)
 
     def stop(self):
         """Terminate an iteration of an instantiated :class:`Runnable`."""
@@ -363,8 +371,12 @@ class Branch(Runnable):
 
         """
         for component in self.components:
-            state = component.iterate(state)
-        return state
+            state = component.run(state, defer=False)
+        return state.result()
+
+    def error(self, exc):
+        """Be explicit about propagating input error."""
+        raise exc
 
     def stop(self):
         """Try terminating all components in an instantiated :class:`Branch`."""
