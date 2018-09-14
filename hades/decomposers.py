@@ -195,6 +195,7 @@ class TilingChimeraDecomposer(Runnable):
         >>> state1 = decomposer.iterate(state0)    # doctest: +SKIP
         >>> print(state1.subproblem)        # doctest: +SKIP
         BinaryQuadraticModel({8: 3.0, 12: 0.0, 13: 2.0, 14: -11.0, 15: -3.0, 9: 4.0, 10: 0.0, 11: 0.0, 1032: 0.0,
+        >>> # Snipped above response for brevity
 
     """
 
@@ -218,7 +219,10 @@ class TilingChimeraDecomposer(Runnable):
 
 
 class RandomConstraintDecomposer(Runnable):
-    """Selects variables randomly in groupings by constraints.
+    """Selects variables randomly as constrained by groupings.
+
+    By grouping related variables, the problem's structure can guide the random selection
+    of variables so subproblems are related to the problem's constraints.
 
     Args:
         bqm (:obj:`.BinaryQuadraticModel`):
@@ -229,6 +233,22 @@ class RandomConstraintDecomposer(Runnable):
             Groups of variables in the BQM, as a list of sets, where each set is associated
             with a constraint.
 
+    Examples:
+        This example decomposes a 4-variable binary quadratic model that represents
+        three serial NOT gates into 2-variable subproblems. The expected decomposition
+        should use variables that represent one of the NOT gates rather than two
+        arbitrary variables.
+
+        >>> import dimod           # Import a Chimera-structured binary quadratic model
+        >>> bqm = dimod.BinaryQuadraticModel({'w': -2.0, 'x': -4.0, 'y': -4.0, 'z': -2.0},
+        ...                                  {('w', 'x'): 4.0, ('x', 'y'): 4.0, ('y', 'z'): 4.0},
+        ...                                  3.0, 'BINARY')
+        >>> decomposer = RandomConstraintDecomposer(bqm, 2, [{'w', 'x'}, {'x', 'y'}, {'y', 'z'}])
+        >>> state0 = core.State.from_sample(random_sample(bqm), bqm)
+        >>> state1 = decomposer.iterate(state0)
+        >>> print(state1.subproblem)        # doctest: +SKIP
+        BinaryQuadraticModel({'z': -2.0, 'y': 0.0}, {('z', 'y'): 4.0}, 0.0, Vartype.BINARY)
+        
     """
 
     def __init__(self, bqm, size, constraints):
