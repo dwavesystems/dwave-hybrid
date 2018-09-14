@@ -181,14 +181,24 @@ class SimulatedAnnealingSubproblemSampler(Runnable):
         self.num_reads = num_reads
         self.sweeps = sweeps
         self.sampler = SimulatedAnnealingSampler()
+        self._stop_event = threading.Event()
 
     @tictoc('subneal_sample')
     def iterate(self, state):
         subbqm = state.subproblem
         response = self.sampler.sample(
-            subbqm, num_reads=self.num_reads, sweeps=self.sweeps)
+            subbqm, num_reads=self.num_reads, sweeps=self.sweeps,
+            interrupt_function=lambda: self._stop_event.is_set())
         return state.updated(subsamples=response,
                              debug=dict(sampler=self.name))
+
+    def stop(self):
+        self._stop_event.set()
+
+
+class InterruptableSimulatedAnnealingSubproblemSampler(SimulatedAnnealingSubproblemSampler):
+    """SimulatedAnnealingSubproblemSampler is already interruptable."""
+    pass
 
 
 class TabuSubproblemSampler(Runnable):
