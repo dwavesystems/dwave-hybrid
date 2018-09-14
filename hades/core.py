@@ -2,13 +2,27 @@ from collections import namedtuple
 from itertools import chain
 from copy import deepcopy
 import operator
-
-# TODO: abstract as singleton executor under hades namespace
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
-executor = ThreadPoolExecutor(max_workers=4)
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, Future, Executor
 
 from plucky import merge
 import dimod
+
+
+class ImmediateExecutor(Executor):
+
+    def submit(self, fn, *args, **kwargs):
+        """Blocking version of `Executor.submit()`. Returns resolved `Future`."""
+        # TODO: (re)combine with our global async_executor object, probably introduce
+        # customizable underlying executor (e.g. thread/process/celery/network)
+        try:
+            return Present(result=fn(*args, **kwargs))
+        except Exception as exc:
+            return Present(exception=exc)
+
+
+# TODO: abstract and make customizable to support other types of executors
+async_executor = ThreadPoolExecutor(max_workers=4)
+immediate_executor = ImmediateExecutor()
 
 
 class SampleSet(dimod.Response):
@@ -136,6 +150,15 @@ class State(PliableDict):
 
         return State(merge(self, kwargs, max_depth=1, op=overwrite))
 
+    def result(self):
+        """Implement `concurrent.Future`-compatible result resolution interface.
+
+        Also, explicitly defining this method prevents accidental definition of
+        `State.result` method via attribute setters, which might prevent result
+        resolution in some edge cases.
+        """
+        return self
+
     @classmethod
     def from_sample(cls, sample, bqm):
         """Convenience method for constructing State from raw (dict) sample;
@@ -146,20 +169,26 @@ class State(PliableDict):
                                                  energy=bqm.energy(sample)))
 
 
-class Present(object):
-    """Already resolved Future-like object.
+class Present(Future):
+    """Already resolved Future object."""
 
-    Very limited in Future-compatibility. We implement only the minimum here.
-    """
+    def __init__(self, result=None, exception=None):
+        super(Present, self).__init__()
+        if result:
+            self.set_result(result)
+        elif exception:
+            self.set_exception(exception)
+        else:
+            raise ValueError("can't provide both 'result' and 'exception'")
 
-    def __init__(self, result):
-        self._result = result
 
-    def result(self):
-        return self._result
+class RunnableError(Exception):
+    """Generic Runnable exception error that includes the error context, in
+    particular, the `State` that caused the runnable component to fail."""
 
-    def done(self):
-        return True
+    def __init__(self, message, state):
+        super(RunnableError, self).__init__(message)
+        self.state = state
 
 
 class Runnable(object):
@@ -219,13 +248,43 @@ class Runnable(object):
         """
         raise NotImplementedError
 
-    def run(self, state):
-        """Start an asynchronous iteration of an instantiated :class:`Runnable`.
+    def error(self, exc):
+        """Called when previous component raised an exception (instead of new state).
 
-        Accepts a state in a :class:`future` and return a new state in a :class:`future`.
+        Must return a valid new `State`, or raise an exception.
+
+        Default to re-raise of input exception. Runnable errors must be explicitly silenced.
+        """
+        raise exc
+
+    def dispatch(self, future):
+        """Dispatch `state` got by resolving `future` to either `iterate` or `error`.
 
         Args:
-            state (:class:`State`): Computation state passed between connected components.
+            state (:class:`concurrent.futures.Future`-like object): :class:`State` future.
+
+        Returns state from `iterate`/`error`, or passes-thru an exception raised there.
+        Blocks on `state` resolution and `iterate`/`error` execution .
+        """
+        try:
+            state = future.result()
+        except Exception as exc:
+            return self.error(exc)
+        return self.iterate(state)
+
+    def run(self, state, defer=True):
+        """Execute the next step/iteration of an instantiated :class:`Runnable`.
+
+        Accepts a state in a :class:`~concurrent.futures.Future`-like object and
+        return a new state in a :class:`~concurrent.futures.Future`-like object.
+
+        Args:
+            state (:class:`State`):
+                Computation state future-lookalike passed between connected components.
+
+            defer (bool, optional, default=True):
+                Return result future immediately, and run the computation asynchronously.
+                If set to false, block on computation, and return the resolved future.
 
         Examples:
             This code snippet runs one iteration of a sampler to produce a new state::
@@ -233,11 +292,12 @@ class Runnable(object):
                 new_state = sampler.run(core.State.from_sample({'x': 0, 'y': 0}, bqm))
 
         """
-        try:
-            state = state.result()
-        except:
-            pass
-        return executor.submit(self.iterate, state)
+        if defer:
+            executor = async_executor
+        else:
+            executor = immediate_executor
+
+        return executor.submit(self.dispatch, state)
 
     def stop(self):
         """Terminate an iteration of an instantiated :class:`Runnable`."""
@@ -278,7 +338,6 @@ class Branch(Runnable):
     """
 
     def __init__(self, components=(), *args, **kwargs):
-
         super(Branch, self).__init__(*args, **kwargs)
         self.components = tuple(components)
 
@@ -321,8 +380,12 @@ class Branch(Runnable):
 
         """
         for component in self.components:
-            state = component.iterate(state)
-        return state
+            state = component.run(state, defer=False)
+        return state.result()
+
+    def error(self, exc):
+        """Be explicit about propagating input error."""
+        raise exc
 
     def stop(self):
         """Try terminating all components in an instantiated :class:`Branch`."""

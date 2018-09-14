@@ -12,7 +12,7 @@ from dwave.system.composites import EmbeddingComposite, FixedEmbeddingComposite
 from tabu import TabuSampler
 from neal import SimulatedAnnealingSampler
 
-from hades.core import executor, Runnable, SampleSet
+from hades.core import async_executor, Runnable, SampleSet
 from hades.profiling import tictoc
 from hades.utils import random_sample
 
@@ -386,7 +386,7 @@ class InterruptableTabuSampler(TabuProblemSampler):
 
     def run(self, state):
         self._stop_event.clear()
-        return executor.submit(self._interruptable_iterate, state)
+        return async_executor.submit(self._interruptable_iterate, state)
 
     def stop(self):
         self._stop_event.set()
