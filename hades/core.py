@@ -174,10 +174,12 @@ class Present(Future):
 
     def __init__(self, result=None, exception=None):
         super(Present, self).__init__()
-        if exception:
+        if result:
+            self.set_result(result)
+        elif exception:
             self.set_exception(exception)
         else:
-            self.set_result(result)
+            raise ValueError("can't provide both 'result' and 'exception'")
 
 
 class RunnableError(Exception):
