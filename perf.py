@@ -1,12 +1,15 @@
 #!/usr/bin/env python
 """Performance tests."""
 
+import sys
 from itertools import chain
 from collections import OrderedDict
 from glob import glob
 
 import dimod
 from dwave.system.samplers import DWaveSampler
+from dwave.system.composites import EmbeddingComposite
+from dwave_qbsolv import QBSolv
 
 from hades.samplers import (
     QPUSubproblemExternalEmbeddingSampler, QPUSubproblemAutoEmbeddingSampler,
@@ -16,10 +19,23 @@ from hades.decomposers import (
     RandomSubproblemDecomposer, IdentityDecomposer,
     TilingChimeraDecomposer, EnergyImpactDecomposer)
 from hades.composers import SplatComposer
-from hades.core import State, SampleSet
+from hades.core import State, SampleSet, Runnable
 from hades.flow import RacingBranches, ArgMinFold, SimpleIterator
 from hades.utils import min_sample
 from hades.profiling import tictoc
+
+
+class QBSolvProblemSampler(Runnable):
+    """QBSolv wrapper for hades."""
+
+    def __init__(self, bqm, qpu=None):
+        self.bqm = bqm
+        self.sampler = EmbeddingComposite(qpu) if qpu is not None else None
+
+    def iterate(self, state):
+        response = QBSolv().sample(self.bqm, solver=self.sampler)
+        return state.updated(samples=SampleSet.from_response(response),
+                             debug=dict(sampler=self.name))
 
 
 problems = chain(
@@ -52,6 +68,13 @@ solver_factories = [
             | QPUSubproblemExternalEmbeddingSampler(qpu_sampler=qpu)
             | SplatComposer(bqm),
         ) | ArgMinFold(), max_iter=100, convergence=10)),
+
+    ("qbsolv-classic",
+        lambda bqm, **kw: QBSolvProblemSampler(bqm)),
+
+    ("qbsolv-qpu",
+        lambda bqm, qpu, **kw: QBSolvProblemSampler(bqm, qpu=qpu)),
+
 ]
 
 
@@ -78,7 +101,7 @@ def run(problems, solver_factories):
                     solution = solver.run(init_state).result()
 
             except Exception as exc:
-                print("{case}: {exc!r}".format(**locals()))
+                print("FAILED {case}: {exc!r}".format(**locals()))
                 results[problem][name] = repr(exc)
 
             else:
@@ -95,4 +118,4 @@ def run(problems, solver_factories):
 if __name__ == "__main__":
     import json
     results = run(problems, solver_factories)
-    print(json.dumps(results))
+    print(json.dumps(results), file=sys.stderr)
