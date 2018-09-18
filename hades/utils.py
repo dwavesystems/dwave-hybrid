@@ -9,12 +9,32 @@ import numpy
 from dnx import canonical_chimera_labeling
 
 
-def bqm_reduced_to(bqm, variables, state, keep_offset=True):
-    """Return a sub-BQM, which is ``bqm`` reduced to ``variables``, by fixing
-    all non sub-BQM variables.
+def bqm_reduced_to(bqm, variables, fixed_values, keep_offset=True):
+    """Return a binary quadratic model with a subset of a given model's variables.
 
-    Note:
-        Optimized for ``len(variables) ~ len(bqm)`` (fixing very little vars).
+    The function reduces a binary quadratic model (BQM) to a subset of its variables
+    by fixing the values of the remaining variables. It is optimized for
+    ``len(variables) ~ len(bqm)``, that is, for small numbers of fixed variables.
+
+    Args:
+        bqm (:class:`dimod.BinaryQuadraticModel`):
+            Binary quadratic model.
+        variables (list/set);
+            Subset of variables to keep in the reduced BQM.
+        fixed_values (dict/list): Mapping of variable labels to values or a list when labels are
+            sequential integers.
+        keep_offset (bool, optional, default=True): If false, set the reduced binary quadratic
+            model’s offset to zero; otherwise, uses the caluclated energy offset.
+
+    Examples:
+        This example reduces a 3-variable BQM to two variables.
+
+        >>> import dimod           # Create a binary quadratic model
+        >>> bqm = dimod.BinaryQuadraticModel({}, {('a', 'b'): -1, ('b', 'c'): -1, ('c', 'a'): -1}, 0, 'BINARY')
+        >>> fixed_values = {'a': 1, 'b': 1, 'c': 0}
+        >>> bqm_reduced_to(bqm, ['a', 'b'], fixed_values)
+        BinaryQuadraticModel({'a': 0.0, 'b': 0.0}, {('a', 'b'): -1}, 0.0, Vartype.BINARY)
+
     """
 
     # fix complement of ``variables```
