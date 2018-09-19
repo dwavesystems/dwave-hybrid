@@ -218,9 +218,37 @@ flip_energy_gains = flip_energy_gains_iterative
 
 
 def select_localsearch_adversaries(bqm, sample, max_n=None, min_gain=None):
-    """Returns a list of up to ``max_n`` variables from ``bqm`` that have a high
-    energy gain (at least ``min_gain``) for single bit flip, and thus are
-    considered tabu for tabu.
+    """Find variable flips that contribute high energy changes to a BQM.
+
+    Args:
+        bqm (:class:`dimod.BinaryQuadraticModel`):
+            Binary quadratic model (BQM).
+        sample (list/dict):
+            Sample values as returned by dimod samplers (0 or 1 values for dimod.BINARY
+            and -1 or +1 for dimod.SPIN)
+        max_n (int, optional, default=None):
+            Maximum contributing variables to return. By default, returns any variable
+            for which flipping its sample value results in an energy gain of `min_gain`.
+        min_gain (float, optional, default=None):
+            Minimum required energy increase from flipping a sample value to return
+            its corresponding variable.
+
+    Returns:
+        list: Up to `max_n` variables for which flipping the corresponding sample value
+        increases the BQM energy by at least `min_gain`.
+
+    Examples:
+        This example returns 2 variables (out of up to 3 allowed) for which flipping
+        sample values changes BQM energy by 1 or more. The BQM has energy gains
+        of  0, -2, 2, 4 for variables a, b, c, d respectively for the given sample.
+
+        >>> import dimod           # Create a binary quadratic model
+        >>> bqm = dimod.BinaryQuadraticModel({},
+        ...             {('a', 'b'): 0, ('b', 'c'): 1, ('c', 'd'): 2}, 0, 'SPIN')
+        >>> select_localsearch_adversaries(bqm, {'a': -1, 'b': 1, 'c': 1, 'd': -1},
+        ...                                max_n=3, min_gain=1)
+        ['d', 'c']
+
     """
     var_gains = flip_energy_gains(bqm, sample)
 
