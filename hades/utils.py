@@ -288,7 +288,17 @@ def select_random_subgraph(bqm, n):
 
 
 def chimera_tiles(bqm, m, n, t):
-    """Map a given bqm to a set of chimera-structured tiles defined by (m, n, t).
+    """Map a binary quadratic model to a set of Chimera tiles.
+
+    A Chimera lattice is an m-by-n grid of Chimera tiles, where each tile is a bipartite graph
+    with shores of size t.
+
+    Args:
+        bqm (:obj:`.BinaryQuadraticModel`):
+            Binary quadratic model (BQM).
+        m (int): Row for the tile.
+        n (int): Column for the tile. 
+        t (int): Size of shore.
 
     Returns:
         dict: The keys are the tile coordinates (row, col, aisle) and the values are partial
