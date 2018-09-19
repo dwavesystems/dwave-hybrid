@@ -10,21 +10,23 @@ from dnx import canonical_chimera_labeling
 
 
 def bqm_reduced_to(bqm, variables, fixed_values, keep_offset=True):
-    """Return a binary quadratic model with a subset of a given model's variables.
+    """Reduce a binary quadratic model by fixing values of some variables.
 
-    The function reduces a binary quadratic model (BQM) to a subset of its variables
-    by fixing the values of the remaining variables. It is optimized for
-    ``len(variables) ~ len(bqm)``, that is, for small numbers of fixed variables.
+    The function is optimized for ``len(variables) ~ len(bqm)``, that is,
+    for small numbers of fixed variables.
 
     Args:
         bqm (:class:`dimod.BinaryQuadraticModel`):
-            Binary quadratic model.
+            Binary quadratic model (BQM).
         variables (list/set);
             Subset of variables to keep in the reduced BQM.
-        fixed_values (dict/list): Mapping of variable labels to values or a list when labels are
-            sequential integers.
+        fixed_values (dict/list): Mapping of variable labels to values or a list when labels
+            are sequential integers. Must include all variables not specified in `variables`.
         keep_offset (bool, optional, default=True): If false, set the reduced binary quadratic
             model’s offset to zero; otherwise, uses the caluclated energy offset.
+
+    Returns:
+            :class:`dimod.BinaryQuadraticModel`: A reduced BQM.
 
     Examples:
         This example reduces a 3-variable BQM to two variables.
@@ -41,7 +43,7 @@ def bqm_reduced_to(bqm, variables, fixed_values, keep_offset=True):
     fixed = set(bqm.variables).difference(variables)
     subbqm = bqm.copy()
     for v in fixed:
-        subbqm.fix_variable(v, state[v])
+        subbqm.fix_variable(v, fixed_values[v])
 
     if not keep_offset:
         subbqm.remove_offset()
@@ -49,29 +51,39 @@ def bqm_reduced_to(bqm, variables, fixed_values, keep_offset=True):
     return subbqm
 
 
-def bqm_induced_by(bqm, variables, state):
-    """Return sub-BQM that includes only ``variables``, and boundary is fixed
-    according to ``state``.
+def bqm_induced_by(bqm, variables, fixed_values):
+    """Induce a binary quadratic model by fixing values of boundary variables.
+
+    The function is optimized for ``len(variables) << len(bqm)``, that is, for fixing
+    the majority of variables.
 
     Args:
         bqm (:class:`dimod.BinaryQuadraticModel`):
-            Original BQM.
-
+            Binary quadratic model (BQM).
         variables (list/set);
-            Variables of the subgraph.
-
-        state (dict/list):
-            Mapping of variable labels to values. If labels are sequential integers
-            ``state`` may be a list. State is required only for variables on boundary
-            (variables in BQM graph connected with ``variables``).
+            Subset of variables to keep in the reduced BQM, typically a subgraph.
+        fixed_values (dict/list):
+            Mapping of variable labels to values or a list when labels
+            are sequential integers. Values are required only for boundary variables,
+            that is, for variables with interactions with `variables` (having edges
+            with non-zero quadratic biases connected to the subgraph).
 
     Returns:
-        Sub-graph (sub-bqm) induced by ``variables`` on ``bqm``. Only variables on
-        boundary (adjacent to any of internal variables) are fixed according to
-        ``state``. BQM offset is set to zero.
+        :class:`dimod.BinaryQuadraticModel`: A BQM induced by fixing values of
+        those variables adjacent to its subset of variables and setting the energy offset
+        to zero.
 
-    Note:
-        Optimized for ``len(variables) << len(bqm)`` (fixing majority of vars).
+    Examples:
+        This example induces a 2-variable BQM from a 6-variable path graph---the subset
+        of nodes 2 and 3 of nodes 0 to 5---by fixing values of boundary variables 1 and 4.
+
+        >>> import dimod           # Create a binary quadratic model from a path graph
+        >>> import networkx as nx
+        >>> bqm = dimod.BinaryQuadraticModel({},
+                        {edge: edge[0] for edge in set(nx.path_graph(6).edges)}, 0, 'BINARY')
+        >>> fixed_values = {1: 3, 4: 3}
+        >>> bqm_induced_by(bqm, [2, 3], fixed_values)
+        BinaryQuadraticModel({2: 3.0, 3: 9.0}, {(2, 3): 2.0}, 0.0, Vartype.BINARY)
 
     """
 
@@ -86,7 +98,7 @@ def bqm_induced_by(bqm, variables, state):
             if v in variables:
                 subbqm.add_interaction(u, v, j / 2.0)
             else:
-                bias += j * state[v]
+                bias += j * fixed_values[v]
         subbqm.add_variable(u, bias)
 
     # no point in having offset since we're fixing only variables on boundary
