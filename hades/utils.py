@@ -108,8 +108,27 @@ def bqm_induced_by(bqm, variables, fixed_values):
 
 
 def bqm_edges_between_variables(bqm, variables):
-    """Returns a list of all edges as tuples in ``bqm`` between ``variables``.
-    Nodes/variables are included as (v, v).
+    """Return edges connecting specified variables of a binary quadratic model.
+
+    Args:
+        bqm (:class:`dimod.BinaryQuadraticModel`):
+            Binary quadratic model (BQM).
+        variables (list/set);
+            Subset of variables in the BQM.
+
+    Returns:
+        list: All edges connecting `variables` as tuples plus the variables themselves
+        as tuples (v, v).
+
+    Examples:
+        This example returns connecting edges between 3 nodes of a BQM based on a 4-variable
+        path graph.
+
+        >>> import dimod           # Create a binary quadratic model
+        >>> bqm = dimod.BinaryQuadraticModel({}, {(0, 1): 1, (1, 2): 1, (2, 3): 1}, 0, 'BINARY')
+        >>> bqm_edges_between_variables(bqm, {0, 1, 3})
+        [(0, 1), (0, 0), (1, 1), (3, 3)]
+
     """
     variables = set(variables)
     edges = [(start, end) for (start, end), coupling in bqm.quadratic.items() if start in variables and end in variables]
