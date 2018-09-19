@@ -80,7 +80,7 @@ def bqm_induced_by(bqm, variables, fixed_values):
         >>> import dimod           # Create a binary quadratic model from a path graph
         >>> import networkx as nx
         >>> bqm = dimod.BinaryQuadraticModel({},
-                        {edge: edge[0] for edge in set(nx.path_graph(6).edges)}, 0, 'BINARY')
+        ...             {edge: edge[0] for edge in set(nx.path_graph(6).edges)}, 0, 'BINARY')
         >>> fixed_values = {1: 3, 4: 3}
         >>> bqm_induced_by(bqm, [2, 3], fixed_values)
         BinaryQuadraticModel({2: 3.0, 3: 9.0}, {(2, 3): 2.0}, 0.0, Vartype.BINARY)
@@ -113,7 +113,7 @@ def bqm_edges_between_variables(bqm, variables):
     Args:
         bqm (:class:`dimod.BinaryQuadraticModel`):
             Binary quadratic model (BQM).
-        variables (list/set);
+        variables (list/set):
             Subset of variables in the BQM.
 
     Returns:
@@ -157,31 +157,38 @@ def flip_energy_gains_naive(bqm, sample):
     energy_gains.sort(reverse=True)
     return energy_gains
 
+    # Performance comparison to flip_energy_gains_iterative (bqm size ~ 2k, random sample)::
+    #   >>> %timeit flip_energy_gains_naive(bqm, sample)
+    #   3.35 s ± 37.5 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
+    #   >>> %timeit flip_energy_gains_iterative(bqm, sample)
+    #   3.52 ms ± 20.4 µs per loop (mean ± std. dev. of 7 runs, 100 loops each)
+    #  Three orders of magnitude faster.
 
 def flip_energy_gains_iterative(bqm, sample):
-    """Return `list[(energy_gain, flip_index)]` in descending order
-    for flipping qubit with flip_index in sample.
+    """Order variable flips by descending contribution to energy changes in a BQM.
 
     Args:
         bqm (:class:`dimod.BinaryQuadraticModel`):
-            BQM of type dimod.BINARY
-
+            Binary quadratic model (BQM).
         sample (list/dict):
-            Perturbation base (0/1 values for QUBO and -1/+1 for Ising model)
+            Sample values as returned by dimod samplers (0 or 1 values for dimod.BINARY
+            and -1 or +1 for dimod.SPIN)
 
-    Note:
-        Comparison with the naive approach (bqm size ~ 2k, random sample)::
+    Returns:
+        list: Energy changes in descending order, in the format of tuples
+            (energy_gain, variable), for flipping the given sample value
+            for each variable.
 
-            >>> %timeit flip_energy_gains_naive(bqm, sample)
-            3.35 s ± 37.5 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
+    Examples:
+        This example returns connecting edges between 3 nodes of a BQM based on a 4-variable
+        path graph.
 
-            >>> %timeit flip_energy_gains_iterative(bqm, sample)
-            3.52 ms ± 20.4 µs per loop (mean ± std. dev. of 7 runs, 100 loops each)
+        >>> import dimod           # Create a binary quadratic model
+        >>> bqm = dimod.BinaryQuadraticModel({},
+        ...             {('a', 'b'): 0, ('b', 'c'): 1, ('c', 'd'): 2}, 0, 'SPIN')
+        >>> flip_energy_gains_iterative(bqm, {'a': -1, 'b': 1, 'c': 1, 'd': -1})
+        [(4.0, 'd'), (2.0, 'c'), (0.0, 'a'), (-2.0, 'b')]
 
-        Three orders of magnitude faster.
-
-        Subnote: using list comprehension speeds-up the iterative approach by
-        only 2%, so we're using the standard loop (a lot more readable).
     """
 
     if bqm.vartype is dimod.BINARY:
@@ -197,6 +204,8 @@ def flip_energy_gains_iterative(bqm, sample):
 
     energy_gains = []
     sample = sample_as_dict(sample)
+    # list comprehension speeds-up the iterative approach by
+    # only 2%. Using standard loop for readablity
     for idx, val in sample.items():
         contrib = bqm.linear[idx] + sum(w * sample[neigh] for neigh, w in bqm.adj[idx].items())
         energy_gains.append((contrib * delta(val), idx))
