@@ -263,6 +263,27 @@ def select_localsearch_adversaries(bqm, sample, max_n=None, min_gain=None):
 
 
 def select_random_subgraph(bqm, n):
+    """Select randomly `n` variables of the specified binary quadratic model.
+
+    Args:
+        bqm (:class:`dimod.BinaryQuadraticModel`):
+            Binary quadratic model (BQM).
+        n (int):
+            Number of requested variables. Must be between 0 and `len(bqm)`.
+
+    Returns:
+        list: `n` variables selected randomly from the BQM.
+
+    Examples:
+        This example returns 2 variables of a 4-variable BQM.
+
+        >>> import dimod           # Create a binary quadratic model
+        >>> bqm = dimod.BinaryQuadraticModel({},
+        ...             {('a', 'b'): 0, ('b', 'c'): 1, ('c', 'd'): 2}, 0, 'BINARY')
+        >>> select_random_subgraph(bqm, 2)
+        ['d', 'b']
+
+    """
     return random.sample(bqm.linear.keys(), n)
 
 
