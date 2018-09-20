@@ -255,6 +255,7 @@ def sample_as_dict(sample):
     return dict(sample)
 
 
+@dimod.decorators.vartype_argument('vartype')
 def random_sample_seq(size, vartype):
     """Return random sample of `size` in length, with values from `vartype`."""
     values = list(vartype.value)
