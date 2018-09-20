@@ -404,7 +404,7 @@ def sample_as_dict(sample):
 
     Args:
         sample (list/dict/dimod.SampleView): Sample object formatted as a list,
-        Numpy array, dict, or as returned by dimod samplers. 
+        Numpy array, dict, or as returned by dimod samplers.
 
     Returns:
         list: Copy of `sample` formatted as a dict, with variable indices as keys.
@@ -424,7 +424,21 @@ def sample_as_dict(sample):
 
 @dimod.decorators.vartype_argument('vartype')
 def random_sample_seq(size, vartype):
-    """Return random sample of `size` in length, with values from `vartype`."""
+    """Return a random sample.
+
+    Args:
+        size (int): Sample size (number of variables).
+        vartype (Vartype): Variable type for the binary quadratic model; for example,
+            `Vartype.SPIN`, `BINARY`, or {-1, 1}.
+
+    Returns:
+        dict: Random sample of `size` in length, with values from `vartype`.
+
+    Examples:
+        >>> random_sample_seq(4, dimod.BINARY)
+        {0: 0, 1: 1, 2: 0, 3: 0}
+
+    """
     values = list(vartype.value)
     return {i: random.choice(values) for i in range(size)}
 
