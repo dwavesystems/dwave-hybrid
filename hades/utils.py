@@ -362,7 +362,7 @@ def updated_sample(sample, replacements):
 
     Examples:
         >>> sample = {'a': 1, 'b': 1}
-        >>> updated_sample(sample, {'b': 2})
+        >>> updated_sample(sample, {'b': 2})       # doctest: +SKIP
         {'a': 1, 'b': 2}
 
     """
@@ -411,7 +411,7 @@ def sample_as_dict(sample):
 
     Examples:
         >>> sample = [1, 2, 3]
-        >>> sample_as_dict(sample)
+        >>> sample_as_dict(sample)     # doctest: +SKIP
         {0: 1, 1: 2, 2: 3}
 
     """
@@ -428,14 +428,13 @@ def random_sample_seq(size, vartype):
 
     Args:
         size (int): Sample size (number of variables).
-        vartype (Vartype): Variable type for the binary quadratic model; for example,
-            `Vartype.SPIN`, `BINARY`, or {-1, 1}.
+        vartype (Vartype): Variable type; for example, `Vartype.SPIN`, `BINARY`, or {-1, 1}.
 
     Returns:
         dict: Random sample of `size` in length, with values from `vartype`.
 
     Examples:
-        >>> random_sample_seq(4, dimod.BINARY)
+        >>> random_sample_seq(4, dimod.BINARY)      # doctest: +SKIP
         {0: 0, 1: 1, 2: 0, 3: 0}
 
     """
@@ -444,15 +443,66 @@ def random_sample_seq(size, vartype):
 
 
 def random_sample(bqm):
+    """Return a random sample for a binary quadratic model.
+
+    Args:
+        bqm (:obj:`.BinaryQuadraticModel`):
+            Binary quadratic model (BQM).
+
+    Returns:
+        dict: A sample with random values for the BQM.
+
+    Examples:
+        >>> import dimod
+        >>> bqm = dimod.BinaryQuadraticModel({},
+        ...             {('a', 'b'): -1, ('b', 'c'): -1, ('c', 'a'): -1}, 0, 'BINARY')
+        >>> random_sample(bqm)     # doctest: +SKIP
+        {'a': 0, 'b': 1, 'c': 1}
+
+    """
     values = list(bqm.vartype.value)
     return {i: random.choice(values) for i in bqm.variables}
 
 
 def min_sample(bqm):
+    """Return a sample with minimal values for a binary quadratic model.
+
+    Args:
+        bqm (:obj:`.BinaryQuadraticModel`):
+            Binary quadratic model (BQM).
+
+    Returns:
+        dict: A sample with minimal values for the BQM.
+
+    Examples:
+        >>> import dimod
+        >>> bqm = dimod.BinaryQuadraticModel({},
+        ...             {('a', 'b'): -1, ('b', 'c'): -1, ('c', 'a'): -1}, 0, 'BINARY')
+        >>> random_sample(bqm)     # doctest: +SKIP
+        {'a': 0, 'b': 0, 'c': 0}
+
+    """
     value = min(bqm.vartype.value)
     return {i: value for i in bqm.variables}
 
 
 def max_sample(bqm):
+    """Return a sample with maximal values for a binary quadratic model.
+
+    Args:
+        bqm (:obj:`.BinaryQuadraticModel`):
+            Binary quadratic model (BQM).
+
+    Returns:
+        dict: A sample with maximal values for the BQM.
+
+    Examples:
+        >>> import dimod
+        >>> bqm = dimod.BinaryQuadraticModel({},
+        ...             {('a', 'b'): -1, ('b', 'c'): -1, ('c', 'a'): -1}, 0, 'BINARY')
+        >>> random_sample(bqm)     # doctest: +SKIP
+        {'a': 1, 'b': 1, 'c': 1}
+
+    """
     value = max(bqm.vartype.value)
     return {i: value for i in bqm.variables}
