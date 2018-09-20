@@ -373,7 +373,7 @@ def updated_sample(sample, replacements):
 
 
 def sample_as_list(sample):
-    """Return sample object in dict format.
+    """Return sample object in list format.
 
     Args:
         sample (list/dict/dimod.SampleView): Sample object formatted as a list,
@@ -400,8 +400,20 @@ def sample_as_list(sample):
 
 
 def sample_as_dict(sample):
-    """Convert list-like ``sample`` (list/dict/dimod.SampleView),
-    ``list: var``, to ``map: idx -> var``.
+    """Return sample object in dict format.
+
+    Args:
+        sample (list/dict/dimod.SampleView): Sample object formatted as a list,
+        Numpy array, dict, or as returned by dimod samplers. 
+
+    Returns:
+        list: Copy of `sample` formatted as a dict, with variable indices as keys.
+
+    Examples:
+        >>> sample = [1, 2, 3]
+        >>> sample_as_dict(sample)
+        {0: 1, 1: 2, 2: 3}
+
     """
     if isinstance(sample, dict):
         return sample
