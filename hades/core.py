@@ -281,7 +281,7 @@ class Runnable(object):
         except Exception as exc:
             return self.error(exc)
 
-        if getattr(self, '_initialized', False):
+        if not getattr(self, '_initialized', False):
             self.init(state)
             setattr(self, '_initialized', True)
 
