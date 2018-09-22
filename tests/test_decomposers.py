@@ -16,7 +16,7 @@ class TestEnergyImpactDecomposer(unittest.TestCase):
         """First-variable selection works."""
 
         state = State.from_sample({'a': 1, 'b': 1, 'c': -1}, self.notall)
-        eid = EnergyImpactDecomposer(self.notall, max_size=1, min_gain=0)
+        eid = EnergyImpactDecomposer(max_size=1, min_gain=0)
         nextstate = eid.iterate(state)
         self.assertDictEqual(nextstate.subproblem.linear, {'c': 2})
         self.assertDictEqual(nextstate.subproblem.quadratic, {})
@@ -25,7 +25,7 @@ class TestEnergyImpactDecomposer(unittest.TestCase):
         """Multiple variables subproblem selection works, without gain limit."""
 
         state = State.from_sample({'a': 1, 'b': 1, 'c': -1}, self.notall)
-        eid = EnergyImpactDecomposer(self.notall, max_size=3, min_gain=None)
+        eid = EnergyImpactDecomposer(max_size=3, min_gain=None)
         nextstate = eid.iterate(state)
         self.assertDictEqual(nextstate.subproblem.adj, self.notall.adj)
 
@@ -33,7 +33,7 @@ class TestEnergyImpactDecomposer(unittest.TestCase):
         """Multiple variables subproblem selection works, with gain limit."""
 
         state = State.from_sample({'a': 1, 'b': 1, 'c': -1}, self.notall)
-        eid = EnergyImpactDecomposer(self.notall, max_size=3, min_gain=2.0)
+        eid = EnergyImpactDecomposer(max_size=3, min_gain=2.0)
         nextstate = eid.iterate(state)
         self.assertDictEqual(nextstate.subproblem.linear, {'c': 2})
         self.assertDictEqual(nextstate.subproblem.quadratic, {})
@@ -42,7 +42,7 @@ class TestEnergyImpactDecomposer(unittest.TestCase):
         """Failure due to no sub vars available."""
 
         state = State.from_sample({'a': 1, 'b': 1, 'c': -1}, self.notall)
-        eid = EnergyImpactDecomposer(self.notall, max_size=3, min_gain=5.0)
+        eid = EnergyImpactDecomposer(max_size=3, min_gain=5.0)
         with self.assertRaises(ValueError):
             nextstate = eid.iterate(state)
 
@@ -58,7 +58,8 @@ class TestConstraintDecomposer(unittest.TestCase):
                 bqm.add_interaction(u, v, -1)
             constraints.append(triplet)
 
-        rcd = RandomConstraintDecomposer(bqm, 3, constraints)
+        rcd = RandomConstraintDecomposer(3, constraints)
+        rcd.init(state=State.from_sample(min_sample(bqm), bqm))
 
         # check that the graph is complete
         G = rcd.constraint_graph
@@ -75,11 +76,11 @@ class TestConstraintDecomposer(unittest.TestCase):
                 bqm.add_interaction(u, v, -1)
             constraints.append(triplet)
 
-        rcd = RandomConstraintDecomposer(bqm, 3, constraints)
+        rcd = RandomConstraintDecomposer(3, constraints)
 
         state = State.from_sample(min_sample(bqm), bqm)
 
-        newstate = rcd.iterate(state)
+        newstate = rcd.run(state).result()
 
         self.assertIn('subproblem', newstate)
         self.assertTrue(len(newstate.subproblem) <= 3)  # correct size
