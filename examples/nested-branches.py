@@ -19,15 +19,15 @@ with open(problem) as fp:
 
 
 iteration = RacingBranches(
-    IdentityDecomposer(bqm) | SimulatedAnnealingSubproblemSampler() | SplatComposer(bqm),
-    EnergyImpactDecomposer(bqm, max_size=50, min_diff=50)
+    IdentityDecomposer() | SimulatedAnnealingSubproblemSampler() | SplatComposer(),
+    EnergyImpactDecomposer(max_size=50, min_diff=50)
         | RacingBranches(
             SimulatedAnnealingSubproblemSampler(sweeps=1000),
             TabuSubproblemSampler(tenure=20, timeout=10),
             endomorphic=False
         )
         | ArgMinFold(lambda state: state.subsamples.record[0].energy)
-        | SplatComposer(bqm)
+        | SplatComposer()
 ) | ArgMinFold()
 
 main = SimpleIterator(iteration, max_iter=10, convergence=3)
