@@ -162,9 +162,11 @@ class State(PliableDict):
     @classmethod
     def from_sample(cls, sample, bqm):
         """Convenience method for constructing State from raw (dict) sample;
-        energy is calculated from BQM.
+        energy is calculated from the BQM, and State.problem is also set to that
+        BQM.
         """
-        return cls(samples=SampleSet.from_sample(sample,
+        return cls(problem=bqm,
+                   samples=SampleSet.from_sample(sample,
                                                  vartype=bqm.vartype,
                                                  energy=bqm.energy(sample)))
 
