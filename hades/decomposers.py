@@ -22,14 +22,12 @@ class EnergyImpactDecomposer(Runnable):
     in the problem graph.
 
     Args:
-        bqm (:obj:`.BinaryQuadraticModel`):
-            Binary quadratic model (BQM).
         max_size (int):
             Maximum number of variables in the subproblem.
         min_gain (int, optional, default=0):
             Minimum reduction required to BQM energy, given the current sample. A variable
             is included in the subproblem only if inverting its sample value reduces energy
-            by at least this ammount.
+            by at least this amount.
         min_diff (int, optional, default=1):
             Minimum number of variables that did not partake in the previous iteration.
         stride (int, optional, default=1):
@@ -49,8 +47,8 @@ class EnergyImpactDecomposer(Runnable):
         >>> bqm = dimod.BinaryQuadraticModel({t: 0 for t in range(10)},
         ...                                  {(t, (t+1) % 10): 1 for t in range(10)},
         ...                                  0, 'BINARY')
-        >>> decomposer = EnergyImpactDecomposer(bqm, max_size=8, min_gain=1, min_diff=2)
-        >>> state0 = core.State.from_sample(random_sample(bqm), bqm)
+        >>> decomposer = EnergyImpactDecomposer(max_size=8, min_gain=1, min_diff=2)
+        >>> state0 = State.from_sample(random_sample(bqm), bqm)
         >>> flip_energy_gains(bqm, state0.samples.first.sample)     # doctest: +SKIP
         [(1, 8), (1, 6), (1, 2), (1, 1), (0, 7), (-1, 9), (-1, 5), (-1, 3), (-1, 0), (-2, 4)]
         >>> state1 = decomposer.iterate(state0)
@@ -62,13 +60,10 @@ class EnergyImpactDecomposer(Runnable):
 
     """
 
-    def __init__(self, bqm, max_size, min_gain=0.0, min_diff=1, stride=1):
-        if max_size > len(bqm):
-            raise ValueError("subproblem size cannot be greater than the problem size")
+    def __init__(self, max_size, min_gain=0.0, min_diff=1, stride=1):
         if min_diff > max_size or min_diff < 0:
             raise ValueError("min_diff must be nonnegative and less than max_size")
 
-        self.bqm = bqm
         self.max_size = max_size
         self.min_gain = min_gain
         self.min_diff = min_diff
@@ -79,11 +74,16 @@ class EnergyImpactDecomposer(Runnable):
 
     @tictoc('energy_impact_decompose')
     def iterate(self, state):
+        bqm = state.problem
+
+        if self.max_size > len(bqm):
+            raise ValueError("subproblem size cannot be greater than the problem size")
+
         # select a new subset of `max_size` variables, making sure they differ
         # from previous iteration by at least `min_diff` variables
-        sample = state.samples.change_vartype(self.bqm.vartype).first.sample
+        sample = state.samples.change_vartype(bqm.vartype).first.sample
         variables = select_localsearch_adversaries(
-            self.bqm, sample, min_gain=self.min_gain)
+            bqm, sample, min_gain=self.min_gain)
 
         # TODO: soft fail strategy? skip one iteration or relax vars selection?
         if len(variables) < self.min_diff:
@@ -101,7 +101,7 @@ class EnergyImpactDecomposer(Runnable):
         self._prev_vars = next_vars
 
         # induce sub-bqm based on selected variables and global sample
-        subbqm = bqm_induced_by(self.bqm, next_vars, sample)
+        subbqm = bqm_induced_by(bqm, next_vars, sample)
         return state.updated(subproblem=subbqm,
                              debug=dict(decomposer=self.name))
 
@@ -113,8 +113,6 @@ class RandomSubproblemDecomposer(Runnable):
     in the problem graph.
 
     Args:
-        bqm (:obj:`.BinaryQuadraticModel`):
-            Binary quadratic model (BQM).
         size (int):
             Number of variables in the subproblem.
 
@@ -126,26 +124,27 @@ class RandomSubproblemDecomposer(Runnable):
         >>> bqm = dimod.BinaryQuadraticModel({t: 0 for t in range(6)},
         ...             {(t, (t+1) % 6): 1 for t in range(6)}, 0, 'BINARY')
         >>> decomposer = RandomSubproblemDecomposer(bqm, size=3)
-        >>> state0 = core.State.from_sample(random_sample(bqm), bqm)
+        >>> state0 = State.from_sample(random_sample(bqm), bqm)
         >>> state1 = decomposer.iterate(state0)
         >>> print(state1.subproblem)
         BinaryQuadraticModel({2: 1.0, 3: 0.0, 4: 0.0}, {(2, 3): 1.0, (3, 4): 1.0}, 0.0, Vartype.BINARY)
 
     """
 
-    def __init__(self, bqm, size):
+    def __init__(self, size):
         # TODO: add min_diff support (like in EnergyImpactDecomposer)
-        if size > len(bqm):
-            raise ValueError("subproblem size cannot be greater than the problem size")
-
-        self.bqm = bqm
         self.size = size
 
     @tictoc('random_decompose')
     def iterate(self, state):
-        variables = select_random_subgraph(self.bqm, self.size)
-        sample = state.samples.change_vartype(self.bqm.vartype).first.sample
-        subbqm = bqm_induced_by(self.bqm, variables, sample)
+        bqm = state.problem
+
+        if self.size > len(bqm):
+            raise ValueError("subproblem size cannot be greater than the problem size")
+
+        variables = select_random_subgraph(bqm, self.size)
+        sample = state.samples.change_vartype(bqm.vartype).first.sample
+        subbqm = bqm_induced_by(bqm, variables, sample)
         return state.updated(subproblem=subbqm,
                              debug=dict(decomposer=self.name))
 
@@ -153,12 +152,9 @@ class RandomSubproblemDecomposer(Runnable):
 class IdentityDecomposer(Runnable):
     """Selects a subproblem that is a copy of the problem."""
 
-    def __init__(self, bqm):
-        self.bqm = bqm
-
     @tictoc('identity_decompose')
     def iterate(self, state):
-        return state.updated(subproblem=self.bqm,
+        return state.updated(subproblem=state.problem,
                              debug=dict(decomposer=self.name))
 
 
@@ -171,8 +167,6 @@ class TilingChimeraDecomposer(Runnable):
     a 2x2 Chimera lattice could be tiled 64 times (8x8) on a fully-yielded D-Wave 2000Q system (16x16).
 
     Args:
-        bqm (:obj:`.BinaryQuadraticModel`):
-            Binary quadratic model (BQM).
         size (int, optional, default=(4,4,4)):
             Size of the Chimera lattice as (m, n, t), where m is the number of rows,
             n the columns, and t the size of shore in the Chimera lattice.
@@ -186,7 +180,7 @@ class TilingChimeraDecomposer(Runnable):
         >>> import dimod           # Import a Chimera-structured binary quadratic model
         >>> with open('2048.09.qubo', 'r') as file:    # doctest: +SKIP
         ...     bqm = dimod.BinaryQuadraticModel.from_coo(file)
-        >>> decomposer = TilingChimeraDecomposer(bqm, size=(2,2,4))   # doctest: +SKIP
+        >>> decomposer = TilingChimeraDecomposer(size=(2,2,4))   # doctest: +SKIP
         >>> state0 = core.State.from_sample(random_sample(bqm), bqm)  # doctest: +SKIP
         >>> state1 = decomposer.iterate(state0)    # doctest: +SKIP
         >>> print(state1.subproblem)        # doctest: +SKIP
@@ -199,21 +193,25 @@ class TilingChimeraDecomposer(Runnable):
 
     """
 
-    def __init__(self, bqm, size=(4,4,4), loop=True):
+    def __init__(self, size=(4,4,4), loop=True):
         """Size C(n,m,t) defines a Chimera subgraph returned with each call."""
-        self.bqm = bqm
         self.size = size
-        self.blocks = iter(chimera_tiles(self.bqm, *self.size).items())
-        if loop:
+        self.loop = loop
+        self.blocks = None
+
+    def init(self, state):
+        self.blocks = iter(chimera_tiles(state.problem, *self.size).items())
+        if self.loop:
             self.blocks = cycle(self.blocks)
 
     @tictoc('tiling_chimera_decompose')
     def iterate(self, state):
         """Each call returns a subsequent block of size `self.size` Chimera cells."""
+        bqm = state.problem
         pos, embedding = next(self.blocks)
         variables = embedding.keys()
-        sample = state.samples.change_vartype(self.bqm.vartype).first.sample
-        subbqm = bqm_induced_by(self.bqm, variables, sample)
+        sample = state.samples.change_vartype(bqm.vartype).first.sample
+        subbqm = bqm_induced_by(bqm, variables, sample)
         return state.updated(subproblem=subbqm, embedding=embedding,
                              debug=dict(decomposer=self.name))
 
@@ -225,8 +223,6 @@ class RandomConstraintDecomposer(Runnable):
     of variables so subproblems are related to the problem's constraints.
 
     Args:
-        bqm (:obj:`.BinaryQuadraticModel`):
-            Binary quadratic model (BQM).
         size (int):
             Number of variables in the subproblem.
         constraints (list[set]):
@@ -243,7 +239,7 @@ class RandomConstraintDecomposer(Runnable):
         >>> bqm = dimod.BinaryQuadraticModel({'w': -2.0, 'x': -4.0, 'y': -4.0, 'z': -2.0},
         ...                                  {('w', 'x'): 4.0, ('x', 'y'): 4.0, ('y', 'z'): 4.0},
         ...                                  3.0, 'BINARY')
-        >>> decomposer = RandomConstraintDecomposer(bqm, 2, [{'w', 'x'}, {'x', 'y'}, {'y', 'z'}])
+        >>> decomposer = RandomConstraintDecomposer(2, [{'w', 'x'}, {'x', 'y'}, {'y', 'z'}])
         >>> state0 = core.State.from_sample(random_sample(bqm), bqm)
         >>> state1 = decomposer.iterate(state0)
         >>> print(state1.subproblem)        # doctest: +SKIP
@@ -251,11 +247,7 @@ class RandomConstraintDecomposer(Runnable):
         
     """
 
-    def __init__(self, bqm, size, constraints):
-        self.bqm = bqm
-
-        if size > len(bqm):
-            raise ValueError("subproblem size cannot be greater than the problem size")
+    def __init__(self, size, constraints):
         self.size = size
 
         if not isinstance(constraints, collections.Sequence):
@@ -264,19 +256,23 @@ class RandomConstraintDecomposer(Runnable):
             raise ValueError("size must be able to contain the largest constraint")
         self.constraints = constraints
 
+    def init(self, state):
+        if self.size > len(state.problem):
+            raise ValueError("subproblem size cannot be greater than the problem size")
+
         # get the connectivity between the constraint components
         self.constraint_graph = CG = nx.Graph()
-        for ci, const in enumerate(constraints):
-            for i in range(ci+1, len(constraints)):
-                if any(v in const for v in constraints[i]):
+        for ci, const in enumerate(self.constraints):
+            for i in range(ci+1, len(self.constraints)):
+                if any(v in const for v in self.constraints[i]):
                     CG.add_edge(i, ci)
 
     @tictoc('random_constraint_decomposer')
     def iterate(self, state):
         CG = self.constraint_graph
         size = self.size
-        bqm = self.bqm
         constraints = self.constraints
+        bqm = state.problem
 
         # get a random constraint to start with.
         # for some reason random.choice(CG.nodes) does not work, so we rely on the fact that our
@@ -297,7 +293,7 @@ class RandomConstraintDecomposer(Runnable):
                 # can exit early
                 break
 
-        sample = state.samples.change_vartype(self.bqm.vartype).first.sample
-        subbqm = bqm_induced_by(self.bqm, variables, sample)
+        sample = state.samples.change_vartype(bqm.vartype).first.sample
+        subbqm = bqm_induced_by(bqm, variables, sample)
         return state.updated(subproblem=subbqm,
                              debug=dict(decomposer=self.name))
