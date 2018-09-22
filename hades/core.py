@@ -220,7 +220,6 @@ class Runnable(object):
 
     def __init__(self, *args, **kwargs):
         super(Runnable, self).__init__(*args, **kwargs)
-        self._initialized = False
 
     @property
     def name(self):
@@ -282,9 +281,9 @@ class Runnable(object):
         except Exception as exc:
             return self.error(exc)
 
-        if not self._initialized:
+        if getattr(self, '_initialized', False):
             self.init(state)
-            self._initialized = True
+            setattr(self, '_initialized', True)
 
         return self.iterate(state)
 
