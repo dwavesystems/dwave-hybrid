@@ -220,6 +220,7 @@ class Runnable(object):
 
     def __init__(self, *args, **kwargs):
         super(Runnable, self).__init__(*args, **kwargs)
+        self._initialized = False
 
     @property
     def name(self):
@@ -233,6 +234,13 @@ class Runnable(object):
 
         """
         return self.__class__.__name__
+
+    def init(self, state):
+        """Run prior to the first iterate/run, with the first state received.
+
+        Default to NOP.
+        """
+        pass
 
     def iterate(self, state):
         """Start a blocking iteration of an instantiated :class:`Runnable`.
@@ -268,10 +276,16 @@ class Runnable(object):
         Returns state from `iterate`/`error`, or passes-thru an exception raised there.
         Blocks on `state` resolution and `iterate`/`error` execution .
         """
+
         try:
             state = future.result()
         except Exception as exc:
             return self.error(exc)
+
+        if not self._initialized:
+            self.init(state)
+            self._initialized = True
+
         return self.iterate(state)
 
     def run(self, state, defer=True):
