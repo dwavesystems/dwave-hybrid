@@ -19,10 +19,10 @@ with open(problem) as fp:
 
 # define the solver
 iteration = RacingBranches(
-    InterruptableTabuSampler(bqm),
-    EnergyImpactDecomposer(bqm, max_size=50, min_diff=30)
+    InterruptableTabuSampler(),
+    EnergyImpactDecomposer(max_size=50, min_diff=30)
     | QPUSubproblemAutoEmbeddingSampler()
-    | SplatComposer(bqm)
+    | SplatComposer()
 ) | ArgMinFold()
 main = SimpleIterator(iteration, max_iter=10, convergence=3)
 

@@ -55,10 +55,10 @@ Example
 
     # Define the solver
     iteration = RacingBranches(
-        InterruptableTabuSampler(bqm),
-        EnergyImpactDecomposer(bqm, max_size=2)
+        InterruptableTabuSampler(),
+        EnergyImpactDecomposer(max_size=2)
         | QPUSubproblemAutoEmbeddingSampler()
-        | SplatComposer(bqm)
+        | SplatComposer()
     ) | ArgMinFold()
     main = SimpleIterator(iteration, max_iter=10, convergence=3)
 

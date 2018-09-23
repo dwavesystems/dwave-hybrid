@@ -19,11 +19,11 @@ with open(problem) as fp:
 
 # Run Tabu in parallel with QPU, but post-process QPU samples with very short Tabu
 iteration = RacingBranches(
-    InterruptableTabuSampler(bqm),
-    EnergyImpactDecomposer(bqm, max_size=50, min_diff=50)
+    InterruptableTabuSampler(),
+    EnergyImpactDecomposer(max_size=50, min_diff=50)
     | QPUSubproblemAutoEmbeddingSampler(num_reads=100)
-    | SplatComposer(bqm)
-    | TabuProblemSampler(bqm, timeout=1)
+    | SplatComposer()
+    | TabuProblemSampler(timeout=1)
 ) | ArgMinFold()
 
 main = SimpleIterator(iteration, max_iter=10, convergence=3)

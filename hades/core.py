@@ -162,9 +162,11 @@ class State(PliableDict):
     @classmethod
     def from_sample(cls, sample, bqm):
         """Convenience method for constructing State from raw (dict) sample;
-        energy is calculated from BQM.
+        energy is calculated from the BQM, and State.problem is also set to that
+        BQM.
         """
-        return cls(samples=SampleSet.from_sample(sample,
+        return cls(problem=bqm,
+                   samples=SampleSet.from_sample(sample,
                                                  vartype=bqm.vartype,
                                                  energy=bqm.energy(sample)))
 
@@ -232,6 +234,13 @@ class Runnable(object):
         """
         return self.__class__.__name__
 
+    def init(self, state):
+        """Run prior to the first iterate/run, with the first state received.
+
+        Default to NOP.
+        """
+        pass
+
     def iterate(self, state):
         """Start a blocking iteration of an instantiated :class:`Runnable`.
 
@@ -266,10 +275,16 @@ class Runnable(object):
         Returns state from `iterate`/`error`, or passes-thru an exception raised there.
         Blocks on `state` resolution and `iterate`/`error` execution .
         """
+
         try:
             state = future.result()
         except Exception as exc:
             return self.error(exc)
+
+        if not getattr(self, '_initialized', False):
+            self.init(state)
+            setattr(self, '_initialized', True)
+
         return self.iterate(state)
 
     def run(self, state, defer=True):

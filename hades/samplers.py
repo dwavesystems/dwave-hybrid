@@ -264,8 +264,6 @@ class TabuProblemSampler(Runnable):
     """A tabu sampler for a binary quadratic problem.
 
     Args:
-        bqm (:obj:`.BinaryQuadraticModel`):
-            Binary quadratic model.
         num_reads (int, optional, default=1):
             Number of states (output solutions) to read from the sampler.
         tenure (int, optional):
@@ -292,8 +290,8 @@ class TabuProblemSampler(Runnable):
         ...                                  ('b', 'a'): 2.0, ('c', 'a'): -4.0, ('c', 'b'): -4.0, ('a', 'z'): -4.0},
         ...                                  -1.0, 'BINARY')
         >>> # Set up the sampler with an initial state
-        >>> sampler = samplers.TabuProblemSampler(bqm, tenure=2, timeout=5)
-        >>> state = core.State.from_sample({'x': 0, 'y': 0, 'z': 1, 'a': 1, 'b': 1, 'c': 0}, bqm)
+        >>> sampler = samplers.TabuProblemSampler(tenure=2, timeout=5)
+        >>> state = State.from_sample({'x': 0, 'y': 0, 'z': 1, 'a': 1, 'b': 1, 'c': 0}, bqm)
         >>> # Sample the problem
         >>> new_state = sampler.iterate(state)
         >>> print(new_state.samples)      # doctest: +SKIP
@@ -303,8 +301,7 @@ class TabuProblemSampler(Runnable):
 
     """
 
-    def __init__(self, bqm, num_reads=1, tenure=None, timeout=20):
-        self.bqm = bqm
+    def __init__(self, num_reads=1, tenure=None, timeout=20):
         self.num_reads = num_reads
         self.tenure = tenure
         self.timeout = timeout
@@ -313,7 +310,7 @@ class TabuProblemSampler(Runnable):
     @tictoc('tabu_sample')
     def iterate(self, state):
         response = self.sampler.sample(
-            self.bqm, init_solution=state.samples, tenure=self.tenure,
+            state.problem, init_solution=state.samples, tenure=self.tenure,
             timeout=self.timeout, num_reads=self.num_reads)
         return state.updated(samples=SampleSet.from_response(response),
                              debug=dict(sampler=self.name))
@@ -323,8 +320,6 @@ class InterruptableTabuSampler(TabuProblemSampler):
     """An interruptable tabu sampler for a binary quadratic problem.
 
     Args:
-        bqm (:obj:`.BinaryQuadraticModel`):
-            Binary quadratic model.
         num_reads (int, optional, default=1):
             Number of states (output solutions) to read from the sampler.
         tenure (int, optional):
@@ -356,7 +351,7 @@ class InterruptableTabuSampler(TabuProblemSampler):
         ...                                  ('b', 'a'): 2.0, ('c', 'a'): -4.0, ('c', 'b'): -4.0, ('a', 'z'): -4.0},
         ...                                  -1.0, 'BINARY')
         >>> # Set up the sampler with an initial state
-        >>> sampler = samplers.InterruptableTabuSampler(bqm, tenure=2, quantum_timeout=30, timeout=5000)
+        >>> sampler = samplers.InterruptableTabuSampler(tenure=2, quantum_timeout=30, timeout=5000)
         >>> state = core.State.from_sample({'x': 0, 'y': 0, 'z': 1, 'a': 1, 'b': 1, 'c': 0}, bqm)
         >>> # Sample the problem
         >>> new_state = sampler.run(state)
@@ -373,8 +368,7 @@ class InterruptableTabuSampler(TabuProblemSampler):
 
     """
 
-    def __init__(self, bqm, quantum_timeout=20, timeout=None, **kwargs):
-        kwargs['bqm'] = bqm
+    def __init__(self, quantum_timeout=20, timeout=None, **kwargs):
         kwargs['timeout'] = quantum_timeout
         super(InterruptableTabuSampler, self).__init__(**kwargs)
         self.max_timeout = timeout

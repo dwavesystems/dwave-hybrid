@@ -52,16 +52,16 @@ class KerberosSampler(dimod.Sampler):
         subproblem_size = min(len(bqm), max_subproblem_size)
 
         iteration = RacingBranches(
-            InterruptableTabuSampler(bqm),
-            IdentityDecomposer(bqm)
+            InterruptableTabuSampler(),
+            IdentityDecomposer()
                 | SimulatedAnnealingSubproblemSampler(num_reads=1, sweeps=sa_sweeps)
-                | SplatComposer(bqm),
-            RandomSubproblemDecomposer(bqm, size=subproblem_size)
+                | SplatComposer(),
+            RandomSubproblemDecomposer(size=subproblem_size)
                 | QPUSubproblemAutoEmbeddingSampler(num_reads=qpu_reads)
-                | SplatComposer(bqm),
-            EnergyImpactDecomposer(bqm, max_size=subproblem_size, min_diff=subproblem_size//2)
+                | SplatComposer(),
+            EnergyImpactDecomposer(max_size=subproblem_size, min_diff=subproblem_size//2)
                 | QPUSubproblemAutoEmbeddingSampler(num_reads=qpu_reads)
-                | SplatComposer(bqm),
+                | SplatComposer(),
         ) | ArgMinFold()
         main = SimpleIterator(iteration, max_iter=max_iter, convergence=convergence)
 
