@@ -9,7 +9,7 @@ import numpy
 from dnx import canonical_chimera_labeling
 
 
-def bqm_reduced_to(bqm, variables, fixed_values, keep_offset=True):
+def bqm_reduced_to(bqm, variables, state, keep_offset=True):
     """Reduce a binary quadratic model by fixing values of some variables.
 
     The function is optimized for ``len(variables) ~ len(bqm)``, that is,
@@ -20,7 +20,7 @@ def bqm_reduced_to(bqm, variables, fixed_values, keep_offset=True):
             Binary quadratic model (BQM).
         variables (list/set);
             Subset of variables to keep in the reduced BQM.
-        fixed_values (dict/list): Mapping of variable labels to values or a list when labels
+        state (dict/list): Mapping of variable labels to values or a list when labels
             are sequential integers. Must include all variables not specified in `variables`.
         keep_offset (bool, optional, default=True): If false, set the reduced binary quadratic
             model’s offset to zero; otherwise, uses the caluclated energy offset.
@@ -33,8 +33,8 @@ def bqm_reduced_to(bqm, variables, fixed_values, keep_offset=True):
 
         >>> import dimod           # Create a binary quadratic model
         >>> bqm = dimod.BinaryQuadraticModel({}, {('a', 'b'): -1, ('b', 'c'): -1, ('c', 'a'): -1}, 0, 'BINARY')
-        >>> fixed_values = {'a': 1, 'b': 1, 'c': 0}
-        >>> bqm_reduced_to(bqm, ['a', 'b'], fixed_values)
+        >>> state = {'a': 1, 'b': 1, 'c': 0}
+        >>> bqm_reduced_to(bqm, ['a', 'b'], state)
         BinaryQuadraticModel({'a': 0.0, 'b': 0.0}, {('a', 'b'): -1}, 0.0, Vartype.BINARY)
 
     """
@@ -43,7 +43,7 @@ def bqm_reduced_to(bqm, variables, fixed_values, keep_offset=True):
     fixed = set(bqm.variables).difference(variables)
     subbqm = bqm.copy()
     for v in fixed:
-        subbqm.fix_variable(v, fixed_values[v])
+        subbqm.fix_variable(v, state[v])
 
     if not keep_offset:
         subbqm.remove_offset()
@@ -51,7 +51,7 @@ def bqm_reduced_to(bqm, variables, fixed_values, keep_offset=True):
     return subbqm
 
 
-def bqm_induced_by(bqm, variables, fixed_values):
+def bqm_induced_by(bqm, variables, state):
     """Induce a binary quadratic model by fixing values of boundary variables.
 
     The function is optimized for ``len(variables) << len(bqm)``, that is, for fixing
@@ -62,7 +62,7 @@ def bqm_induced_by(bqm, variables, fixed_values):
             Binary quadratic model (BQM).
         variables (list/set);
             Subset of variables to keep in the reduced BQM, typically a subgraph.
-        fixed_values (dict/list):
+        state (dict/list):
             Mapping of variable labels to values or a list when labels
             are sequential integers. Values are required only for boundary variables,
             that is, for variables with interactions with `variables` (having edges
@@ -81,8 +81,8 @@ def bqm_induced_by(bqm, variables, fixed_values):
         >>> import networkx as nx
         >>> bqm = dimod.BinaryQuadraticModel({},
         ...             {edge: edge[0] for edge in set(nx.path_graph(6).edges)}, 0, 'BINARY')
-        >>> fixed_values = {1: 3, 4: 3}
-        >>> bqm_induced_by(bqm, [2, 3], fixed_values)
+        >>> state = {1: 3, 4: 3}
+        >>> bqm_induced_by(bqm, [2, 3], state)
         BinaryQuadraticModel({2: 3.0, 3: 9.0}, {(2, 3): 2.0}, 0.0, Vartype.BINARY)
 
     """
@@ -98,7 +98,7 @@ def bqm_induced_by(bqm, variables, fixed_values):
             if v in variables:
                 subbqm.add_interaction(u, v, j / 2.0)
             else:
-                bias += j * fixed_values[v]
+                bias += j * state[v]
         subbqm.add_variable(u, bias)
 
     # no point in having offset since we're fixing only variables on boundary
@@ -278,8 +278,7 @@ def select_random_subgraph(bqm, n):
         This example returns 2 variables of a 4-variable BQM.
 
         >>> import dimod           # Create a binary quadratic model
-        >>> bqm = dimod.BinaryQuadraticModel({},
-        ...             {('a', 'b'): 0, ('b', 'c'): 1, ('c', 'd'): 2}, 0, 'BINARY')
+        >>> bqm = dimod.BinaryQuadraticModel({}, {'ab': 0, 'bc': 1, 'cd': 2}, 0, 'BINARY')
         >>> select_random_subgraph(bqm, 2)      # doctest: +SKIP
         ['d', 'b']
 
