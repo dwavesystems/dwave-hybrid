@@ -17,7 +17,7 @@ Methods
    bqm_reduced_to
    bqm_induced_by
    bqm_edges_between_variables
-   flip_energy_gains_naive
+   .. flip_energy_gains_naive
    flip_energy_gains_iterative
    select_localsearch_adversaries
    select_random_subgraph
