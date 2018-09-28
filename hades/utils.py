@@ -141,7 +141,9 @@ def flip_energy_gains_naive(bqm, sample):
     for flipping qubit with flip_index in sample.
 
     Note: Grossly inefficient! Use `flip_energy_gains_iterative` which traverses
-    variables, updating energy delta based on previous var value and neighbors.
+    variables, updating energy delta based on previous var value and neighbors
+    (iterative approach is ~1000x slower than the naive one, for bqm sizes
+    of ~2k variables).
     """
 
     if bqm.vartype is dimod.BINARY:
@@ -157,12 +159,6 @@ def flip_energy_gains_naive(bqm, sample):
     energy_gains.sort(reverse=True)
     return energy_gains
 
-    # Performance comparison to flip_energy_gains_iterative (bqm size ~ 2k, random sample)::
-    #   >>> %timeit flip_energy_gains_naive(bqm, sample)
-    #   3.35 s ± 37.5 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
-    #   >>> %timeit flip_energy_gains_iterative(bqm, sample)
-    #   3.52 ms ± 20.4 µs per loop (mean ± std. dev. of 7 runs, 100 loops each)
-    #  Three orders of magnitude faster.
 
 def flip_energy_gains_iterative(bqm, sample):
     """Order variable flips by descending contribution to energy changes in a BQM.
@@ -204,8 +200,6 @@ def flip_energy_gains_iterative(bqm, sample):
 
     energy_gains = []
     sample = sample_as_dict(sample)
-    # list comprehension speeds-up the iterative approach by
-    # only 2%. Using standard loop for readablity
     for idx, val in sample.items():
         contrib = bqm.linear[idx] + sum(w * sample[neigh] for neigh, w in bqm.adj[idx].items())
         energy_gains.append((contrib * delta(val), idx))
