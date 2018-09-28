@@ -1,0 +1,9 @@
+[run]
+# omit virtualenv and test files
+omit = env/*, */tests/*
+source=hades
+
+[report]
+exclude_lines:
+    pragma: no cover
+

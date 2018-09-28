@@ -22,6 +22,8 @@ from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, Future, 
 from plucky import merge
 import dimod
 
+from hades.utils import min_sample, sample_as_dict
+
 
 class ImmediateExecutor(Executor):
 
@@ -421,3 +423,57 @@ class Branch(Runnable):
         """Try terminating all components in an instantiated :class:`Branch`."""
         for component in self.components:
             component.stop()
+
+
+class HybridSampler(dimod.Sampler):
+    """Produce `dimod.Sampler` from `hades.Runnable`-based sampler."""
+
+    properties = None
+    parameters = None
+
+    def __init__(self, runnable_solver):
+        """Construct the sampler off of a (composed) `Runnable` BQM solver.
+
+        Args:
+            runnable_solver (`Runnable`):
+                Hades runnable (likely composed) that accepts a BQM (in input
+                state) and produces (at least one) sample (in output state).
+
+        """
+        if not isinstance(runnable_solver, Runnable):
+            raise TypeError("'sampler' should be 'hades.Runnable'")
+        self._runnable_solver = runnable_solver
+
+        self.parameters = {'initial_sample': []}
+        self.properties = {}
+
+    def sample(self, bqm, initial_sample=None):
+        """Sample from a binary quadratic model using composed runnable sampler.
+
+        Args:
+            bqm (:obj:`~dimod.BinaryQuadraticModel`):
+                Binary quadratic model to be sampled from.
+
+            initial_sample (dict, default=None):
+                `bqm`-compatible sample used for initial state construction.
+                Defaults to `hades.utils.min_sample(bqm)`.
+
+        Returns:
+            :obj:`~dimod.Response`: A `dimod` :obj:`.~dimod.Response` object.
+
+        """
+        if not isinstance(bqm, dimod.BinaryQuadraticModel):
+            raise TypeError("'bqm' should be BinaryQuadraticModel")
+
+        if initial_sample is None:
+            initial_sample = min_sample(bqm)
+        else:
+            initial_sample = sample_as_dict(initial_sample)
+
+        if len(initial_sample) != len(bqm):
+            raise ValueError("size of 'initial_sample' incompatible with 'bqm'")
+
+        initial_state = State.from_sample(initial_sample, bqm)
+        final_state = self._runnable_solver.run(initial_state)
+
+        return dimod.Response.from_future(final_state, result_hook=lambda f: f.result().samples)
