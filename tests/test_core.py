@@ -1,6 +1,9 @@
 import unittest
 
-from hades.core import PliableDict, State, SampleSet
+import dimod
+
+from hades.core import PliableDict, State, SampleSet, HybridSampler
+from hades.samplers import TabuProblemSampler
 
 
 class TestSampleSet(unittest.TestCase):
@@ -59,3 +62,33 @@ class TestState(unittest.TestCase):
         # test clear
         self.assertEqual(s2.updated(emb=None).emb, None)
         self.assertEqual(s2.updated(debug=None).debug, None)
+
+
+
+class TestHybridSampler(unittest.TestCase):
+
+    def test_simple(self):
+        bqm = dimod.BinaryQuadraticModel({}, {'ab': 1, 'bc': 1, 'ca': -1}, 0, dimod.SPIN)
+        sampler = HybridSampler(TabuProblemSampler())
+        response = sampler.sample(bqm)
+
+        self.assertEqual(response.record[0].energy, -3.0)
+
+    def test_validation(self):
+        bqm = dimod.BinaryQuadraticModel({}, {'ab': 1, 'bc': 1, 'ca': -1}, 0, dimod.SPIN)
+        sampler = TabuProblemSampler()
+
+        with self.assertRaises(TypeError):
+            HybridSampler()
+
+        with self.assertRaises(TypeError):
+            HybridSampler(sampler).sample(1)
+
+        with self.assertRaises(ValueError):
+            HybridSampler(sampler).sample(bqm, initial_sample={1: 2})
+
+        response = HybridSampler(sampler).sample(bqm, initial_sample={'a': 1, 'b': 1, 'c': 1})
+        self.assertEqual(response.record[0].energy, -3.0)
+
+        response = HybridSampler(sampler).sample(bqm, initial_sample={'a': -1, 'b': 1, 'c': -1})
+        self.assertEqual(response.record[0].energy, -3.0)
