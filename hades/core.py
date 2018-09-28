@@ -424,10 +424,12 @@ class HybridSampler(dimod.Sampler):
                 Hades runnable sampler.
 
         """
+        if not isinstance(sampler, Runnable):
+            raise TypeError("'sampler' should be 'hades.Runnable'")
+        self._sampler = sampler
 
         self.parameters = {'initial_sample': []}
         self.properties = {}
-        self._sampler = sampler
 
     def sample(self, bqm, initial_sample=None):
         """Sample from low-energy spin states using composed runnable sampler.
@@ -444,7 +446,6 @@ class HybridSampler(dimod.Sampler):
             :obj:`~dimod.Response`: A `dimod` :obj:`.~dimod.Response` object.
 
         """
-
         if not isinstance(bqm, dimod.BinaryQuadraticModel):
             raise TypeError("'bqm' should be BinaryQuadraticModel")
 
