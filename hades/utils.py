@@ -142,8 +142,7 @@ def flip_energy_gains_naive(bqm, sample):
 
     Note: Grossly inefficient! Use `flip_energy_gains_iterative` which traverses
     variables, updating energy delta based on previous var value and neighbors
-    (iterative approach is ~1000x slower than the naive one, for bqm sizes
-    of ~2k variables).
+    (for ~2k variable BQMs, iterative approach is ~1000x faster than the naive one).
     """
 
     if bqm.vartype is dimod.BINARY:

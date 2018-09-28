@@ -416,23 +416,24 @@ class HybridSampler(dimod.Sampler):
     properties = None
     parameters = None
 
-    def __init__(self, sampler):
-        """Construct the sampler.
+    def __init__(self, runnable_solver):
+        """Construct the sampler off of a (composed) `Runnable` BQM solver.
 
         Args:
-            sampler (`Runnable`):
-                Hades runnable sampler.
+            runnable_solver (`Runnable`):
+                Hades runnable (likely composed) that accepts a BQM (in input
+                state) and produces (at least one) sample (in output state).
 
         """
-        if not isinstance(sampler, Runnable):
+        if not isinstance(runnable_solver, Runnable):
             raise TypeError("'sampler' should be 'hades.Runnable'")
-        self._sampler = sampler
+        self._runnable_solver = runnable_solver
 
         self.parameters = {'initial_sample': []}
         self.properties = {}
 
     def sample(self, bqm, initial_sample=None):
-        """Sample from low-energy spin states using composed runnable sampler.
+        """Sample from a binary quadratic model using composed runnable sampler.
 
         Args:
             bqm (:obj:`~dimod.BinaryQuadraticModel`):
@@ -458,6 +459,6 @@ class HybridSampler(dimod.Sampler):
             raise ValueError("size of 'initial_sample' incompatible with 'bqm'")
 
         initial_state = State.from_sample(initial_sample, bqm)
-        final_state = self._sampler.run(initial_state)
+        final_state = self._runnable_solver.run(initial_state)
 
         return dimod.Response.from_future(final_state, result_hook=lambda f: f.result().samples)
