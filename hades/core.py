@@ -477,3 +477,18 @@ class HybridSampler(dimod.Sampler):
         final_state = self._runnable_solver.run(initial_state)
 
         return dimod.Response.from_future(final_state, result_hook=lambda f: f.result().samples)
+
+
+class HybridRunnable(Runnable):
+    """Produce `hades.Runnable` from `dimod.Sampler` (dual of `HybridSampler`)."""
+
+    def __init__(self, sampler, **sample_kwargs):
+        if not isinstance(sampler, dimod.Sampler):
+            raise TypeError("'sampler' should be 'dimod.Sampler'")
+
+        self.sampler = sampler
+        self.sample_kwargs = sample_kwargs
+
+    def iterate(self, state):
+        response = self.sampler.sample(state.problem, **self.sample_kwargs)
+        return state.updated(samples=response)

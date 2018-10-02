@@ -14,11 +14,15 @@
 #
 
 import unittest
+import concurrent.futures
 
 import dimod
+from tabu import TabuSampler
 
-from hades.core import PliableDict, State, SampleSet, HybridSampler
+from hades.core import (
+    PliableDict, State, SampleSet, HybridSampler, HybridRunnable)
 from hades.samplers import TabuProblemSampler
+from hades.utils import min_sample
 
 
 class TestSampleSet(unittest.TestCase):
@@ -107,3 +111,15 @@ class TestHybridSampler(unittest.TestCase):
 
         response = HybridSampler(sampler).sample(bqm, initial_sample={'a': -1, 'b': 1, 'c': -1})
         self.assertEqual(response.record[0].energy, -3.0)
+
+
+class TestHybridRunnable(unittest.TestCase):
+
+    def test_simple(self):
+        bqm = dimod.BinaryQuadraticModel({}, {'ab': 1, 'bc': 1, 'ca': -1}, 0, dimod.SPIN)
+        runnable = HybridRunnable(TabuSampler())
+        state = State.from_sample(min_sample(bqm), bqm)
+        response = runnable.run(state)
+
+        self.assertIsInstance(response, concurrent.futures.Future)
+        self.assertEqual(response.result().samples.record[0].energy, -3.0)
