@@ -480,15 +480,45 @@ class HybridSampler(dimod.Sampler):
 
 
 class HybridRunnable(Runnable):
-    """Produce `hades.Runnable` from `dimod.Sampler` (dual of `HybridSampler`)."""
+    """Produce `hades.Runnable` from `dimod.Sampler` (dual of `HybridSampler`).
 
-    def __init__(self, sampler, **sample_kwargs):
+    The runnable will sample from problem defined in state field with `fields[0]`,
+    and populate the state field defined with `fields[1]`.
+    """
+
+    def __init__(self, sampler, fields, **sample_kwargs):
         if not isinstance(sampler, dimod.Sampler):
             raise TypeError("'sampler' should be 'dimod.Sampler'")
+        if not isinstance(fields, tuple) or not len(fields) == 2:
+            raise ValueError("'fields' should be two-tuple with input/output state fields")
 
         self.sampler = sampler
+        self.input = fields[0]
+        self.output = fields[1]
         self.sample_kwargs = sample_kwargs
 
     def iterate(self, state):
-        response = self.sampler.sample(state.problem, **self.sample_kwargs)
-        return state.updated(samples=response)
+        response = self.sampler.sample(state[self.input], **self.sample_kwargs)
+        return state.updated(**{self.output: response})
+
+
+class HybridProblemRunnable(HybridRunnable):
+    """Produce `hades.Runnable` from `dimod.Sampler` (dual of `HybridSampler`).
+
+    The runnable will sample from `state.problem`, and populate `state.samples`.
+    """
+
+    def __init__(self, sampler, **sample_kwargs):
+        super(HybridProblemRunnable, self).__init__(
+            sampler, fields=('problem', 'samples'), **sample_kwargs)
+
+
+class HybridSubproblemRunnable(Runnable):
+    """Produce `hades.Runnable` from `dimod.Sampler` (dual of `HybridSampler`).
+
+    The runnable will sample from `state.subproblem`, and populate `state.subsamples`.
+    """
+
+    def __init__(self, sampler, **sample_kwargs):
+        super(HybridSubproblemRunnable, self).__init__(
+            sampler, fields=('subproblem', 'subsamples'), **sample_kwargs)

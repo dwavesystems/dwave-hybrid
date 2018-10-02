@@ -117,7 +117,7 @@ class TestHybridRunnable(unittest.TestCase):
 
     def test_simple(self):
         bqm = dimod.BinaryQuadraticModel({}, {'ab': 1, 'bc': 1, 'ca': -1}, 0, dimod.SPIN)
-        runnable = HybridRunnable(TabuSampler())
+        runnable = HybridRunnable(TabuSampler(), fields=('problem', 'samples'))
         state = State.from_sample(min_sample(bqm), bqm)
         response = runnable.run(state)
 
