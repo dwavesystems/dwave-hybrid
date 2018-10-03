@@ -482,8 +482,25 @@ class HybridSampler(dimod.Sampler):
 class HybridRunnable(Runnable):
     """Produce `hades.Runnable` from `dimod.Sampler` (dual of `HybridSampler`).
 
-    The runnable will sample from problem defined in state field with `fields[0]`,
-    and populate the state field defined with `fields[1]`.
+    The runnable will sample from a problem defined in state field named `fields[0]`,
+    and populate the state field referred to as in `fields[1]`.
+
+    Args:
+        sampler (:class:`dimod.Sampler`):
+            dimod-compatible sampler which is run on every iteration of the runnable.
+        fields (tuple(str, str)):
+            Input and output state field names.
+        **sample_kwargs (dict):
+            Sampler-specific parameters passed to sampler on every call/iteration.
+
+    Example:
+        Create a runnable from a `dwave-tabu`-based dimod sampler, `TabuSampler`,
+        and run in on your `bqm`:
+
+            runnable = HybridRunnable(tabu.TabuSampler(), fields=('subproblem', 'subsample'), timeout=100)
+            state = State.from_sample(min_sample(bqm), bqm)
+            state = runnable.run(state)
+
     """
 
     def __init__(self, sampler, fields, **sample_kwargs):
@@ -493,8 +510,7 @@ class HybridRunnable(Runnable):
             raise ValueError("'fields' should be two-tuple with input/output state fields")
 
         self.sampler = sampler
-        self.input = fields[0]
-        self.output = fields[1]
+        self.input, self.output = fields
         self.sample_kwargs = sample_kwargs
 
     def iterate(self, state):
