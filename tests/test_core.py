@@ -23,6 +23,7 @@ from hades.core import (
     PliableDict, State, SampleSet, HybridSampler,
     HybridRunnable, HybridProblemRunnable, HybridSubproblemRunnable)
 from hades.decomposers import IdentityDecomposer
+from hades.composers import IdentityComposer
 from hades.samplers import TabuProblemSampler
 from hades.utils import min_sample
 
@@ -140,3 +141,10 @@ class TestHybridRunnable(unittest.TestCase):
 
         self.assertIsInstance(response, concurrent.futures.Future)
         self.assertEqual(response.result().subsamples.record[0].energy, -3.0)
+
+    def test_runnable_composition(self):
+        runnable = IdentityDecomposer() | HybridSubproblemRunnable(TabuSampler()) | IdentityComposer()
+        response = runnable.run(self.init_state)
+
+        self.assertIsInstance(response, concurrent.futures.Future)
+        self.assertEqual(response.result().samples.record[0].energy, -3.0)
