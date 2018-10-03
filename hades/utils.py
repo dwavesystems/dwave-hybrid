@@ -150,30 +150,7 @@ def bqm_edges_between_variables(bqm, variables):
     return edges
 
 
-def flip_energy_gains_naive(bqm, sample):
-    """Return `list[(energy_gain, flip_index)]` in descending order
-    for flipping qubit with flip_index in sample.
-
-    Note: Grossly inefficient! Use `flip_energy_gains_iterative` which traverses
-    variables, updating energy delta based on previous var value and neighbors
-    (for ~2k variable BQMs, iterative approach is ~1000x faster than the naive one).
-    """
-
-    if bqm.vartype is dimod.BINARY:
-        flip = lambda val: 1 - val
-    elif bqm.vartype is dimod.SPIN:
-        flip = lambda val: -val
-    else:
-        raise ValueError("vartype not supported")
-
-    base = bqm.energy(sample)
-    sample = sample_as_list(sample)
-    energy_gains = [(bqm.energy(sample[:i] + [flip(val)] + sample[i+1:]) - base, i) for i, val in enumerate(sample)]
-    energy_gains.sort(reverse=True)
-    return energy_gains
-
-
-def flip_energy_gains_iterative(bqm, sample):
+def flip_energy_gains(bqm, sample):
     """Order variable flips by descending contribution to energy changes in a BQM.
 
     Args:
@@ -192,21 +169,20 @@ def flip_energy_gains_iterative(bqm, sample):
         This example returns connecting edges between 3 nodes of a BQM based on a 4-variable
         path graph.
 
-        >>> import dimod           # Create a binary quadratic model
-        >>> bqm = dimod.BinaryQuadraticModel({},
-        ...             {('a', 'b'): 0, ('b', 'c'): 1, ('c', 'd'): 2}, 0, 'SPIN')
-        >>> flip_energy_gains_iterative(bqm, {'a': -1, 'b': 1, 'c': 1, 'd': -1})
+        >>> import dimod
+        >>> bqm = dimod.BinaryQuadraticModel({}, {'ab': 0, 'bc': 1, 'cd': 2}, 0, 'SPIN')
+        >>> flip_energy_gains(bqm, {'a': -1, 'b': 1, 'c': 1, 'd': -1})
         [(4.0, 'd'), (2.0, 'c'), (0.0, 'a'), (-2.0, 'b')]
 
     """
 
     if bqm.vartype is dimod.BINARY:
-        # val is 0, flips to 1 => delta +1
-        # val is 1, flips to 0 => delta -1
+        # val 0 flips to 1 => delta +1
+        # val 1 flips to 0 => delta -1
         delta = lambda val: 1 - 2 * val
     elif bqm.vartype is dimod.SPIN:
-        # val is -1, flips to +1 => delta +2
-        # val is +1, flips to -1 => delta -2
+        # val -1 flips to +1 => delta +2
+        # val +1 flips to -1 => delta -2
         delta = lambda val: -2 * val
     else:
         raise ValueError("vartype not supported")
@@ -219,9 +195,6 @@ def flip_energy_gains_iterative(bqm, sample):
 
     energy_gains.sort(reverse=True)
     return energy_gains
-
-
-flip_energy_gains = flip_energy_gains_iterative
 
 
 def select_localsearch_adversaries(bqm, sample, max_n=None, min_gain=None):
