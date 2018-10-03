@@ -20,7 +20,9 @@ import dimod
 from tabu import TabuSampler
 
 from hades.core import (
-    PliableDict, State, SampleSet, HybridSampler, HybridRunnable)
+    PliableDict, State, SampleSet, HybridSampler,
+    HybridRunnable, HybridProblemRunnable, HybridSubproblemRunnable)
+from hades.decomposers import IdentityDecomposer
 from hades.samplers import TabuProblemSampler
 from hades.utils import min_sample
 
@@ -114,12 +116,27 @@ class TestHybridSampler(unittest.TestCase):
 
 
 class TestHybridRunnable(unittest.TestCase):
+    bqm = dimod.BinaryQuadraticModel({}, {'ab': 1, 'bc': 1, 'ca': -1}, 0, dimod.SPIN)
+    init_state = State.from_sample(min_sample(bqm), bqm)
 
-    def test_simple(self):
-        bqm = dimod.BinaryQuadraticModel({}, {'ab': 1, 'bc': 1, 'ca': -1}, 0, dimod.SPIN)
+    def test_generic(self):
         runnable = HybridRunnable(TabuSampler(), fields=('problem', 'samples'))
-        state = State.from_sample(min_sample(bqm), bqm)
-        response = runnable.run(state)
+        response = runnable.run(self.init_state)
 
         self.assertIsInstance(response, concurrent.futures.Future)
         self.assertEqual(response.result().samples.record[0].energy, -3.0)
+
+    def test_problem_sampler_runnable(self):
+        runnable = HybridProblemRunnable(TabuSampler())
+        response = runnable.run(self.init_state)
+
+        self.assertIsInstance(response, concurrent.futures.Future)
+        self.assertEqual(response.result().samples.record[0].energy, -3.0)
+
+    def test_subproblem_sampler_runnable(self):
+        runnable = HybridSubproblemRunnable(TabuSampler())
+        state = self.init_state.updated(subproblem=self.bqm)
+        response = runnable.run(state)
+
+        self.assertIsInstance(response, concurrent.futures.Future)
+        self.assertEqual(response.result().subsamples.record[0].energy, -3.0)
