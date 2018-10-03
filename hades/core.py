@@ -477,3 +477,64 @@ class HybridSampler(dimod.Sampler):
         final_state = self._runnable_solver.run(initial_state)
 
         return dimod.Response.from_future(final_state, result_hook=lambda f: f.result().samples)
+
+
+class HybridRunnable(Runnable):
+    """Produce `hades.Runnable` from `dimod.Sampler` (dual of `HybridSampler`).
+
+    The runnable will sample from a problem defined in state field named `fields[0]`,
+    and populate the state field referred to as in `fields[1]`.
+
+    Args:
+        sampler (:class:`dimod.Sampler`):
+            dimod-compatible sampler which is run on every iteration of the runnable.
+        fields (tuple(str, str)):
+            Input and output state field names.
+        **sample_kwargs (dict):
+            Sampler-specific parameters passed to sampler on every call/iteration.
+
+    Example:
+        Create a runnable from a `dwave-tabu`-based dimod sampler, `TabuSampler`,
+        and run in on your `bqm`:
+
+            runnable = HybridRunnable(tabu.TabuSampler(), fields=('subproblem', 'subsample'), timeout=100)
+            state = State.from_sample(min_sample(bqm), bqm)
+            state = runnable.run(state)
+
+    """
+
+    def __init__(self, sampler, fields, **sample_kwargs):
+        if not isinstance(sampler, dimod.Sampler):
+            raise TypeError("'sampler' should be 'dimod.Sampler'")
+        if not isinstance(fields, tuple) or not len(fields) == 2:
+            raise ValueError("'fields' should be two-tuple with input/output state fields")
+
+        self.sampler = sampler
+        self.input, self.output = fields
+        self.sample_kwargs = sample_kwargs
+
+    def iterate(self, state):
+        response = self.sampler.sample(state[self.input], **self.sample_kwargs)
+        return state.updated(**{self.output: response})
+
+
+class HybridProblemRunnable(HybridRunnable):
+    """Produce `hades.Runnable` from `dimod.Sampler` (dual of `HybridSampler`).
+
+    The runnable will sample from `state.problem`, and populate `state.samples`.
+    """
+
+    def __init__(self, sampler, **sample_kwargs):
+        super(HybridProblemRunnable, self).__init__(
+            sampler, fields=('problem', 'samples'), **sample_kwargs)
+
+
+class HybridSubproblemRunnable(HybridRunnable):
+    """Produce `hades.Runnable` from `dimod.Sampler` (dual of `HybridSampler`).
+
+    The runnable will sample from `state.subproblem`, and populate `state.subsamples`.
+    """
+
+    def __init__(self, sampler, **sample_kwargs):
+        super(HybridSubproblemRunnable, self).__init__(
+            sampler, fields=('subproblem', 'subsamples'), **sample_kwargs)

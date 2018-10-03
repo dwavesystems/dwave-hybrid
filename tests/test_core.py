@@ -14,11 +14,18 @@
 #
 
 import unittest
+import concurrent.futures
 
 import dimod
+from tabu import TabuSampler
 
-from hades.core import PliableDict, State, SampleSet, HybridSampler
+from hades.core import (
+    PliableDict, State, SampleSet, HybridSampler,
+    HybridRunnable, HybridProblemRunnable, HybridSubproblemRunnable)
+from hades.decomposers import IdentityDecomposer
+from hades.composers import IdentityComposer
 from hades.samplers import TabuProblemSampler
+from hades.utils import min_sample
 
 
 class TestSampleSet(unittest.TestCase):
@@ -107,3 +114,37 @@ class TestHybridSampler(unittest.TestCase):
 
         response = HybridSampler(sampler).sample(bqm, initial_sample={'a': -1, 'b': 1, 'c': -1})
         self.assertEqual(response.record[0].energy, -3.0)
+
+
+class TestHybridRunnable(unittest.TestCase):
+    bqm = dimod.BinaryQuadraticModel({}, {'ab': 1, 'bc': 1, 'ca': -1}, 0, dimod.SPIN)
+    init_state = State.from_sample(min_sample(bqm), bqm)
+
+    def test_generic(self):
+        runnable = HybridRunnable(TabuSampler(), fields=('problem', 'samples'))
+        response = runnable.run(self.init_state)
+
+        self.assertIsInstance(response, concurrent.futures.Future)
+        self.assertEqual(response.result().samples.record[0].energy, -3.0)
+
+    def test_problem_sampler_runnable(self):
+        runnable = HybridProblemRunnable(TabuSampler())
+        response = runnable.run(self.init_state)
+
+        self.assertIsInstance(response, concurrent.futures.Future)
+        self.assertEqual(response.result().samples.record[0].energy, -3.0)
+
+    def test_subproblem_sampler_runnable(self):
+        runnable = HybridSubproblemRunnable(TabuSampler())
+        state = self.init_state.updated(subproblem=self.bqm)
+        response = runnable.run(state)
+
+        self.assertIsInstance(response, concurrent.futures.Future)
+        self.assertEqual(response.result().subsamples.record[0].energy, -3.0)
+
+    def test_runnable_composition(self):
+        runnable = IdentityDecomposer() | HybridSubproblemRunnable(TabuSampler()) | IdentityComposer()
+        response = runnable.run(self.init_state)
+
+        self.assertIsInstance(response, concurrent.futures.Future)
+        self.assertEqual(response.result().samples.record[0].energy, -3.0)
