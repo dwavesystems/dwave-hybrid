@@ -529,7 +529,7 @@ class HybridProblemRunnable(HybridRunnable):
             sampler, fields=('problem', 'samples'), **sample_kwargs)
 
 
-class HybridSubproblemRunnable(Runnable):
+class HybridSubproblemRunnable(HybridRunnable):
     """Produce `hades.Runnable` from `dimod.Sampler` (dual of `HybridSampler`).
 
     The runnable will sample from `state.subproblem`, and populate `state.subsamples`.
