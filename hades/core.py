@@ -61,20 +61,6 @@ class SampleSet(dimod.Response):
 
     """
 
-    def __eq__(self, other):
-        # TODO: merge into dimod.Response together with the updated docstring
-        return (self.vartype == other.vartype and self.info == other.info
-            and self.variable_labels == other.variable_labels
-            and self.record == other.record)
-
-    @property
-    def first(self):
-        """Return the `Sample(sample={...}, energy, num_occurrences)` with
-        lowest energy.
-        """
-        # TODO: merge into dimod.Response
-        return next(self.data(sorted_by='energy', name='Sample'))
-
     @classmethod
     def from_sample(cls, sample, vartype, energy=None, num_occurrences=1):
         """Convenience method for constructing a SampleSet from one raw (dict)
