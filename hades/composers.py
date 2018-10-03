@@ -21,6 +21,14 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+class IdentityComposer(Runnable):
+    """Copy `subsamples` to `samples` verbatim."""
+
+    @tictoc('identity_compose')
+    def iterate(self, state):
+        return state.updated(samples=state.subsamples, debug=dict(composer=self.name))
+
+
 class SplatComposer(Runnable):
     """A composer that overwrites current samples with subproblem samples.
 
