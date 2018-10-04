@@ -30,6 +30,18 @@ from hades.utils import (
 logger = logging.getLogger(__name__)
 
 
+class IdentityDecomposer(Runnable, traits.ProblemDecomposer):
+    """Selects a subproblem that is a full copy of the problem."""
+
+    def __init__(self):
+        super(IdentityDecomposer, self).__init__()
+
+    @tictoc('identity_decompose')
+    def iterate(self, state):
+        return state.updated(subproblem=state.problem,
+                             debug=dict(decomposer=self.name))
+
+
 class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
     """Selects a subproblem of variables maximally contributing to the problem energy.
 
@@ -165,18 +177,6 @@ class RandomSubproblemDecomposer(Runnable, traits.ProblemDecomposer):
         sample = state.samples.change_vartype(bqm.vartype).first.sample
         subbqm = bqm_induced_by(bqm, variables, sample)
         return state.updated(subproblem=subbqm,
-                             debug=dict(decomposer=self.name))
-
-
-class IdentityDecomposer(Runnable, traits.ProblemDecomposer):
-    """Selects a subproblem that is a copy of the problem."""
-
-    def __init__(self):
-        super(IdentityDecomposer, self).__init__()
-
-    @tictoc('identity_decompose')
-    def iterate(self, state):
-        return state.updated(subproblem=state.problem,
                              debug=dict(decomposer=self.name))
 
 

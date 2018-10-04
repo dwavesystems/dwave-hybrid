@@ -91,3 +91,33 @@ class TestMultipleTraits(unittest.TestCase):
             s = State()
             del s['problem']
             Component().run(s).result()
+
+    def test_problem_decomposer_traits(self):
+        # ProblemDecomposer ~ ProblemActing, SamplesActing, SubproblemProducing
+
+        class Component(Runnable, traits.ProblemDecomposer):
+            def iterate(self, state):
+                return state
+
+        with self.assertRaises(traits.StateTraitMissingError):
+            Component().run(State()).result()
+        self.assertTrue(
+            # problem and samples are included by default
+            Component().run(State(subproblem=True)).result())
+
+    def test_subproblem_composer_traits(self):
+        # SubproblemComposer ~ SubproblemActing, SubsamplesActing, ProblemActing, SamplesProducing
+
+        class Component(Runnable, traits.SubproblemComposer):
+            def iterate(self, state):
+                return state
+
+        with self.assertRaises(traits.StateTraitMissingError):
+            Component().run(State()).result()
+        with self.assertRaises(traits.StateTraitMissingError):
+            Component().run(State(subproblem=True)).result()
+        with self.assertRaises(traits.StateTraitMissingError):
+            Component().run(State(subsamples=True)).result()
+        self.assertTrue(
+            # problem and samples are included by default
+            Component().run(State(subproblem=True, subsamples=True)).result())
