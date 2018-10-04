@@ -52,3 +52,42 @@ class TestRunnableTraits(unittest.TestCase):
 
         with self.assertRaises(traits.StateTraitMissingError):
             Component().run(State()).result()
+
+
+class TestMultipleTraits(unittest.TestCase):
+
+    def test_explicit_siso_system(self):
+        class Component(Runnable, traits.SubproblemActing, traits.SubsampleProducing):
+            def iterate(self, state):
+                return state.updated(subsamples=True)
+
+        self.assertTrue(Component().run(State(subproblem=True)).result().subsamples)
+
+        with self.assertRaises(traits.StateTraitMissingError):
+            Component().run(State()).result()
+
+    def test_explicit_mimo_system(self):
+        class Component(Runnable, traits.EmbeddingActing, traits.SubproblemActing,
+                                  traits.SubsampleProducing, traits.SampleProducing):
+            def iterate(self, state):
+                return state.updated(samples=True, subsamples=True)
+
+        self.assertTrue(Component().run(State(embedding=True, subproblem=True)).result().samples)
+        self.assertTrue(Component().run(State(embedding=True, subproblem=True)).result().subsamples)
+
+        with self.assertRaises(traits.StateTraitMissingError):
+            Component().run(State(embedding=True)).result()
+        with self.assertRaises(traits.StateTraitMissingError):
+            Component().run(State(subproblem=True)).result()
+
+    def test_composed_traits(self):
+        class Component(Runnable, traits.ProblemDecomposer):
+            def iterate(self, state):
+                return state.updated(subproblem=True)
+
+        self.assertTrue(Component().run(State(problem=True)).result().subproblem)
+
+        with self.assertRaises(traits.StateTraitMissingError):
+            s = State()
+            del s['problem']
+            Component().run(s).result()
