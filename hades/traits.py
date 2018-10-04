@@ -89,3 +89,15 @@ class ProblemSampler(ProblemActing, SampleProducing):
 
 class SubproblemSampler(SubproblemActing, SubsampleProducing):
     pass
+
+
+class EmbeddingProducing(StateTraits):
+    def __init__(self):
+        super(EmbeddingProducing, self).__init__()
+        self.outputs.add('embedding')
+
+
+class EmbeddingActing(StateTraits):
+    def __init__(self):
+        super(EmbeddingActing, self).__init__()
+        self.inputs.add('embedding')

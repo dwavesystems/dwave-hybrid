@@ -485,6 +485,8 @@ class HybridRunnable(Runnable):
     """
 
     def __init__(self, sampler, fields, **sample_kwargs):
+        super(HybridRunnable, self).__init__()
+
         if not isinstance(sampler, dimod.Sampler):
             raise TypeError("'sampler' should be 'dimod.Sampler'")
         if not isinstance(fields, tuple) or not len(fields) == 2:
@@ -493,6 +495,10 @@ class HybridRunnable(Runnable):
         self.sampler = sampler
         self.input, self.output = fields
         self.sample_kwargs = sample_kwargs
+
+        # manually add traits
+        self.inputs.add(self.input)
+        self.outputs.add(self.output)
 
     def iterate(self, state):
         response = self.sampler.sample(state[self.input], **self.sample_kwargs)

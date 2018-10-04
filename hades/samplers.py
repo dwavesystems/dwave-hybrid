@@ -30,12 +30,13 @@ from neal import SimulatedAnnealingSampler
 from hades.core import async_executor, Runnable, SampleSet
 from hades.profiling import tictoc
 from hades.utils import random_sample
+from hades import traits
 
 import logging
 logger = logging.getLogger(__name__)
 
 
-class QPUSubproblemExternalEmbeddingSampler(Runnable):
+class QPUSubproblemExternalEmbeddingSampler(Runnable, traits.SubproblemSampler, traits.EmbeddingActing):
     """A quantum sampler for a subproblem with a defined minor-embedding.
 
     Args:
@@ -81,6 +82,8 @@ class QPUSubproblemExternalEmbeddingSampler(Runnable):
     """
 
     def __init__(self, num_reads=100, qpu_sampler=None):
+        super(QPUSubproblemExternalEmbeddingSampler, self).__init__()
+
         self.num_reads = num_reads
         if qpu_sampler is None:
             qpu_sampler = DWaveSampler()
@@ -94,7 +97,7 @@ class QPUSubproblemExternalEmbeddingSampler(Runnable):
                              debug=dict(sampler=self.name))
 
 
-class QPUSubproblemAutoEmbeddingSampler(Runnable):
+class QPUSubproblemAutoEmbeddingSampler(Runnable, traits.SubproblemSampler):
     """A quantum sampler for a subproblem with automated heuristic minor-embedding.
 
     Args:
@@ -137,6 +140,8 @@ class QPUSubproblemAutoEmbeddingSampler(Runnable):
     """
 
     def __init__(self, num_reads=100, qpu_sampler=None):
+        super(QPUSubproblemAutoEmbeddingSampler, self).__init__()
+
         self.num_reads = num_reads
         if qpu_sampler is None:
             qpu_sampler = DWaveSampler()
@@ -149,7 +154,7 @@ class QPUSubproblemAutoEmbeddingSampler(Runnable):
                              debug=dict(sampler=self.name))
 
 
-class SimulatedAnnealingSubproblemSampler(Runnable):
+class SimulatedAnnealingSubproblemSampler(Runnable, traits.SubproblemSampler):
     """A simulated annealing sampler for a subproblem.
 
     Args:
@@ -193,6 +198,7 @@ class SimulatedAnnealingSubproblemSampler(Runnable):
     """
 
     def __init__(self, num_reads=1, sweeps=1000):
+        super(SimulatedAnnealingSubproblemSampler, self).__init__()
         self.num_reads = num_reads
         self.sweeps = sweeps
         self.sampler = SimulatedAnnealingSampler()
@@ -216,7 +222,7 @@ class InterruptableSimulatedAnnealingSubproblemSampler(SimulatedAnnealingSubprob
     pass
 
 
-class TabuSubproblemSampler(Runnable):
+class TabuSubproblemSampler(Runnable, traits.SubproblemSampler):
     """A tabu sampler for a subproblem.
 
     Args:
@@ -261,6 +267,7 @@ class TabuSubproblemSampler(Runnable):
     """
 
     def __init__(self, num_reads=1, tenure=None, timeout=20):
+        super(TabuSubproblemSampler, self).__init__()
         self.num_reads = num_reads
         self.tenure = tenure
         self.timeout = timeout
@@ -275,7 +282,7 @@ class TabuSubproblemSampler(Runnable):
                              debug=dict(sampler=self.name))
 
 
-class TabuProblemSampler(Runnable):
+class TabuProblemSampler(Runnable, traits.ProblemSampler):
     """A tabu sampler for a binary quadratic problem.
 
     Args:
@@ -317,6 +324,7 @@ class TabuProblemSampler(Runnable):
     """
 
     def __init__(self, num_reads=1, tenure=None, timeout=20):
+        super(TabuProblemSampler, self).__init__()
         self.num_reads = num_reads
         self.tenure = tenure
         self.timeout = timeout
@@ -411,7 +419,7 @@ class InterruptableTabuSampler(TabuProblemSampler):
         self._stop_event.set()
 
 
-class RandomSubproblemSampler(Runnable):
+class RandomSubproblemSampler(Runnable, traits.SubproblemSampler):
     """A random sample generator for a subproblem.
 
     Examples:
@@ -443,6 +451,9 @@ class RandomSubproblemSampler(Runnable):
         [([1, 1, 1], 1., 1)]
 
     """
+
+    def __init__(self):
+        super(RandomSubproblemSampler, self).__init__()
 
     @tictoc('random_sample')
     def iterate(self, state):
