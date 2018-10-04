@@ -21,6 +21,7 @@ import networkx as nx
 
 from hades.core import Runnable, State
 from hades.profiling import tictoc
+from hades import traits
 from hades.utils import (
     bqm_induced_by, select_localsearch_adversaries, select_random_subgraph,
     chimera_tiles)
@@ -29,7 +30,19 @@ from hades.utils import (
 logger = logging.getLogger(__name__)
 
 
-class EnergyImpactDecomposer(Runnable):
+class IdentityDecomposer(Runnable, traits.ProblemDecomposer):
+    """Selects a subproblem that is a full copy of the problem."""
+
+    def __init__(self):
+        super(IdentityDecomposer, self).__init__()
+
+    @tictoc('identity_decompose')
+    def iterate(self, state):
+        return state.updated(subproblem=state.problem,
+                             debug=dict(decomposer=self.name))
+
+
+class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
     """Selects a subproblem of variables maximally contributing to the problem energy.
 
     The selection currently implemented does not ensure that the variables are connected
@@ -75,6 +88,8 @@ class EnergyImpactDecomposer(Runnable):
     """
 
     def __init__(self, max_size, min_gain=0.0, min_diff=1, stride=1):
+        super(EnergyImpactDecomposer, self).__init__()
+
         if min_diff > max_size or min_diff < 0:
             raise ValueError("min_diff must be nonnegative and less than max_size")
 
@@ -120,7 +135,7 @@ class EnergyImpactDecomposer(Runnable):
                              debug=dict(decomposer=self.name))
 
 
-class RandomSubproblemDecomposer(Runnable):
+class RandomSubproblemDecomposer(Runnable, traits.ProblemDecomposer):
     """Select a subproblem of `size` random variables.
 
     The selection currently implemented does not ensure that the variables are connected
@@ -146,6 +161,8 @@ class RandomSubproblemDecomposer(Runnable):
     """
 
     def __init__(self, size):
+        super(RandomSubproblemDecomposer, self).__init__()
+
         # TODO: add min_diff support (like in EnergyImpactDecomposer)
         self.size = size
 
@@ -163,16 +180,7 @@ class RandomSubproblemDecomposer(Runnable):
                              debug=dict(decomposer=self.name))
 
 
-class IdentityDecomposer(Runnable):
-    """Selects a subproblem that is a copy of the problem."""
-
-    @tictoc('identity_decompose')
-    def iterate(self, state):
-        return state.updated(subproblem=state.problem,
-                             debug=dict(decomposer=self.name))
-
-
-class TilingChimeraDecomposer(Runnable):
+class TilingChimeraDecomposer(Runnable, traits.ProblemDecomposer, traits.EmbeddingProducing):
     """Returns sequential Chimera lattices that tile the initial problem.
 
     A Chimera lattice is an m-by-n grid of Chimera tiles, where each tile is a bipartite graph
@@ -209,6 +217,7 @@ class TilingChimeraDecomposer(Runnable):
 
     def __init__(self, size=(4,4,4), loop=True):
         """Size C(n,m,t) defines a Chimera subgraph returned with each call."""
+        super(TilingChimeraDecomposer, self).__init__()
         self.size = size
         self.loop = loop
         self.blocks = None
@@ -230,7 +239,7 @@ class TilingChimeraDecomposer(Runnable):
                              debug=dict(decomposer=self.name))
 
 
-class RandomConstraintDecomposer(Runnable):
+class RandomConstraintDecomposer(Runnable, traits.ProblemDecomposer):
     """Selects variables randomly as constrained by groupings.
 
     By grouping related variables, the problem's structure can guide the random selection
@@ -262,6 +271,8 @@ class RandomConstraintDecomposer(Runnable):
     """
 
     def __init__(self, size, constraints):
+        super(RandomConstraintDecomposer, self).__init__()
+
         self.size = size
 
         if not isinstance(constraints, collections.Sequence):

@@ -21,6 +21,7 @@ from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, Future, 
 from plucky import merge
 import dimod
 
+from hades.traits import StateTraits
 from hades.utils import min_sample, sample_as_dict
 
 
@@ -186,16 +187,7 @@ class Present(Future):
             raise ValueError("can't provide both 'result' and 'exception'")
 
 
-class RunnableError(Exception):
-    """Generic Runnable exception error that includes the error context, in
-    particular, the `State` that caused the runnable component to fail."""
-
-    def __init__(self, message, state):
-        super(RunnableError, self).__init__(message)
-        self.state = state
-
-
-class Runnable(object):
+class Runnable(StateTraits):
     """Component that can be run for an iteration such as samplers and branches.
 
     Implementations must support the iterate or run methods, stop is not required.
@@ -276,8 +268,8 @@ class Runnable(object):
 
         Returns state from `iterate`/`error`, or passes-thru an exception raised there.
         Blocks on `state` resolution and `iterate`/`error` execution .
-        """
 
+        """
         try:
             state = future.result()
         except Exception as exc:
@@ -287,7 +279,11 @@ class Runnable(object):
             self.init(state)
             setattr(self, '_initialized', True)
 
-        return self.iterate(state)
+        self.validate_input_state_traits(state)
+        new_state = self.iterate(state)
+        self.validate_output_state_traits(new_state)
+
+        return new_state
 
     def run(self, state, defer=True):
         """Execute the next step/iteration of an instantiated :class:`Runnable`.
@@ -489,6 +485,8 @@ class HybridRunnable(Runnable):
     """
 
     def __init__(self, sampler, fields, **sample_kwargs):
+        super(HybridRunnable, self).__init__()
+
         if not isinstance(sampler, dimod.Sampler):
             raise TypeError("'sampler' should be 'dimod.Sampler'")
         if not isinstance(fields, tuple) or not len(fields) == 2:
@@ -497,6 +495,10 @@ class HybridRunnable(Runnable):
         self.sampler = sampler
         self.input, self.output = fields
         self.sample_kwargs = sample_kwargs
+
+        # manually add traits
+        self.inputs.add(self.input)
+        self.outputs.add(self.output)
 
     def iterate(self, state):
         response = self.sampler.sample(state[self.input], **self.sample_kwargs)
