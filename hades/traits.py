@@ -63,31 +63,43 @@ class SubproblemProducing(StateTraits):
         self.outputs.add('subproblem')
 
 
-class SampleProducing(StateTraits):
+class SamplesActing(StateTraits):
     def __init__(self):
-        super(SampleProducing, self).__init__()
+        super(SamplesActing, self).__init__()
+        self.inputs.add('samples')
+
+
+class SubsamplesActing(StateTraits):
+    def __init__(self):
+        super(SubsamplesActing, self).__init__()
+        self.inputs.add('subsamples')
+
+
+class SamplesProducing(StateTraits):
+    def __init__(self):
+        super(SamplesProducing, self).__init__()
         self.outputs.add('samples')
 
 
-class SubsampleProducing(StateTraits):
+class SubsamplesProducing(StateTraits):
     def __init__(self):
-        super(SubsampleProducing, self).__init__()
+        super(SubsamplesProducing, self).__init__()
         self.outputs.add('subsamples')
 
 
-class ProblemDecomposer(ProblemActing, SubproblemProducing):
+class ProblemDecomposer(ProblemActing, SamplesActing, SubproblemProducing):
     pass
 
 
-class SubproblemComposer(SubproblemActing, ProblemActing, ProblemProducing):
+class SubproblemComposer(SubproblemActing, SubsamplesActing, ProblemActing, SamplesProducing):
     pass
 
 
-class ProblemSampler(ProblemActing, SampleProducing):
+class ProblemSampler(ProblemActing, SamplesProducing):
     pass
 
 
-class SubproblemSampler(SubproblemActing, SubsampleProducing):
+class SubproblemSampler(SubproblemActing, SubsamplesProducing):
     pass
 
 

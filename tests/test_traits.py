@@ -57,7 +57,7 @@ class TestRunnableTraits(unittest.TestCase):
 class TestMultipleTraits(unittest.TestCase):
 
     def test_explicit_siso_system(self):
-        class Component(Runnable, traits.SubproblemActing, traits.SubsampleProducing):
+        class Component(Runnable, traits.SubproblemActing, traits.SubsamplesProducing):
             def iterate(self, state):
                 return state.updated(subsamples=True)
 
@@ -68,7 +68,7 @@ class TestMultipleTraits(unittest.TestCase):
 
     def test_explicit_mimo_system(self):
         class Component(Runnable, traits.EmbeddingActing, traits.SubproblemActing,
-                                  traits.SubsampleProducing, traits.SampleProducing):
+                                  traits.SubsamplesProducing, traits.SamplesProducing):
             def iterate(self, state):
                 return state.updated(samples=True, subsamples=True)
 
