@@ -28,6 +28,7 @@ class RacingBranches(Runnable):
         can safely be mixed in with branches' results. Otherwise set
         `endomorphic=False`.
         """
+        super(RacingBranches, self).__init__()
         self.branches = branches
         self.endomorphic = endomorphic
 
@@ -59,6 +60,7 @@ class ArgMinFold(Runnable):
 
     def __init__(self, fn=None):
         """Return the state which minimizes the objective function `fn`."""
+        super(ArgMinFold, self).__init__()
         if fn is None:
             fn = attrgetter('samples.first.energy')
         self.fn = fn
@@ -74,6 +76,7 @@ class ArgMinFold(Runnable):
 class SimpleIterator(Runnable):
 
     def __init__(self, runnable, max_iter=1000, convergence=10):
+        super(SimpleIterator, self).__init__()
         self.runnable = runnable
         self.max_iter = max_iter
         self.convergence = convergence
