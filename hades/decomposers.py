@@ -59,29 +59,6 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
             the `min_diff` criteria. A shift of 3, for example, skips three high
             contributors to the current and previous iteration in favor of selecting three
             variables not in the previous iteration.
-
-    Examples:
-        This example iterates twice on a 10-variable binary quadratic model with a
-        random initial sample set. `min_gain` configuration limits the subproblem
-        in the first iteration to the first 4 variables shown in the output of
-        `flip_energy_gains`; `min_diff` configuration should bring in new variables
-        (this edge case worsens the second pick)
-
-        >>> import dimod           # Create a binary quadratic model
-        >>> bqm = dimod.BinaryQuadraticModel({t: 0 for t in range(10)},
-        ...                                  {(t, (t+1) % 10): 1 for t in range(10)},
-        ...                                  0, 'BINARY')
-        >>> decomposer = EnergyImpactDecomposer(max_size=8, min_gain=1, min_diff=2)
-        >>> state0 = State.from_sample(random_sample(bqm), bqm)
-        >>> flip_energy_gains(bqm, state0.samples.first.sample)     # doctest: +SKIP
-        [(1, 8), (1, 6), (1, 2), (1, 1), (0, 7), (-1, 9), (-1, 5), (-1, 3), (-1, 0), (-2, 4)]
-        >>> state1 = decomposer.iterate(state0)
-        >>> print(state1.subproblem)       # doctest: +SKIP
-        BinaryQuadraticModel({9: 2, 3: 1, 5: 2, 1: 1}, {}, 0.0, Vartype.BINARY)
-        >>> state2 = decomposer.iterate(state1)
-        >>> print(state2.subproblem)      # doctest: +SKIP
-        BinaryQuadraticModel({1: 1, 3: 1}, {}, 0.0, Vartype.BINARY)
-
     """
 
     def __init__(self, max_size, min_gain=0.0, min_diff=1, stride=1):
@@ -141,20 +118,6 @@ class RandomSubproblemDecomposer(Runnable, traits.ProblemDecomposer):
     Args:
         size (int):
             Number of variables in the subproblem.
-
-    Examples:
-        This example decomposes a 6-variable binary quadratic model with a
-        random initial sample set to create a 3-variable subproblem.
-
-        >>> import dimod           # Create a binary quadratic model
-        >>> bqm = dimod.BinaryQuadraticModel({t: 0 for t in range(6)},
-        ...             {(t, (t+1) % 6): 1 for t in range(6)}, 0, 'BINARY')
-        >>> decomposer = RandomSubproblemDecomposer(bqm, size=3)
-        >>> state0 = State.from_sample(random_sample(bqm), bqm)
-        >>> state1 = decomposer.iterate(state0)
-        >>> print(state1.subproblem)
-        BinaryQuadraticModel({2: 1.0, 3: 0.0, 4: 0.0}, {(2, 3): 1.0, (3, 4): 1.0}, 0.0, Vartype.BINARY)
-
     """
 
     def __init__(self, size):
@@ -191,25 +154,6 @@ class TilingChimeraDecomposer(Runnable, traits.ProblemDecomposer, traits.Embeddi
             n the columns, and t the size of shore in the Chimera lattice.
         loop (Bool, optional, default=True):
             Cycle continually through the tiles.
-
-    Examples:
-        This example decomposes a 2048-variable Chimera structured binary quadratic model
-        read from a file into 2x2x4-lattice subproblems.
-
-        >>> import dimod           # Import a Chimera-structured binary quadratic model
-        >>> with open('2048.09.qubo', 'r') as file:    # doctest: +SKIP
-        ...     bqm = dimod.BinaryQuadraticModel.from_coo(file)
-        >>> decomposer = TilingChimeraDecomposer(size=(2,2,4))   # doctest: +SKIP
-        >>> state0 = core.State.from_sample(random_sample(bqm), bqm)  # doctest: +SKIP
-        >>> state1 = decomposer.iterate(state0)    # doctest: +SKIP
-        >>> print(state1.subproblem)        # doctest: +SKIP
-        BinaryQuadraticModel({0: 0.0, 4: 0.0, 5: 0.0, 6: 0.0, 7: -3.0, 1: 0.0, 2: 0.0, 3: -4.0, 1024: -7.0, 1028: 0.0,
-        >>> # Snipped above response for brevity
-        >>> state1 = decomposer.iterate(state0)    # doctest: +SKIP
-        >>> print(state1.subproblem)        # doctest: +SKIP
-        BinaryQuadraticModel({8: 3.0, 12: 0.0, 13: 2.0, 14: -11.0, 15: -3.0, 9: 4.0, 10: 0.0, 11: 0.0, 1032: 0.0,
-        >>> # Snipped above response for brevity
-
     """
 
     def __init__(self, size=(4,4,4), loop=True):
@@ -248,23 +192,6 @@ class RandomConstraintDecomposer(Runnable, traits.ProblemDecomposer):
         constraints (list[set]):
             Groups of variables in the BQM, as a list of sets, where each set is associated
             with a constraint.
-
-    Examples:
-        This example decomposes a 4-variable binary quadratic model that represents
-        three serial NOT gates into 2-variable subproblems. The expected decomposition
-        should use variables that represent one of the NOT gates rather than two
-        arbitrary variables.
-
-        >>> import dimod           # Import a Chimera-structured binary quadratic model
-        >>> bqm = dimod.BinaryQuadraticModel({'w': -2.0, 'x': -4.0, 'y': -4.0, 'z': -2.0},
-        ...                                  {('w', 'x'): 4.0, ('x', 'y'): 4.0, ('y', 'z'): 4.0},
-        ...                                  3.0, 'BINARY')
-        >>> decomposer = RandomConstraintDecomposer(2, [{'w', 'x'}, {'x', 'y'}, {'y', 'z'}])
-        >>> state0 = core.State.from_sample(random_sample(bqm), bqm)
-        >>> state1 = decomposer.iterate(state0)
-        >>> print(state1.subproblem)        # doctest: +SKIP
-        BinaryQuadraticModel({'z': -2.0, 'y': 0.0}, {('z', 'y'): 4.0}, 0.0, Vartype.BINARY)
-        
     """
 
     def __init__(self, size, constraints):
