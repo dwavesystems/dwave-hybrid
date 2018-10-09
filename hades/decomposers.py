@@ -33,9 +33,6 @@ logger = logging.getLogger(__name__)
 class IdentityDecomposer(Runnable, traits.ProblemDecomposer):
     """Selects a subproblem that is a full copy of the problem."""
 
-    def __init__(self):
-        super(IdentityDecomposer, self).__init__()
-
     @tictoc('identity_decompose')
     def iterate(self, state):
         return state.updated(subproblem=state.problem,

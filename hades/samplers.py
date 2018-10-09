@@ -452,9 +452,6 @@ class RandomSubproblemSampler(Runnable, traits.SubproblemSampler):
 
     """
 
-    def __init__(self):
-        super(RandomSubproblemSampler, self).__init__()
-
     @tictoc('random_sample')
     def iterate(self, state):
         bqm = state.subproblem

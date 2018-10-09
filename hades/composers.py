@@ -24,9 +24,6 @@ logger = logging.getLogger(__name__)
 class IdentityComposer(Runnable, traits.SubproblemComposer):
     """Copy `subsamples` to `samples` verbatim."""
 
-    def __init__(self):
-        super(IdentityComposer, self).__init__()
-
     @tictoc('identity_compose')
     def iterate(self, state):
         return state.updated(samples=state.subsamples, debug=dict(composer=self.name))
@@ -52,9 +49,6 @@ class SplatComposer(Runnable, traits.SubproblemComposer):
                 dtype=[('sample', 'i1', (6,)), ('num_occurrences', '<i8'), ('energy', '<i8')]), [0, 1, 2, 3, 4, 5], {}, 'BINARY')
 
     """
-
-    def __init__(self):
-        super(SplatComposer, self).__init__()
 
     @tictoc('splat_compose')
     def iterate(self, state):
