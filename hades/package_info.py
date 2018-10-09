@@ -14,7 +14,7 @@
 
 __packagename__ = 'hades'
 __title__ = 'D-Wave Hades'
-__version__ = '0.0.1'
+__version__ = '0.0.2'
 __author__ = 'D-Wave Systems Inc.'
 __authoremail__ = 'radomir@dwavesys.com'
 __description__ = 'Hybrid Asynchronous Decomposition Solver Framework'
