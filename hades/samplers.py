@@ -44,41 +44,6 @@ class QPUSubproblemExternalEmbeddingSampler(Runnable, traits.SubproblemSampler, 
             Number of states (output solutions) to read from the sampler.
         qpu_sampler (:class:`dimod.Sampler`, optional, default=DWaveSampler()):
             Quantum sampler such as a D-Wave system.
-
-    Examples:
-        This example works on a binary quadratic model of two AND gates in series
-        by sampling a BQM representing just one of the gates. Output :math:`z` of gate
-        :math:`z = x \wedge y` connects to input :math:`a` of gate :math:`c = a \wedge b`.
-        An initial state is manually set with invalid solution :math:`x=y=0, z=1; a=b=1, c=0`.
-        The state is updated by sampling the subproblem 100 times on a D-Wave system.
-        The execution results shown here were three valid solutions to the subproblem; for
-        example, :math:`x=0, y=1, z=0` occurred 22 times.
-
-        >>> import dimod
-        >>> from dwave.system.samplers import DWaveSampler
-        >>> import minorminer
-        ...
-        >>> # Define a problem and a subproblem
-        >>> bqm = dimod.BinaryQuadraticModel({'x': 0.0, 'y': 0.0, 'z': 8.0, 'a': 2.0, 'b': 0.0, 'c': 6.0},
-        ...                                  {('y', 'x'): 2.0, ('z', 'x'): -4.0, ('z', 'y'): -4.0,
-        ...                                  ('b', 'a'): 2.0, ('c', 'a'): -4.0, ('c', 'b'): -4.0, ('a', 'z'): -4.0},
-        ...                                  -1.0, 'BINARY')
-        >>> sub_bqm = dimod.BinaryQuadraticModel({'x': 0.0, 'y': 0.0, 'z': 8.0},
-        ...                                      {('x', 'y'): 2.0, ('x', 'z'): -4.0, ('y', 'z'): -4.0},
-        ...                                      -1.0, dimod.Vartype.BINARY)
-        >>> # Find a minor-embedding for the subproblem
-        >>> qpu_sampler = DWaveSampler()
-        >>> sub_embedding = minorminer.find_embedding(list(sub_bqm.quadratic.keys()), qpu_sampler.edgelist)
-        >>> # Set up the sampler with an initial state
-        >>> sampler = samplers.QPUSubproblemExternalEmbeddingSampler(num_reads=100)
-        >>> state = core.State.from_sample({'x': 0, 'y': 0, 'z': 1, 'a': 1, 'b': 1, 'c': 0}, bqm)
-        >>> state.update(subproblem=sub_bqm, embedding=sub_embedding)
-        >>> # Sample the subproblem on the QPU
-        >>> new_state = sampler.iterate(state)
-        >>> print(new_state.subsamples.record)      # doctest: +SKIP
-        [([0, 1, 0], -1., 22) ([0, 0, 0], -1., 47) ([1, 0, 0], -1., 31)]
-
-
     """
 
     def __init__(self, num_reads=100, qpu_sampler=None):
@@ -105,38 +70,6 @@ class QPUSubproblemAutoEmbeddingSampler(Runnable, traits.SubproblemSampler):
             Number of states (output solutions) to read from the sampler.
         qpu_sampler (:class:`dimod.Sampler`, optional, default=DWaveSampler()):
             Quantum sampler such as a D-Wave system.
-
-    Examples:
-        This example works on a binary quadratic model of two AND gates in series
-        by sampling a BQM representing just one of the gates. Output :math:`z` of gate
-        :math:`z = x \wedge y` connects to input :math:`a` of gate :math:`c = a \wedge b`.
-        An initial state is manually set with invalid solution :math:`x=y=0, z=1; a=b=1, c=0`.
-        The state is updated by sampling the subproblem 100 times on a D-Wave system.
-        The execution results shown here were four valid solutions to the subproblem; for
-        example, :math:`x=0, y=0, z=0` occurred 53 times.
-
-        >>> import dimod
-        >>> from dwave.system.samplers import DWaveSampler
-        ...
-        >>> # Define a problem and a subproblem
-        >>> bqm = dimod.BinaryQuadraticModel({'x': 0.0, 'y': 0.0, 'z': 8.0, 'a': 2.0, 'b': 0.0, 'c': 6.0},
-        ...                                  {('y', 'x'): 2.0, ('z', 'x'): -4.0, ('z', 'y'): -4.0,
-        ...                                  ('b', 'a'): 2.0, ('c', 'a'): -4.0, ('c', 'b'): -4.0, ('a', 'z'): -4.0},
-        ...                                  -1.0, 'BINARY')
-        >>> sub_bqm = dimod.BinaryQuadraticModel({'x': 0.0, 'y': 0.0, 'z': 8.0},
-        ...                                      {('x', 'y'): 2.0, ('x', 'z'): -4.0, ('y', 'z'): -4.0},
-        ...                                      -1.0, dimod.Vartype.BINARY)
-        >>> # Set up the sampler with an initial state
-        >>> sampler = samplers.QPUSubproblemAutoEmbeddingSampler(num_reads=100)
-        >>> state = core.State.from_sample({'x': 0, 'y': 0, 'z': 1, 'a': 1, 'b': 1, 'c': 0}, bqm)
-        >>> state.update(subproblem=sub_bqm)
-        >>> # Sample the subproblem on the QPU
-        >>> new_state = sampler.iterate(state)
-        >>> print(new_state.subsamples.record)      # doctest: +SKIP
-        [([0, 0, 0], -1., 53) ([0, 1, 0], -1., 15) ([1, 0, 0], -1., 31)
-         ([1, 1, 1],  1.,  1)]
-
-
     """
 
     def __init__(self, num_reads=100, qpu_sampler=None):
@@ -162,39 +95,6 @@ class SimulatedAnnealingSubproblemSampler(Runnable, traits.SubproblemSampler):
             Number of states (output solutions) to read from the sampler.
         sweeps (int, optional, default=1000):
             Number of sweeps or steps.
-
-    Examples:
-        This example works on a binary quadratic model of two AND gates in series
-        by sampling a BQM representing just one of the gates. Output :math:`z` of gate
-        :math:`z = x \wedge y` connects to input :math:`a` of gate :math:`c = a \wedge b`.
-        An initial state is manually set with invalid solution :math:`x=y=0, z=1; a=b=1, c=0`.
-        The state is updated by sampling the subproblem 10 times.
-        The execution results shown here were valid solutions to the subproblem; for
-        example, :math:`x=0, y=1, z=0`.
-
-        >>> import dimod
-        >>> from neal import SimulatedAnnealingSampler
-        ...
-        >>> # Define a problem and a subproblem
-        >>> bqm = dimod.BinaryQuadraticModel({'x': 0.0, 'y': 0.0, 'z': 8.0, 'a': 2.0, 'b': 0.0, 'c': 6.0},
-        ...                                  {('y', 'x'): 2.0, ('z', 'x'): -4.0, ('z', 'y'): -4.0,
-        ...                                  ('b', 'a'): 2.0, ('c', 'a'): -4.0, ('c', 'b'): -4.0, ('a', 'z'): -4.0},
-        ...                                  -1.0, 'BINARY')
-        >>> sub_bqm = dimod.BinaryQuadraticModel({'x': 0.0, 'y': 0.0, 'z': 8.0},
-        ...                                      {('x', 'y'): 2.0, ('x', 'z'): -4.0, ('y', 'z'): -4.0},
-        ...                                      -1.0, dimod.Vartype.BINARY)
-        >>> # Set up the sampler with an initial state
-        >>> sampler = samplers.SimulatedAnnealingSubproblemSampler(num_reads=10)
-        >>> state = core.State.from_sample({'x': 0, 'y': 0, 'z': 1, 'a': 1, 'b': 1, 'c': 0}, bqm)
-        >>> state.update(subproblem=sub_bqm)
-        >>> # Sample the subproblem
-        >>> new_state = sampler.iterate(state)
-        >>> print(new_state.subsamples.record)      # doctest: +SKIP
-        [([0, 1, 0], -1., 1) ([0, 1, 0], -1., 1) ([0, 0, 0], -1., 1)
-        ([0, 0, 0], -1., 1) ([0, 0, 0], -1., 1) ([1, 0, 0], -1., 1)
-        ([1, 0, 0], -1., 1) ([0, 0, 0], -1., 1) ([0, 1, 0], -1., 1)
-        ([1, 0, 0], -1., 1)]
-
     """
 
     def __init__(self, num_reads=1, sweeps=1000):
@@ -234,36 +134,6 @@ class TabuSubproblemSampler(Runnable, traits.SubproblemSampler):
             of problem variables up to a maximum value of 20.
         timeout (int, optional, default=20):
             Total running time in milliseconds.
-
-    Examples:
-        This example works on a binary quadratic model of two AND gates in series
-        by sampling a BQM representing just one of the gates. Output :math:`z` of gate
-        :math:`z = x \wedge y` connects to input :math:`a` of gate :math:`c = a \wedge b`.
-        An initial state is manually set with invalid solution :math:`x=y=0, z=1; a=b=1, c=0`.
-        The state is updated by a tabu search on the subproblem.
-        The execution results shown here was a valid solution to the subproblem:
-        example, :math:`x=0, y=1, z=0`.
-
-        >>> import dimod
-        >>> from tabu import TabuSampler
-        ...
-        >>> # Define a problem and a subproblem
-        >>> bqm = dimod.BinaryQuadraticModel({'x': 0.0, 'y': 0.0, 'z': 8.0, 'a': 2.0, 'b': 0.0, 'c': 6.0},
-        ...                                  {('y', 'x'): 2.0, ('z', 'x'): -4.0, ('z', 'y'): -4.0,
-        ...                                  ('b', 'a'): 2.0, ('c', 'a'): -4.0, ('c', 'b'): -4.0, ('a', 'z'): -4.0},
-        ...                                  -1.0, 'BINARY')
-        >>> sub_bqm = dimod.BinaryQuadraticModel({'x': 0.0, 'y': 0.0, 'z': 8.0},
-        ...                                      {('x', 'y'): 2.0, ('x', 'z'): -4.0, ('y', 'z'): -4.0},
-        ...                                      -1.0, dimod.Vartype.BINARY)
-        >>> # Set up the sampler with an initial state
-        >>> sampler = samplers.TabuSubproblemSampler(tenure=2, timeout=5)
-        >>> state = core.State.from_sample({'x': 0, 'y': 0, 'z': 1, 'a': 1, 'b': 1, 'c': 0}, bqm)
-        >>> state.update(subproblem=sub_bqm)
-        >>> # Sample the subproblem
-        >>> new_state = sampler.iterate(state)
-        >>> print(new_state.subsamples.record)      # doctest: +SKIP
-        [([0, 1, 0], -1., 1)]
-
     """
 
     def __init__(self, num_reads=1, tenure=None, timeout=20):
@@ -294,33 +164,6 @@ class TabuProblemSampler(Runnable, traits.ProblemSampler):
             of problem variables up to a maximum value of 20.
         timeout (int, optional, default=20):
             Total running time in milliseconds.
-
-    Examples:
-        This example works on a binary quadratic model of two AND gates in series, where
-        output :math:`z` of gate :math:`z = x \wedge y` connects to input :math:`a`
-        of gate :math:`c = a \wedge b`. An initial state is manually set with invalid
-        solution :math:`x=y=0, z=1; a=b=1, c=0`. The state is updated by a tabu search.
-        The execution results shown here was a valid solution to the problem:
-        example, :math:`x=y=z=a=b=c=1`.
-
-        >>> import dimod
-        >>> from tabu import TabuSampler
-        ...
-        >>> # Define a problem
-        >>> bqm = dimod.BinaryQuadraticModel({'x': 0.0, 'y': 0.0, 'z': 8.0, 'a': 2.0, 'b': 0.0, 'c': 6.0},
-        ...                                  {('y', 'x'): 2.0, ('z', 'x'): -4.0, ('z', 'y'): -4.0,
-        ...                                  ('b', 'a'): 2.0, ('c', 'a'): -4.0, ('c', 'b'): -4.0, ('a', 'z'): -4.0},
-        ...                                  -1.0, 'BINARY')
-        >>> # Set up the sampler with an initial state
-        >>> sampler = samplers.TabuProblemSampler(tenure=2, timeout=5)
-        >>> state = State.from_sample({'x': 0, 'y': 0, 'z': 1, 'a': 1, 'b': 1, 'c': 0}, bqm)
-        >>> # Sample the problem
-        >>> new_state = sampler.iterate(state)
-        >>> print(new_state.samples)      # doctest: +SKIP
-        Response(rec.array([([1, 1, 1, 1, 1, 1], -1., 1)],
-          dtype=[('sample', 'i1', (6,)), ('energy', '<f8'), ('num_occurrences', '<i4')]),
-          ['a', 'b', 'c', 'x', 'y', 'z'], {}, 'BINARY')
-
     """
 
     def __init__(self, num_reads=1, tenure=None, timeout=20):
@@ -356,39 +199,6 @@ class InterruptableTabuSampler(TabuProblemSampler):
             expiration of the `timeout` parameter.
         timeout (int, optional, default=20):
             Total running time in milliseconds.
-
-    Examples:
-        This example works on a binary quadratic model of two AND gates in series, where
-        output :math:`z` of gate :math:`z = x \wedge y` connects to input :math:`a`
-        of gate :math:`c = a \wedge b`. An initial state is manually set with invalid
-        solution :math:`x=y=0, z=1; a=b=1, c=0`. The state is updated by a tabu search.
-        The execution results shown here was a valid solution to the problem:
-        example, :math:`x=y=z=a=b=c=1`.
-
-        >>> import dimod
-        >>> from tabu import TabuSampler
-        ...
-        >>> # Define a problem
-        >>> bqm = dimod.BinaryQuadraticModel({'x': 0.0, 'y': 0.0, 'z': 8.0, 'a': 2.0, 'b': 0.0, 'c': 6.0},
-        ...                                  {('y', 'x'): 2.0, ('z', 'x'): -4.0, ('z', 'y'): -4.0,
-        ...                                  ('b', 'a'): 2.0, ('c', 'a'): -4.0, ('c', 'b'): -4.0, ('a', 'z'): -4.0},
-        ...                                  -1.0, 'BINARY')
-        >>> # Set up the sampler with an initial state
-        >>> sampler = samplers.InterruptableTabuSampler(tenure=2, quantum_timeout=30, timeout=5000)
-        >>> state = core.State.from_sample({'x': 0, 'y': 0, 'z': 1, 'a': 1, 'b': 1, 'c': 0}, bqm)
-        >>> # Sample the problem
-        >>> new_state = sampler.run(state)
-        >>> new_state  # doctest: +SKIP
-        <Future at 0x179eae59898 state=running>
-        >>> sampler.stop()
-        >>> new_state  # doctest: +SKIP
-        <Future at 0x179eae59898 state=finished returned State>
-        >>> print(new_state.result())      # doctest: +SKIP
-        State(samples=Response(rec.array([([1, 1, 1, 1, 1, 1], -1., 1)],
-          dtype=[('sample', 'i1', (6,)), ('energy', '<f8'), ('num_occurrences', '<i4')]),
-          ['a', 'b', 'c', 'x', 'y', 'z'], {}, 'BINARY'),
-          debug={'sampler': 'InterruptableTabuSampler', 'runtime': 62.85970854759216, 'iterno': 2082})
-
     """
 
     def __init__(self, quantum_timeout=20, timeout=None, **kwargs):
@@ -420,40 +230,7 @@ class InterruptableTabuSampler(TabuProblemSampler):
 
 
 class RandomSubproblemSampler(Runnable, traits.SubproblemSampler):
-    """A random sample generator for a subproblem.
-
-    Examples:
-        This example works on a binary quadratic model of two AND gates in series
-        by sampling a BQM representing just one of the gates. Output :math:`z` of gate
-        :math:`z = x \wedge y` connects to input :math:`a` of gate :math:`c = a \wedge b`.
-        An initial state is manually set with invalid solution :math:`x=y=0, z=1; a=b=1, c=0`.
-        The state is updated with a random sample..
-
-        >>> import dimod
-        >>> # Define a problem and a subproblem
-        >>> bqm = dimod.BinaryQuadraticModel({'x': 0.0, 'y': 0.0, 'z': 8.0, 'a': 2.0, 'b': 0.0, 'c': 6.0},
-        ...                                  {('y', 'x'): 2.0, ('z', 'x'): -4.0, ('z', 'y'): -4.0,
-        ...                                  ('b', 'a'): 2.0, ('c', 'a'): -4.0, ('c', 'b'): -4.0, ('a', 'z'): -4.0},
-        ...                                  -1.0, 'BINARY')
-        >>> sub_bqm = dimod.BinaryQuadraticModel({'x': 0.0, 'y': 0.0, 'z': 8.0},
-        ...                                      {('x', 'y'): 2.0, ('x', 'z'): -4.0, ('y', 'z'): -4.0},
-        ...                                      -1.0, dimod.Vartype.BINARY)
-        >>> # Set up the sampler with an initial state
-        >>> sampler = samplers.RandomSubproblemSampler()
-        >>> state = core.State.from_sample({'x': 0, 'y': 0, 'z': 1, 'a': 1, 'b': 1, 'c': 0}, bqm)
-        >>> state.update(subproblem=sub_bqm)
-        >>> # Sample the subproblem a couple of times
-        >>> new_state = sampler.iterate(state)
-        >>> print(new_state.subsamples.record)      # doctest: +SKIP
-        [([0, 0, 0], -1., 1)]
-        >>> new_state = sampler.iterate(state)
-        >>> print(new_state.subsamples.record)      # doctest: +SKIP
-        [([1, 1, 1], 1., 1)]
-
-    """
-
-    def __init__(self):
-        super(RandomSubproblemSampler, self).__init__()
+    """A random sample generator for a subproblem."""
 
     @tictoc('random_sample')
     def iterate(self, state):
