@@ -15,6 +15,17 @@
 import os
 import logging
 
+import hades.core
+import hades.utils
+import hades.traits
+import hades.profiling
+import hades.exceptions
+
+import hades.flow
+import hades.samplers
+import hades.decomposers
+import hades.composers
+
 
 def _configure_logger(logger):
     formatter = logging.Formatter('%(asctime)s %(name)s %(levelname)s %(message)s')
