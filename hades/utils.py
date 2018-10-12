@@ -20,7 +20,7 @@ import six
 import dimod
 import numpy
 
-from dnx import canonical_chimera_labeling
+from dwave_networkx.algorithms import canonical_chimera_labeling
 
 
 def bqm_reduced_to(bqm, variables, sample, keep_offset=True):
