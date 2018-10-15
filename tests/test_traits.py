@@ -24,14 +24,14 @@ from hades import traits
 class TestRunnableTraits(unittest.TestCase):
 
     def test_valid_input(self):
-        class Component(Runnable, traits.SubproblemActing):
+        class Component(Runnable, traits.SubproblemConsuming):
             def iterate(self, state):
                 return True
 
         self.assertTrue(Component().run(State(subproblem=None)).result())
 
     def test_invalid_input(self):
-        class Component(Runnable, traits.SubproblemActing):
+        class Component(Runnable, traits.SubproblemConsuming):
             def iterate(self, state):
                 return True
 
@@ -57,7 +57,7 @@ class TestRunnableTraits(unittest.TestCase):
 class TestMultipleTraits(unittest.TestCase):
 
     def test_explicit_siso_system(self):
-        class Component(Runnable, traits.SubproblemActing, traits.SubsamplesProducing):
+        class Component(Runnable, traits.SubproblemConsuming, traits.SubsamplesProducing):
             def iterate(self, state):
                 return state.updated(subsamples=True)
 
@@ -67,7 +67,7 @@ class TestMultipleTraits(unittest.TestCase):
             Component().run(State()).result()
 
     def test_explicit_mimo_system(self):
-        class Component(Runnable, traits.EmbeddingActing, traits.SubproblemActing,
+        class Component(Runnable, traits.EmbeddingConsuming, traits.SubproblemConsuming,
                                   traits.SubsamplesProducing, traits.SamplesProducing):
             def iterate(self, state):
                 return state.updated(samples=True, subsamples=True)
@@ -93,7 +93,7 @@ class TestMultipleTraits(unittest.TestCase):
             Component().run(s).result()
 
     def test_problem_decomposer_traits(self):
-        # ProblemDecomposer ~ ProblemActing, SamplesActing, SubproblemProducing
+        # ProblemDecomposer ~ ProblemConsuming, SamplesConsuming, SubproblemProducing
 
         class Component(Runnable, traits.ProblemDecomposer):
             def iterate(self, state):
@@ -106,7 +106,7 @@ class TestMultipleTraits(unittest.TestCase):
             Component().run(State(subproblem=True)).result())
 
     def test_subproblem_composer_traits(self):
-        # SubproblemComposer ~ SubproblemActing, SubsamplesActing, ProblemActing, SamplesProducing
+        # SubproblemComposer ~ SubproblemConsuming, SubsamplesConsuming, ProblemConsuming, SamplesProducing
 
         class Component(Runnable, traits.SubproblemComposer):
             def iterate(self, state):
