@@ -42,5 +42,5 @@ class SplatComposer(Runnable, traits.SubproblemComposer):
         composed_sample = updated_sample(sample, subsample)
         composed_energy = state.problem.energy(composed_sample)
         return state.updated(
-            samples=SampleSet.from_sample(composed_sample, state.samples.vartype, composed_energy),
+            samples=SampleSet.from_samples(composed_sample, state.samples.vartype, composed_energy),
             debug=dict(composer=self.name))

@@ -49,7 +49,7 @@ class QBSolvProblemSampler(Runnable):
 
     def iterate(self, state):
         response = QBSolv().sample(self.bqm, solver=self.sampler)
-        return state.updated(samples=SampleSet.from_response(response),
+        return state.updated(samples=response,
                              debug=dict(sampler=self.name))
 
 

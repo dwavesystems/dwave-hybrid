@@ -34,7 +34,7 @@ a 3-variable subproblem that was manually set to all ones.
 
     composer = SplatComposer()
     state0 = State.from_sample(min_sample(bqm), bqm)
-    state1 = state0.updated(subsamples=SampleSet.from_sample({3: 1, 4: 1, 5: 1}, 'BINARY'))
+    state1 = state0.updated(subsamples=SampleSet.from_samples({3: 1, 4: 1, 5: 1}, 'BINARY', 0.0))
 
     composed_state = composer.run(state1).result()
 

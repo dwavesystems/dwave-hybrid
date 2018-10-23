@@ -59,8 +59,8 @@ class TestState(unittest.TestCase):
         self.assertEqual(State(debug={'a': 1}).debug, {'a': 1})
 
     def test_updated(self):
-        a = SampleSet.from_sample([1,0,1], 'SPIN', 0)
-        b = SampleSet.from_sample([0,1,0], 'SPIN', 0)
+        a = SampleSet.from_samples([1,0,1], 'SPIN', 0)
+        b = SampleSet.from_samples([0,1,0], 'SPIN', 0)
         s1 = State(samples=a)
         s2 = State(samples=b, emb={'a': {'b': 1}}, debug={'x': 1})
         s3 = State(debug={'x': {'y': {'z': [1]}}})
