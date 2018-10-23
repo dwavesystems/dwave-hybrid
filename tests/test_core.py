@@ -24,11 +24,7 @@ from hades.core import (
 from hades.decomposers import IdentityDecomposer
 from hades.composers import IdentityComposer
 from hades.samplers import TabuProblemSampler
-from hades.utils import min_sample
-
-
-class TestSampleSet(unittest.TestCase):
-    pass
+from hades.utils import min_sample, sample_as_dict
 
 
 class TestPliableDict(unittest.TestCase):
@@ -58,6 +54,16 @@ class TestState(unittest.TestCase):
         self.assertEqual(State(problem={'a': 1}).problem, {'a': 1})
         self.assertEqual(State(debug={'a': 1}).debug, {'a': 1})
 
+    def test_from_samples(self):
+        s1 = [0, 1]
+        s2 = {0: 1, 1: 0}
+        bqm = dimod.BinaryQuadraticModel({0: 1, 1: 2}, {}, 0.0, 'BINARY')
+        self.assertEqual(State.from_sample(s1, bqm).samples.first.energy, 2.0)
+        self.assertEqual(State.from_sample(s2, bqm).samples.first.energy, 1.0)
+        self.assertEqual(State.from_samples([s1, s1], bqm).samples.first.energy, 2.0)
+        self.assertEqual(State.from_samples([s2, s2], bqm).samples.first.energy, 1.0)
+        self.assertEqual(State.from_samples([sample_as_dict(s1), s2], bqm).samples.first.energy, 1.0)
+
     def test_updated(self):
         a = SampleSet.from_samples([1,0,1], 'SPIN', 0)
         b = SampleSet.from_samples([0,1,0], 'SPIN', 0)
@@ -83,7 +89,6 @@ class TestState(unittest.TestCase):
         # test clear
         self.assertEqual(s2.updated(emb=None).emb, None)
         self.assertEqual(s2.updated(debug=None).debug, None)
-
 
 
 class TestHybridSampler(unittest.TestCase):
