@@ -20,6 +20,7 @@ from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, Future, 
 
 from plucky import merge
 import dimod
+from dimod import SampleSet
 
 from hades.traits import StateTraits
 from hades.utils import min_sample, sample_as_dict
@@ -40,50 +41,6 @@ class ImmediateExecutor(Executor):
 # TODO: abstract and make customizable to support other types of executors
 async_executor = ThreadPoolExecutor(max_workers=4)
 immediate_executor = ImmediateExecutor()
-
-
-class SampleSet(dimod.Response):
-    """Set of samples and any other data returned by dimod samplers.
-
-    Args:
-        record (:obj:`numpy.recarray`)
-            Samples and data as a NumPy record array. The 'sample', 'energy' and 'num_occurrences'
-            fields are required. 'sample' field is a 2D NumPy int8 array where each row is a
-            sample and each column represents the value of a variable.
-        labels (list):
-            List of variable labels.
-        info (dict):
-            Information about the response as a whole formatted as a dict.
-        vartype (:class:`.Vartype`/str/set):
-            Variable type for the response. Accepted input values:
-
-            * :class:`.Vartype.SPIN`, ``'SPIN'``, ``{-1, 1}``
-            * :class:`.Vartype.BINARY`, ``'BINARY'``, ``{0, 1}``
-
-    """
-
-    @classmethod
-    def from_sample(cls, sample, vartype, energy=None, num_occurrences=1):
-        """Convenience method for constructing a SampleSet from one raw (dict)
-        sample.
-        """
-        return cls.from_samples(
-            samples_like=[sample],
-            vectors={'energy': [energy], 'num_occurrences': [num_occurrences]},
-            info={}, vartype=vartype)
-
-    @classmethod
-    def from_sample_on_bqm(cls, sample, bqm):
-        """Convenience method for constructing a SampleSet from one raw (dict)
-        sample with energy calculated from the BQM.
-        """
-        return cls.from_sample(sample, bqm.vartype, bqm.energy(sample))
-
-    @classmethod
-    def from_response(cls, response):
-        """Convenience method for constructing a SampleSet from a dimod response.
-        """
-        return cls.from_future(response, result_hook=lambda x: x)
 
 
 class PliableDict(dict):
@@ -168,10 +125,22 @@ class State(PliableDict):
         energy is calculated from the BQM, and State.problem is also set to that
         BQM.
         """
-        return cls(problem=bqm,
-                   samples=SampleSet.from_sample(sample,
-                                                 vartype=bqm.vartype,
-                                                 energy=bqm.energy(sample)))
+        return cls.from_samples([sample], bqm)
+
+    @classmethod
+    def from_samples(cls, samples, bqm):
+        """Convenience method for constructing State from raw (dict) samples;
+        per-sample energy is calculated from the BQM, and State.problem is set
+        to the BQM.
+        """
+        return cls(
+            problem=bqm,
+            samples=SampleSet.from_samples(
+                samples,
+                vartype=bqm.vartype,
+                energy=[bqm.energy(sample) for sample in samples]
+            )
+        )
 
 
 class Present(Future):

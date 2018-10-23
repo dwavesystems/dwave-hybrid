@@ -40,9 +40,6 @@ Methods
    Runnable.iterate
    Runnable.run
    Runnable.stop
-   SampleSet.from_response
-   SampleSet.from_sample
-   SampleSet.from_sample_on_bqm
    State.copy
    State.from_sample
    State.updated

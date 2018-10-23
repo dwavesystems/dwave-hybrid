@@ -175,10 +175,10 @@ class TabuProblemSampler(Runnable, traits.ProblemSampler):
 
     @tictoc('tabu_sample')
     def iterate(self, state):
-        response = self.sampler.sample(
+        sampleset = self.sampler.sample(
             state.problem, init_solution=state.samples, tenure=self.tenure,
             timeout=self.timeout, num_reads=self.num_reads)
-        return state.updated(samples=SampleSet.from_response(response),
+        return state.updated(samples=sampleset,
                              debug=dict(sampler=self.name))
 
 
@@ -236,6 +236,8 @@ class RandomSubproblemSampler(Runnable, traits.SubproblemSampler):
     def iterate(self, state):
         bqm = state.subproblem
         sample = random_sample(bqm)
-        response = SampleSet.from_sample_on_bqm(sample, bqm)
-        return state.updated(subsamples=response,
+        sampleset = SampleSet.from_samples(sample,
+                                           vartype=bqm.vartype,
+                                           energy=bqm.energy(sample))
+        return state.updated(subsamples=sampleset,
                              debug=dict(sampler=self.name))
