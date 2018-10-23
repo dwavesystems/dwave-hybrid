@@ -125,10 +125,22 @@ class State(PliableDict):
         energy is calculated from the BQM, and State.problem is also set to that
         BQM.
         """
-        return cls(problem=bqm,
-                   samples=SampleSet.from_samples(sample,
-                                                  vartype=bqm.vartype,
-                                                  energy=bqm.energy(sample)))
+        return cls.from_samples([sample], bqm)
+
+    @classmethod
+    def from_samples(cls, samples, bqm):
+        """Convenience method for constructing State from raw (dict) samples;
+        per-sample energy is calculated from the BQM, and State.problem is set
+        to the BQM.
+        """
+        return cls(
+            problem=bqm,
+            samples=SampleSet.from_samples(
+                samples,
+                vartype=bqm.vartype,
+                energy=[bqm.energy(sample) for sample in samples]
+            )
+        )
 
 
 class Present(Future):
