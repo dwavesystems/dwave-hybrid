@@ -184,17 +184,14 @@ class Runnable(StateTraits):
     def __init__(self, *args, **kwargs):
         super(Runnable, self).__init__(*args, **kwargs)
 
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return "{}()".format(self.name)
+
     @property
     def name(self):
-        """Return the class name of an instantiated :class:`Runnable`.
-
-        Examples:
-            This code-snippet returns the class name of an instantiated sampler.
-
-            >>> print(sampler.name)      # doctest: +SKIP
-            TabuProblemSampler
-
-        """
         return self.__class__.__name__
 
     def init(self, state):
@@ -334,17 +331,11 @@ class Branch(Runnable):
         else:
             raise TypeError("branch can be composed only with Branch or Runnable")
 
-    @property
-    def name(self):
-        """Return the :class:`Runnable` classes in a branch.
+    def __str__(self):
+        return " | ".join(map(str, self.components)) or "(empty branch)"
 
-        Examples:
-            This code-snippet returns the classes in an instantiated branch.
-
-            >>> print(branch.name)      # doctest: +SKIP
-            EnergyImpactDecomposer | QPUSubproblemAutoEmbeddingSampler | SplatComposer
-        """
-        return " | ".join(component.name for component in self.components)
+    def __repr__(self):
+        return "{}({})".format(self.name, ", ".join(map(repr, self.components)))
 
     def iterate(self, state):
         """Start an iteration of an instantiated :class:`Branch`.

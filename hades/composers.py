@@ -26,7 +26,7 @@ class IdentityComposer(Runnable, traits.SubproblemComposer):
 
     @tictoc('identity_compose')
     def iterate(self, state):
-        return state.updated(samples=state.subsamples, debug=dict(composer=self.name))
+        return state.updated(samples=state.subsamples, debug=dict(composer=str(self)))
 
 
 class SplatComposer(Runnable, traits.SubproblemComposer):
@@ -43,4 +43,4 @@ class SplatComposer(Runnable, traits.SubproblemComposer):
         composed_energy = state.problem.energy(composed_sample)
         return state.updated(
             samples=SampleSet.from_samples(composed_sample, state.samples.vartype, composed_energy),
-            debug=dict(composer=self.name))
+            debug=dict(composer=str(self)))
