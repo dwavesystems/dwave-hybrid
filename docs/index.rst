@@ -42,7 +42,7 @@ Documentation
   glossary
 
 .. toctree::
-  :caption: Ocean Software
+  :caption: D-Wave
   :maxdepth: 1
 
   dwave
