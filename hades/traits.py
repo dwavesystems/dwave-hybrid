@@ -39,9 +39,9 @@ class StateTraits(object):
             self.validate_state_trait(state, trait)
 
 
-class ProblemConsuming(StateTraits):
+class ProblemIntaking(StateTraits):
     def __init__(self):
-        super(ProblemConsuming, self).__init__()
+        super(ProblemIntaking, self).__init__()
         self.inputs.add('problem')
 
 class ProblemProducing(StateTraits):
@@ -50,9 +50,9 @@ class ProblemProducing(StateTraits):
         self.outputs.add('problem')
 
 
-class SamplesConsuming(StateTraits):
+class SamplesIntaking(StateTraits):
     def __init__(self):
-        super(SamplesConsuming, self).__init__()
+        super(SamplesIntaking, self).__init__()
         self.inputs.add('samples')
 
 class SamplesProducing(StateTraits):
@@ -61,9 +61,9 @@ class SamplesProducing(StateTraits):
         self.outputs.add('samples')
 
 
-class SubproblemConsuming(StateTraits):
+class SubproblemIntaking(StateTraits):
     def __init__(self):
-        super(SubproblemConsuming, self).__init__()
+        super(SubproblemIntaking, self).__init__()
         self.inputs.add('subproblem')
 
 class SubproblemProducing(StateTraits):
@@ -72,9 +72,9 @@ class SubproblemProducing(StateTraits):
         self.outputs.add('subproblem')
 
 
-class SubsamplesConsuming(StateTraits):
+class SubsamplesIntaking(StateTraits):
     def __init__(self):
-        super(SubsamplesConsuming, self).__init__()
+        super(SubsamplesIntaking, self).__init__()
         self.inputs.add('subsamples')
 
 class SubsamplesProducing(StateTraits):
@@ -83,9 +83,9 @@ class SubsamplesProducing(StateTraits):
         self.outputs.add('subsamples')
 
 
-class EmbeddingConsuming(StateTraits):
+class EmbeddingIntaking(StateTraits):
     def __init__(self):
-        super(EmbeddingConsuming, self).__init__()
+        super(EmbeddingIntaking, self).__init__()
         self.inputs.add('embedding')
 
 class EmbeddingProducing(StateTraits):
@@ -94,14 +94,14 @@ class EmbeddingProducing(StateTraits):
         self.outputs.add('embedding')
 
 
-class ProblemDecomposer(ProblemConsuming, SamplesConsuming, SubproblemProducing):
+class ProblemDecomposer(ProblemIntaking, SamplesIntaking, SubproblemProducing):
     pass
 
-class SubproblemComposer(SubproblemConsuming, SubsamplesConsuming, ProblemConsuming, SamplesProducing):
+class SubproblemComposer(SubproblemIntaking, SubsamplesIntaking, ProblemIntaking, SamplesProducing):
     pass
 
-class ProblemSampler(ProblemConsuming, SamplesProducing):
+class ProblemSampler(ProblemIntaking, SamplesProducing):
     pass
 
-class SubproblemSampler(SubproblemConsuming, SubsamplesProducing):
+class SubproblemSampler(SubproblemIntaking, SubsamplesProducing):
     pass

@@ -36,7 +36,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class QPUSubproblemExternalEmbeddingSampler(Runnable, traits.SubproblemSampler, traits.EmbeddingConsuming):
+class QPUSubproblemExternalEmbeddingSampler(Runnable, traits.SubproblemSampler, traits.EmbeddingIntaking):
     """A quantum sampler for a subproblem with a defined minor-embedding.
 
     Args:
