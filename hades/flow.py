@@ -33,7 +33,7 @@ class RacingBranches(Runnable):
         self.endomorphic = endomorphic
 
     def __str__(self):
-        return " ! ".join(map(str, self.branches)) or "(zero racing branches)"
+        return " !! ".join("({})".format(b) for b in self.branches) or "(zero racing branches)"
 
     def __repr__(self):
         return "{}({})".format(self.name, ", ".join(map(repr, self.branches)))
@@ -89,7 +89,7 @@ class SimpleIterator(Runnable):
         self.convergence = convergence
 
     def __str__(self):
-        return "Loop <{}>".format(self.runnable)
+        return "Loop over {}".format(self.runnable)
 
     def __repr__(self):
         return ("{self.name}(runnable={self.runnable!r}, max_iter={self.max_iter!r}, "

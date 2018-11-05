@@ -54,6 +54,10 @@ class QPUSubproblemExternalEmbeddingSampler(Runnable, traits.SubproblemSampler, 
             qpu_sampler = DWaveSampler()
         self.sampler = qpu_sampler
 
+    def __repr__(self):
+        return ("{self}(num_reads={self.num_reads!r}, "
+                       "qpu_sampler={self.sampler!r})").format(self=self)
+
     @tictoc('qpu_ext_embedding_sample')
     def iterate(self, state):
         sampler = FixedEmbeddingComposite(self.sampler, embedding=state.embedding)
@@ -80,6 +84,10 @@ class QPUSubproblemAutoEmbeddingSampler(Runnable, traits.SubproblemSampler):
             qpu_sampler = DWaveSampler()
         self.sampler = EmbeddingComposite(qpu_sampler)
 
+    def __repr__(self):
+        return ("{self}(num_reads={self.num_reads!r}, "
+                       "qpu_sampler={self.sampler!r})").format(self=self)
+
     @tictoc('qpu_auto_embedding_sample')
     def iterate(self, state):
         response = self.sampler.sample(state.subproblem, num_reads=self.num_reads)
@@ -103,6 +111,10 @@ class SimulatedAnnealingSubproblemSampler(Runnable, traits.SubproblemSampler):
         self.sweeps = sweeps
         self.sampler = SimulatedAnnealingSampler()
         self._stop_event = threading.Event()
+
+    def __repr__(self):
+        return ("{self}(num_reads={self.num_reads!r}, "
+                       "sweeps={self.sweeps!r})").format(self=self)
 
     @tictoc('subneal_sample')
     def iterate(self, state):
@@ -143,6 +155,11 @@ class TabuSubproblemSampler(Runnable, traits.SubproblemSampler):
         self.timeout = timeout
         self.sampler = TabuSampler()
 
+    def __repr__(self):
+        return ("{self}(num_reads={self.num_reads!r}, "
+                       "tenure={self.tenure!r}, "
+                       "timeout={self.timeout!r})").format(self=self)
+
     @tictoc('subtabu_sample')
     def iterate(self, state):
         subbqm = state.subproblem
@@ -173,6 +190,11 @@ class TabuProblemSampler(Runnable, traits.ProblemSampler):
         self.timeout = timeout
         self.sampler = TabuSampler()
 
+    def __repr__(self):
+        return ("{self}(num_reads={self.num_reads!r}, "
+                       "tenure={self.tenure!r}, "
+                       "timeout={self.timeout!r})").format(self=self)
+
     @tictoc('tabu_sample')
     def iterate(self, state):
         sampleset = self.sampler.sample(
@@ -202,10 +224,14 @@ class InterruptableTabuSampler(TabuProblemSampler):
     """
 
     def __init__(self, quantum_timeout=20, timeout=None, **kwargs):
-        kwargs['timeout'] = quantum_timeout
+        self.quantum_timeout = kwargs['timeout'] = quantum_timeout
         super(InterruptableTabuSampler, self).__init__(**kwargs)
         self.max_timeout = timeout
         self._stop_event = threading.Event()
+
+    def __repr__(self):
+        return ("{self}(quantum_timeout={self.quantum_timeout!r}, "
+                       "timeout={self.timeout!r})").format(self=self)
 
     @tictoc('int_tabu_sample')
     def _interruptable_iterate(self, state):
