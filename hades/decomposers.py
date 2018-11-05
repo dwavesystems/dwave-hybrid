@@ -75,6 +75,10 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
         # variables from previous iteration
         self._prev_vars = set()
 
+    def __repr__(self):
+        return ("{self}(max_size={self.max_size!r}, min_gain={self.min_gain!r}, "
+                "min_diff={self.min_diff!r}, stride={self.stride!r})").format(self=self)
+
     @tictoc('energy_impact_decompose')
     def iterate(self, state):
         bqm = state.problem
@@ -126,6 +130,9 @@ class RandomSubproblemDecomposer(Runnable, traits.ProblemDecomposer):
         # TODO: add min_diff support (like in EnergyImpactDecomposer)
         self.size = size
 
+    def __repr__(self):
+        return "{self}(size={self.size!r})".format(self=self)
+
     @tictoc('random_decompose')
     def iterate(self, state):
         bqm = state.problem
@@ -162,6 +169,9 @@ class TilingChimeraDecomposer(Runnable, traits.ProblemDecomposer, traits.Embeddi
         self.size = size
         self.loop = loop
         self.blocks = None
+
+    def __repr__(self):
+        return "{self}(size={self.size!r}, loop={self.loop!r})".format(self=self)
 
     def init(self, state):
         self.blocks = iter(chimera_tiles(state.problem, *self.size).items())
@@ -204,6 +214,9 @@ class RandomConstraintDecomposer(Runnable, traits.ProblemDecomposer):
         if any(len(const) > size for const in constraints):
             raise ValueError("size must be able to contain the largest constraint")
         self.constraints = constraints
+
+    def __repr__(self):
+        return "{self}(size={self.size!r}, constraints={self.constraints!r})".format(self=self)
 
     def init(self, state):
         if self.size > len(state.problem):

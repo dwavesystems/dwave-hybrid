@@ -185,10 +185,14 @@ class Runnable(StateTraits):
         super(Runnable, self).__init__(*args, **kwargs)
 
     def __str__(self):
-        return self.__class__.__name__
+        return self.name
 
     def __repr__(self):
-        return "{}()".format(self)
+        return "{}()".format(self.name)
+
+    @property
+    def name(self):
+        return self.__class__.__name__
 
     def init(self, state):
         """Run prior to the first iterate/run, with the first state received.
@@ -328,10 +332,10 @@ class Branch(Runnable):
             raise TypeError("branch can be composed only with Branch or Runnable")
 
     def __str__(self):
-        return " | ".join(self.components)
+        return " | ".join(map(str, self.components)) or "(empty branch)"
 
     def __repr__(self):
-        return " | ".join(map(repr, self.components))
+        return "{}({})".format(self.name, ", ".join(map(repr, self.components)))
 
     def iterate(self, state):
         """Start an iteration of an instantiated :class:`Branch`.

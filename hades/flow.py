@@ -33,7 +33,10 @@ class RacingBranches(Runnable):
         self.endomorphic = endomorphic
 
     def __str__(self):
-        return "{}[{}]".format(self, ", ".join(self.branches))
+        return " ! ".join(map(str, self.branches)) or "(zero racing branches)"
+
+    def __repr__(self):
+        return "{}({})".format(self.name, ", ".join(map(repr, self.branches)))
 
     def iterate(self, state):
         futures = [branch.run(state.updated(debug=None)) for branch in self.branches]
@@ -66,6 +69,9 @@ class ArgMinFold(Runnable):
     def __str__(self):
         return "[]>"
 
+    def __repr__(self):
+        return "{}(fn={!r})".format(self.name, self.fn)
+
     def iterate(self, states):
         # debug info
         for s in states:
@@ -83,7 +89,11 @@ class SimpleIterator(Runnable):
         self.convergence = convergence
 
     def __str__(self):
-        return "{}({})".format(self, self.runnable)
+        return "Loop <{}>".format(self.runnable)
+
+    def __repr__(self):
+        return ("{self.name}(runnable={self.runnable!r}, max_iter={self.max_iter!r}, "
+                "convergence={self.convergence!r})").format(self=self)
 
     def iterate(self, state):
         last = state
