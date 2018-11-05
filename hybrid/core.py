@@ -22,8 +22,8 @@ from plucky import merge
 import dimod
 from dimod import SampleSet
 
-from hades.traits import StateTraits
-from hades.utils import min_sample, sample_as_dict
+from hybrid.traits import StateTraits
+from hybrid.utils import min_sample, sample_as_dict
 
 
 class ImmediateExecutor(Executor):
@@ -367,7 +367,7 @@ class Branch(Runnable):
 
 
 class HybridSampler(dimod.Sampler):
-    """Produce `dimod.Sampler` from `hades.Runnable`-based sampler."""
+    """Produce `dimod.Sampler` from `hybrid.Runnable`-based sampler."""
 
     properties = None
     parameters = None
@@ -377,12 +377,12 @@ class HybridSampler(dimod.Sampler):
 
         Args:
             runnable_solver (`Runnable`):
-                Hades runnable (likely composed) that accepts a BQM (in input
+                Hybrid runnable (likely composed) that accepts a BQM (in input
                 state) and produces (at least one) sample (in output state).
 
         """
         if not isinstance(runnable_solver, Runnable):
-            raise TypeError("'sampler' should be 'hades.Runnable'")
+            raise TypeError("'sampler' should be 'hybrid.Runnable'")
         self._runnable_solver = runnable_solver
 
         self.parameters = {'initial_sample': []}
@@ -397,7 +397,7 @@ class HybridSampler(dimod.Sampler):
 
             initial_sample (dict, default=None):
                 `bqm`-compatible sample used for initial state construction.
-                Defaults to `hades.utils.min_sample(bqm)`.
+                Defaults to `hybrid.utils.min_sample(bqm)`.
 
         Returns:
             :obj:`~dimod.Response`: A `dimod` :obj:`.~dimod.Response` object.
@@ -421,7 +421,7 @@ class HybridSampler(dimod.Sampler):
 
 
 class HybridRunnable(Runnable):
-    """Produce `hades.Runnable` from `dimod.Sampler` (dual of `HybridSampler`).
+    """Produce `hybrid.Runnable` from `dimod.Sampler` (dual of `HybridSampler`).
 
     The runnable will sample from a problem defined in state field named `fields[0]`,
     and populate the state field referred to as in `fields[1]`.
@@ -466,7 +466,7 @@ class HybridRunnable(Runnable):
 
 
 class HybridProblemRunnable(HybridRunnable):
-    """Produce `hades.Runnable` from `dimod.Sampler` (dual of `HybridSampler`).
+    """Produce `hybrid.Runnable` from `dimod.Sampler` (dual of `HybridSampler`).
 
     The runnable will sample from `state.problem`, and populate `state.samples`.
     """
@@ -477,7 +477,7 @@ class HybridProblemRunnable(HybridRunnable):
 
 
 class HybridSubproblemRunnable(HybridRunnable):
-    """Produce `hades.Runnable` from `dimod.Sampler` (dual of `HybridSampler`).
+    """Produce `hybrid.Runnable` from `dimod.Sampler` (dual of `HybridSampler`).
 
     The runnable will sample from `state.subproblem`, and populate `state.subsamples`.
     """

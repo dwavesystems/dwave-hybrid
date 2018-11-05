@@ -18,14 +18,14 @@ import sys
 
 import dimod
 
-from hades.samplers import (
+from hybrid.samplers import (
     SimulatedAnnealingSubproblemSampler,
     TabuSubproblemSampler, InterruptableTabuSampler)
-from hades.decomposers import EnergyImpactDecomposer, IdentityDecomposer
-from hades.composers import SplatComposer
-from hades.core import State
-from hades.flow import RacingBranches, ArgMinFold, SimpleIterator
-from hades.utils import min_sample
+from hybrid.decomposers import EnergyImpactDecomposer, IdentityDecomposer
+from hybrid.composers import SplatComposer
+from hybrid.core import State
+from hybrid.flow import RacingBranches, ArgMinFold, SimpleIterator
+from hybrid.utils import min_sample
 
 
 problem = sys.argv[1]

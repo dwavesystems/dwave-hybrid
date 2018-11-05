@@ -19,10 +19,10 @@ import random
 
 import networkx as nx
 
-from hades.core import Runnable, State
-from hades.profiling import tictoc
-from hades import traits
-from hades.utils import (
+from hybrid.core import Runnable, State
+from hybrid.profiling import tictoc
+from hybrid import traits
+from hybrid.utils import (
     bqm_induced_by, select_localsearch_adversaries, select_random_subgraph,
     chimera_tiles)
 

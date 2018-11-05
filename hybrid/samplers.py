@@ -27,10 +27,10 @@ from dwave.system.composites import EmbeddingComposite, FixedEmbeddingComposite
 from tabu import TabuSampler
 from neal import SimulatedAnnealingSampler
 
-from hades.core import async_executor, Runnable, SampleSet
-from hades.profiling import tictoc
-from hades.utils import random_sample
-from hades import traits
+from hybrid.core import async_executor, Runnable, SampleSet
+from hybrid.profiling import tictoc
+from hybrid.utils import random_sample
+from hybrid import traits
 
 import logging
 logger = logging.getLogger(__name__)

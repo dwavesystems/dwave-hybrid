@@ -50,7 +50,7 @@ master_doc = 'index'
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
-from hades import package_info
+from hybrid import package_info
 project = package_info.__title__
 copyright = package_info.__copyright__
 author = package_info.__author__
@@ -77,7 +77,7 @@ pygments_style = 'sphinx'
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = True
 
-modindex_common_prefix = ['hades.']
+modindex_common_prefix = ['hybrid.']
 
 # -- Options for HTML output ----------------------------------------------
 

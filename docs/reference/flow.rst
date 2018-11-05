@@ -4,7 +4,7 @@
 Framework
 =========
 
-.. automodule:: hades.flow
+.. automodule:: hybrid.flow
 
 Classes
 =======

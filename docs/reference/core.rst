@@ -4,7 +4,7 @@
 Building Blocks
 ===============
 
-.. automodule:: hades.core
+.. automodule:: hybrid.core
 
 Classes
 =======

@@ -15,16 +15,16 @@
 import os
 import logging
 
-import hades.core
-import hades.utils
-import hades.traits
-import hades.profiling
-import hades.exceptions
+import hybrid.core
+import hybrid.utils
+import hybrid.traits
+import hybrid.profiling
+import hybrid.exceptions
 
-import hades.flow
-import hades.samplers
-import hades.decomposers
-import hades.composers
+import hybrid.flow
+import hybrid.samplers
+import hybrid.decomposers
+import hybrid.composers
 
 
 def _configure_logger(logger):
@@ -36,7 +36,7 @@ def _configure_logger(logger):
     return logger
 
 
-def _apply_loglevel_from_env(logger, env='HADES_LOG_LEVEL'):
+def _apply_loglevel_from_env(logger, env='HYBRID_LOG_LEVEL'):
     name = os.getenv(env) or os.getenv(env.upper()) or os.getenv(env.lower())
     if not name:
         return

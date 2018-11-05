@@ -2,11 +2,11 @@
 Introduction
 ============
 
-**Hades** provides a framework for iterating arbitrary-sized sets of samples
+**dwave-hybrid** provides a framework for iterating arbitrary-sized sets of samples
 through parallel solvers to find an optimal solution.
 
 
-The :ref:`HadesBlockDiagram` figure below shows an example configuration. Samples
+The :ref:`HybridBlockDiagram` figure below shows an example configuration. Samples
 are iterated over four parallel solvers. The top branch represents a classical tabu
 search that runs on the entire problem until interrupted by another branch completing.
 These use different decomposers to parcel out parts of the current sample
@@ -16,8 +16,8 @@ representation of a branch's components---decomposer, sampler, and composer---is
 shown in the lowest branch. A user-defined criterion selects from current samples
 and solver outputs a sample set for iteration :math:`i+1`.
 
-.. figure:: ./_static/HadesBlockDiagram.png
-  :name: HadesBlockDiagram
+.. figure:: ./_static/HybridBlockDiagram.png
+  :name: HybridBlockDiagram
   :scale: 70 %
   :alt: Block diagram
 

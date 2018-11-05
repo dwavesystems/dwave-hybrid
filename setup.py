@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 
 # Load package info, without importing the package
 basedir = os.path.dirname(os.path.abspath(__file__))
-package_info_path = os.path.join(basedir, "hades", "package_info.py")
+package_info_path = os.path.join(basedir, "hybrid", "package_info.py")
 package_info = {}
 try:
     with open(package_info_path, encoding='utf-8') as f:

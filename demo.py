@@ -5,17 +5,17 @@ Some samplers might me interruptable.
 """
 
 import dimod
-from hades.samplers import (
+from hybrid.samplers import (
     QPUSubproblemExternalEmbeddingSampler, QPUSubproblemAutoEmbeddingSampler,
     SimulatedAnnealingSubproblemSampler,
     TabuSubproblemSampler, TabuProblemSampler, InterruptableTabuSampler)
-from hades.decomposers import (
+from hybrid.decomposers import (
     RandomSubproblemDecomposer, IdentityDecomposer,
     TilingChimeraDecomposer, EnergyImpactDecomposer)
-from hades.composers import SplatComposer
-from hades.core import State, SampleSet
-from hades.flow import RacingBranches, ArgMinFold, SimpleIterator
-from hades.utils import min_sample, max_sample, random_sample
+from hybrid.composers import SplatComposer
+from hybrid.core import State, SampleSet
+from hybrid.flow import RacingBranches, ArgMinFold, SimpleIterator
+from hybrid.utils import min_sample, max_sample, random_sample
 
 
 #problem = 'problems/random-chimera/2048.01.qubo'

@@ -19,16 +19,16 @@ Kerberos prototype: runs N samplers in parallel. Behaves like a dimod sampler.
 """
 
 import dimod
-from hades.samplers import (
+from hybrid.samplers import (
     QPUSubproblemAutoEmbeddingSampler,
     SimulatedAnnealingSubproblemSampler,
     InterruptableTabuSampler)
-from hades.decomposers import (
+from hybrid.decomposers import (
     RandomSubproblemDecomposer, IdentityDecomposer, EnergyImpactDecomposer)
-from hades.composers import SplatComposer
-from hades.core import State, SampleSet
-from hades.flow import RacingBranches, ArgMinFold, SimpleIterator
-from hades.utils import random_sample
+from hybrid.composers import SplatComposer
+from hybrid.core import State, SampleSet
+from hybrid.flow import RacingBranches, ArgMinFold, SimpleIterator
+from hybrid.utils import random_sample
 
 
 class KerberosSampler(dimod.Sampler):

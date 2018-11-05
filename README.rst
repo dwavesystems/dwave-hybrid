@@ -1,6 +1,6 @@
-=====
-Hades
-=====
+=============
+D-Wave Hybrid
+=============
 
 .. index-start-marker
 
@@ -23,12 +23,12 @@ Installation or Building
 
 **Package not yet available on PyPI.** Install in developer (edit) mode::
 
-    pip install -e git+https://github.com/dwavesystems/hades.git#egg=hades
+    pip install -e git+https://github.com/dwavesystems/dwave-hybrid.git#egg=dwave-hybrid
 
 or from source::
 
-    git clone https://github.com/dwavesystems/hades.git
-    cd hades
+    git clone https://github.com/dwavesystems/dwave-hybrid.git
+    cd dwave-hybrid
     python setup.py install
 
 .. installation-end-marker
@@ -42,13 +42,13 @@ Example
 .. code-block:: python
 
     import dimod
-    from hades.samplers import (
+    from hybrid.samplers import (
         QPUSubproblemAutoEmbeddingSampler, InterruptableTabuSampler)
-    from hades.decomposers import EnergyImpactDecomposer
-    from hades.composers import SplatComposer
-    from hades.core import State
-    from hades.flow import RacingBranches, ArgMinFold, SimpleIterator
-    from hades.utils import min_sample
+    from hybrid.decomposers import EnergyImpactDecomposer
+    from hybrid.composers import SplatComposer
+    from hybrid.core import State
+    from hybrid.flow import RacingBranches, ArgMinFold, SimpleIterator
+    from hybrid.utils import min_sample
 
     # Construct a problem
     bqm = dimod.BinaryQuadraticModel({}, {'ab': 1, 'bc': -1, 'ca': 1}, 0, dimod.SPIN)

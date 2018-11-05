@@ -18,13 +18,13 @@ import concurrent.futures
 import dimod
 from tabu import TabuSampler
 
-from hades.core import (
+from hybrid.core import (
     PliableDict, State, SampleSet, HybridSampler,
     HybridRunnable, HybridProblemRunnable, HybridSubproblemRunnable)
-from hades.decomposers import IdentityDecomposer
-from hades.composers import IdentityComposer
-from hades.samplers import TabuProblemSampler
-from hades.utils import min_sample, sample_as_dict
+from hybrid.decomposers import IdentityDecomposer
+from hybrid.composers import IdentityComposer
+from hybrid.samplers import TabuProblemSampler
+from hybrid.utils import min_sample, sample_as_dict
 
 
 class TestPliableDict(unittest.TestCase):

@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-__packagename__ = 'hades'
-__title__ = 'D-Wave Hades'
+__packagename__ = 'dwave-hybrid'
+__title__ = 'D-Wave Hybrid'
 __version__ = '0.0.2'
 __author__ = 'D-Wave Systems Inc.'
 __authoremail__ = 'radomir@dwavesys.com'
 __description__ = 'Hybrid Asynchronous Decomposition Solver Framework'
-__url__ = 'https://github.com/dwavesystems/hades'
+__url__ = 'https://github.com/dwavesystems/dwave-hybrid'
 __license__ = 'Apache 2.0'
 __copyright__ = '2018, D-Wave Systems Inc.'

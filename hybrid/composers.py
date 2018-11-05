@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from hades.core import Runnable, SampleSet
-from hades.profiling import tictoc
-from hades.utils import updated_sample
-from hades import traits
+from hybrid.core import Runnable, SampleSet
+from hybrid.profiling import tictoc
+from hybrid.utils import updated_sample
+from hybrid import traits
 
 import logging
 logger = logging.getLogger(__name__)

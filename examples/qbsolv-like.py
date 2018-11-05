@@ -18,13 +18,13 @@ import sys
 
 import dimod
 
-from hades.samplers import (
+from hybrid.samplers import (
     QPUSubproblemAutoEmbeddingSampler, InterruptableTabuSampler)
-from hades.decomposers import EnergyImpactDecomposer
-from hades.composers import SplatComposer
-from hades.core import State
-from hades.flow import RacingBranches, ArgMinFold, SimpleIterator
-from hades.utils import min_sample
+from hybrid.decomposers import EnergyImpactDecomposer
+from hybrid.composers import SplatComposer
+from hybrid.core import State
+from hybrid.flow import RacingBranches, ArgMinFold, SimpleIterator
+from hybrid.utils import min_sample
 
 
 # load a problem

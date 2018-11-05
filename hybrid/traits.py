@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from hades.exceptions import InvalidStateError
+from hybrid.exceptions import InvalidStateError
 
 
 class StateTraitMissingError(InvalidStateError):
