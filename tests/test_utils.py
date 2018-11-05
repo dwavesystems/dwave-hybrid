@@ -17,7 +17,7 @@ import unittest
 import dimod
 import dwave_networkx as dnx
 
-from hades.utils import (
+from hybrid.utils import (
     chimera_tiles, flip_energy_gains, select_localsearch_adversaries)
 
 

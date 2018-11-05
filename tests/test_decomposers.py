@@ -17,9 +17,9 @@ import unittest
 
 import dimod
 
-from hades.decomposers import EnergyImpactDecomposer, RandomConstraintDecomposer
-from hades.core import State
-from hades.utils import min_sample
+from hybrid.decomposers import EnergyImpactDecomposer, RandomConstraintDecomposer
+from hybrid.core import State
+from hybrid.utils import min_sample
 
 
 class TestEnergyImpactDecomposer(unittest.TestCase):

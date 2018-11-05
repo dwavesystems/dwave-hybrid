@@ -15,7 +15,7 @@
 import concurrent.futures
 from operator import attrgetter
 
-from hades.core import Runnable
+from hybrid.core import Runnable
 
 import logging
 logger = logging.getLogger(__name__)

@@ -2,9 +2,9 @@
 
 .. _contents:
 
-=====
-Hades
-=====
+=============
+D-Wave Hybrid
+=============
 
 .. include:: ../README.rst
   :start-after: index-start-marker

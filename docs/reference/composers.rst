@@ -4,7 +4,7 @@
 Composers
 =========
 
-.. automodule:: hades.composers
+.. automodule:: hybrid.composers
 
 Class
 =====
@@ -24,9 +24,9 @@ a 3-variable subproblem that was manually set to all ones.
 .. code-block:: python
 
     import dimod
-    from hades.composers import SplatComposer
-    from hades.core import State, SampleSet
-    from hades.utils import min_sample
+    from hybrid.composers import SplatComposer
+    from hybrid.core import State, SampleSet
+    from hybrid.utils import min_sample
 
     bqm = dimod.BinaryQuadraticModel({t: 0 for t in range(6)},
                                      {(t, (t+1) % 6): 1 for t in range(6)},

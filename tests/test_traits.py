@@ -16,9 +16,9 @@ import unittest
 
 import dimod
 
-from hades.core import State, Runnable
-from hades.utils import min_sample
-from hades import traits
+from hybrid.core import State, Runnable
+from hybrid.utils import min_sample
+from hybrid import traits
 
 
 class TestRunnableTraits(unittest.TestCase):

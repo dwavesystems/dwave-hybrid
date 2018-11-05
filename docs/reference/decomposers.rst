@@ -4,7 +4,7 @@
 Decomposers
 ===========
 
-.. automodule:: hades.decomposers
+.. automodule:: hybrid.decomposers
 
 Classes
 =======
@@ -31,9 +31,9 @@ in the first iteration to the first 4 variables shown in the output of
 .. code-block:: python
 
     import dimod
-    from hades.decomposers import EnergyImpactDecomposer
-    from hades.core import State
-    from hades.utils import random_sample, flip_energy_gains
+    from hybrid.decomposers import EnergyImpactDecomposer
+    from hybrid.core import State
+    from hybrid.utils import random_sample, flip_energy_gains
 
     bqm = dimod.BinaryQuadraticModel({t: 0 for t in range(10)},
                                      {(t, (t+1) % 10): 1 for t in range(10)},
@@ -63,9 +63,9 @@ random initial sample set to create a 3-variable subproblem.
 .. code-block:: python
 
     import dimod
-    from hades.decomposers import RandomSubproblemDecomposer
-    from hades.core import State
-    from hades.utils import random_sample
+    from hybrid.decomposers import RandomSubproblemDecomposer
+    from hybrid.core import State
+    from hybrid.utils import random_sample
 
     bqm = dimod.BinaryQuadraticModel(
         {t: 0 for t in range(6)}, {(t, (t+1) % 6): 1 for t in range(6)}, 0, 'BINARY')
@@ -89,9 +89,9 @@ read from a file into 2x2x4-lattice subproblems.
 .. code-block:: python
 
     import dimod
-    from hades.decomposers import TilingChimeraDecomposer
-    from hades.core import State
-    from hades.utils import random_sample
+    from hybrid.decomposers import TilingChimeraDecomposer
+    from hybrid.core import State
+    from hybrid.utils import random_sample
 
     with open('problems/random-chimera/2048.09.qubo', 'r') as fp:
         bqm = dimod.BinaryQuadraticModel.from_coo(fp)
@@ -122,9 +122,9 @@ arbitrary variables.
 .. code-block:: python
 
     import dimod
-    from hades.decomposers  RandomConstraintDecomposer
-    from hades.core import State
-    from hades.utils import random_sample
+    from hybrid.decomposers  RandomConstraintDecomposer
+    from hybrid.core import State
+    from hybrid.utils import random_sample
 
     bqm = dimod.BinaryQuadraticModel({'w': -2.0, 'x': -4.0, 'y': -4.0, 'z': -2.0},
                                      {('w', 'x'): 4.0, ('x', 'y'): 4.0, ('y', 'z'): 4.0},

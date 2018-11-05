@@ -4,7 +4,7 @@
 Samplers
 ========
 
-.. automodule:: hades.samplers
+.. automodule:: hybrid.samplers
 
 Classes
 =======
@@ -37,8 +37,8 @@ example, :math:`x=0, y=1, z=0` occurred 22 times.
     import dimod
     import minorminer
     from dwave.system.samplers import DWaveSampler
-    from hades.samplers import QPUSubproblemExternalEmbeddingSampler
-    from hades.core import State
+    from hybrid.samplers import QPUSubproblemExternalEmbeddingSampler
+    from hybrid.core import State
 
     # Define a problem and a subproblem
     bqm = dimod.BinaryQuadraticModel({'x': 0.0, 'y': 0.0, 'z': 8.0, 'a': 2.0, 'b': 0.0, 'c': 6.0},
@@ -80,8 +80,8 @@ example, :math:`x=0, y=0, z=0` occurred 53 times.
 .. code-block:: python
 
     import dimod
-    from hades.samplers import QPUSubproblemAutoEmbeddingSampler
-    from hades.core import State
+    from hybrid.samplers import QPUSubproblemAutoEmbeddingSampler
+    from hybrid.core import State
 
     # Define a problem and a subproblem
     bqm = dimod.BinaryQuadraticModel({'x': 0.0, 'y': 0.0, 'z': 8.0, 'a': 2.0, 'b': 0.0, 'c': 6.0},
@@ -119,8 +119,8 @@ example, :math:`x=0, y=1, z=0`.
 .. code-block:: python
 
     import dimod
-    from hades.samplers import SimulatedAnnealingSubproblemSampler
-    from hades.core import State
+    from hybrid.samplers import SimulatedAnnealingSubproblemSampler
+    from hybrid.core import State
 
     # Define a problem and a subproblem
     bqm = dimod.BinaryQuadraticModel({'x': 0.0, 'y': 0.0, 'z': 8.0, 'a': 2.0, 'b': 0.0, 'c': 6.0},
@@ -161,8 +161,8 @@ example, :math:`x=0, y=1, z=0`.
 .. code-block:: python
 
     import dimod
-    from hades.samplers import TabuSubproblemSampler
-    from hades.core import State
+    from hybrid.samplers import TabuSubproblemSampler
+    from hybrid.core import State
 
     # Define a problem and a subproblem
     bqm = dimod.BinaryQuadraticModel({'x': 0.0, 'y': 0.0, 'z': 8.0, 'a': 2.0, 'b': 0.0, 'c': 6.0},
@@ -198,8 +198,8 @@ example, :math:`x=y=z=a=b=c=1`.
 .. code-block:: python
 
     import dimod
-    from hades.samplers import TabuProblemSampler
-    from hades.core import State
+    from hybrid.samplers import TabuProblemSampler
+    from hybrid.core import State
 
     # Define a problem
     bqm = dimod.BinaryQuadraticModel({'x': 0.0, 'y': 0.0, 'z': 8.0, 'a': 2.0, 'b': 0.0, 'c': 6.0},
@@ -234,8 +234,8 @@ example, :math:`x=y=z=a=b=c=1`.
 .. code-block:: python
 
     import dimod
-    from hades.samplers import InterruptableTabuSampler
-    from hades.core import State
+    from hybrid.samplers import InterruptableTabuSampler
+    from hybrid.core import State
 
     # Define a problem
     bqm = dimod.BinaryQuadraticModel({'x': 0.0, 'y': 0.0, 'z': 8.0, 'a': 2.0, 'b': 0.0, 'c': 6.0},
@@ -275,8 +275,8 @@ The state is updated with a random sample..
 .. code-block:: python
 
     import dimod
-    from hades.samplers import RandomSubproblemSampler
-    from hades.core import State
+    from hybrid.samplers import RandomSubproblemSampler
+    from hybrid.core import State
 
     # Define a problem and a subproblem
     bqm = dimod.BinaryQuadraticModel({'x': 0.0, 'y': 0.0, 'z': 8.0, 'a': 2.0, 'b': 0.0, 'c': 6.0},

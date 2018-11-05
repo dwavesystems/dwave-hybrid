@@ -26,22 +26,22 @@ from dwave.system.samplers import DWaveSampler
 from dwave.system.composites import EmbeddingComposite
 from dwave_qbsolv import QBSolv
 
-from hades.samplers import (
+from hybrid.samplers import (
     QPUSubproblemExternalEmbeddingSampler, QPUSubproblemAutoEmbeddingSampler,
     SimulatedAnnealingSubproblemSampler, RandomSubproblemSampler,
     TabuSubproblemSampler, TabuProblemSampler, InterruptableTabuSampler)
-from hades.decomposers import (
+from hybrid.decomposers import (
     RandomSubproblemDecomposer, IdentityDecomposer,
     TilingChimeraDecomposer, EnergyImpactDecomposer)
-from hades.composers import SplatComposer
-from hades.core import State, SampleSet, Runnable
-from hades.flow import RacingBranches, ArgMinFold, SimpleIterator
-from hades.utils import min_sample
-from hades.profiling import tictoc
+from hybrid.composers import SplatComposer
+from hybrid.core import State, SampleSet, Runnable
+from hybrid.flow import RacingBranches, ArgMinFold, SimpleIterator
+from hybrid.utils import min_sample
+from hybrid.profiling import tictoc
 
 
 class QBSolvProblemSampler(Runnable):
-    """QBSolv wrapper for hades."""
+    """QBSolv wrapper for hybrid."""
 
     def __init__(self, bqm, qpu=None):
         self.bqm = bqm

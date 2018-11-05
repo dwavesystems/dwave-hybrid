@@ -4,12 +4,12 @@
 Utilities
 =========
 
-.. automodule:: hades.utils
+.. automodule:: hybrid.utils
 
 Methods
 =======
 
-.. currentmodule:: hades.utils
+.. currentmodule:: hybrid.utils
 
 .. autosummary::
    :toctree: generated/
