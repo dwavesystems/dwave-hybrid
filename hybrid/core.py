@@ -65,7 +65,20 @@ class PliableDict(dict):
 
 
 class State(PliableDict):
-    """Computation state passed along a branch between connected components."""
+    """Computation state passed along a branch between connected components.
+
+    State is a `dict` subclass and contains at least keys `samples`, `problem` and `debug`.
+
+    Examples:
+        >>> import dimod           # Create a binary quadratic model
+        >>> bqm = dimod.BinaryQuadraticModel({0: -1, 1: -1}, {(0, 1): 2}, 0.0, dimod.BINARY)
+        >>> hybrid.core.State.from_sample(hybrid.utils.min_sample(bqm), bqm)   # doctest: +SKIP
+        {'problem': BinaryQuadraticModel({0: -1, 1: -1}, {(0, 1): 2}, 0.0, Vartype.BINARY),
+         'samples': SampleSet(rec.array([([0, 0], 0., 1)],
+         dtype=[('sample', 'i1', (2,)), ('energy', '<f8'), ('num_occurrences', '<i4')]), [0, 1], {}, 'BINARY'),
+         'debug': {}}
+
+    """
 
     def __init__(self, *args, **kwargs):
         """State is a `PliableDict` (`dict` subclass) which always contains
@@ -77,7 +90,7 @@ class State(PliableDict):
         self.setdefault('debug', PliableDict())
 
     def copy(self):
-        """Simple deep copy if itself. Functionally identical to
+        """Simple deep copy of itself. Functionally identical to
         `State.updated()`.
         """
         return deepcopy(self)
@@ -159,8 +172,6 @@ class Present(Future):
 class Runnable(StateTraits):
     """Component that can be run for an iteration such as samplers and branches.
 
-    Implementations must support the iterate or run methods, stop is not required.
-
     Examples:
         This example runs a tabu search on a binary quadratic model. An initial state is
         manually set with invalid solution :math:`x=y=0, z=1; a=b=1, c=0` and an updated
@@ -180,6 +191,8 @@ class Runnable(StateTraits):
           dtype=[('sample', 'i1', (6,)), ('energy', '<f8'), ('num_occurrences', '<i4')]),
           ['a', 'b', 'c', 'x', 'y', 'z'], {}, 'BINARY')
     """
+
+    # Implementations must support the iterate or run methods, stop is not required.
 
     def __init__(self, *args, **kwargs):
         super(Runnable, self).__init__(*args, **kwargs)

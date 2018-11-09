@@ -22,6 +22,21 @@ logger = logging.getLogger(__name__)
 
 
 class RacingBranches(Runnable):
+    """Runs parallel :class:`Branch` classes.
+
+    Args:
+        branches (:class:`Runnable`): Comma-separated branches.
+        endomorphic (bool): Set to False if you are not sure that the codomain of all branches
+            is the domain.
+
+    Examples:
+        >>> RacingBranches(                  # doctest: +SKIP
+            InterruptableTabuSampler(),
+            EnergyImpactDecomposer(max_size=2) |
+            QPUSubproblemAutoEmbeddingSampler()| SplatComposer()
+            ) | ArgMinFold()
+
+    """
 
     def __init__(self, *branches, endomorphic=True):
         """If known upfront codomain for all branches equals domain, state
@@ -58,6 +73,17 @@ class RacingBranches(Runnable):
 
 
 class ArgMinFold(Runnable):
+    """
+    Select the :class:`State` of the :class:`Branch` that minimizes the problem or subproblem.
+
+    Examples:
+        >>> RacingBranches(                  # doctest: +SKIP
+            InterruptableTabuSampler(),
+            EnergyImpactDecomposer(max_size=2) |
+            QPUSubproblemAutoEmbeddingSampler()| SplatComposer()
+            ) | ArgMinFold()
+
+    """
 
     def __init__(self, fn=None):
         """Return the state which minimizes the objective function `fn`."""
