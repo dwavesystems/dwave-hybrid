@@ -29,6 +29,7 @@ or from source::
 
     git clone https://github.com/dwavesystems/dwave-hybrid.git
     cd dwave-hybrid
+    pip install -r requirements.txt
     python setup.py install
 
 .. installation-end-marker
