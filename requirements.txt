@@ -3,7 +3,7 @@ dimod>=0.7.7
 minorminer
 dwave-system
 dwave-neal>=0.4.1
-dwave-tabu
+dwave-tabu>=0.1.2
 numpy
 networkx
 dwave-networkx>=0.6.6
