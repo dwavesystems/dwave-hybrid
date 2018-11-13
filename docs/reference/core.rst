@@ -34,10 +34,8 @@ Methods
 .. autosummary::
    :toctree: generated/
 
-   Branch.stop
-   Present.done
-   Present.result
    Runnable.run
    Runnable.stop
+   State.updated
    State.from_sample
    State.from_samples

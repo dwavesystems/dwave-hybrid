@@ -25,15 +25,18 @@ class RacingBranches(Runnable):
     """Runs parallel :class:`Branch` classes.
 
     Args:
-        branches (:class:`Runnable`): Comma-separated branches.
-        endomorphic (bool): Set to False if you are not sure that the codomain of all branches
+        *branches ([:class:`Runnable`]):
+            Comma-separated branches.
+        endomorphic (bool):
+            Set to ``False`` if you are not sure that the codomain of all branches
             is the domain.
 
     Examples:
-        >>> RacingBranches(                  # doctest: +SKIP
-            InterruptableTabuSampler(),
-            EnergyImpactDecomposer(max_size=2) |
-            QPUSubproblemAutoEmbeddingSampler()| SplatComposer()
+        >>> RacingBranches(                     # doctest: +SKIP
+                InterruptableTabuSampler(),
+                EnergyImpactDecomposer(max_size=2)
+                | QPUSubproblemAutoEmbeddingSampler()
+                | SplatComposer()
             ) | ArgMinFold()
 
     """
@@ -73,14 +76,17 @@ class RacingBranches(Runnable):
 
 
 class ArgMinFold(Runnable):
-    """
-    Select the :class:`State` of the :class:`Branch` that minimizes the problem or subproblem.
+    """Select the :class:`State` from the list of :class:`State`s (output of
+    :class:`RacingBranches`) that is best according to a metric defined with
+    a "key" function, `fn`. By default, `fn` favorizes states which contain a
+    sample with minimal energy.
 
     Examples:
-        >>> RacingBranches(                  # doctest: +SKIP
-            InterruptableTabuSampler(),
-            EnergyImpactDecomposer(max_size=2) |
-            QPUSubproblemAutoEmbeddingSampler()| SplatComposer()
+        >>> RacingBranches(                     # doctest: +SKIP
+                InterruptableTabuSampler(),
+                EnergyImpactDecomposer(max_size=2)
+                | QPUSubproblemAutoEmbeddingSampler()
+                | SplatComposer()
             ) | ArgMinFold()
 
     """

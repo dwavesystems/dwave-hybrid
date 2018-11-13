@@ -75,9 +75,8 @@ class State(PliableDict):
         >>> hybrid.core.State.from_sample(hybrid.utils.min_sample(bqm), bqm)   # doctest: +SKIP
         {'problem': BinaryQuadraticModel({0: -1, 1: -1}, {(0, 1): 2}, 0.0, Vartype.BINARY),
          'samples': SampleSet(rec.array([([0, 0], 0., 1)],
-         dtype=[('sample', 'i1', (2,)), ('energy', '<f8'), ('num_occurrences', '<i4')]), [0, 1], {}, 'BINARY'),
+            dtype=[('sample', 'i1', (2,)), ('energy', '<f8'), ('num_occurrences', '<i4')]), [0, 1], {}, 'BINARY'),
          'debug': {}}
-
     """
 
     def __init__(self, *args, **kwargs):
@@ -111,7 +110,6 @@ class State(PliableDict):
             >>> newstate = state.updated(problem="test")
             >>> newstate
             {'debug': {}, 'problem': 'test', 'samples': None}
-
         """
 
         overwrite = lambda a,b: b
@@ -157,7 +155,12 @@ class State(PliableDict):
 
 
 class Present(Future):
-    """Already resolved Future object."""
+    """Already resolved Future object.
+
+    From user's perspective, `Present` should be treated as `Future`. The only
+    difference is `Present` is "resolved" at construction time (implementation
+    detail).
+    """
 
     def __init__(self, result=None, exception=None):
         super(Present, self).__init__()
@@ -247,8 +250,8 @@ class Runnable(StateTraits):
 
         Returns state from `iterate`/`error`, or passes-thru an exception raised there.
         Blocks on `state` resolution and `iterate`/`error` execution .
-
         """
+
         try:
             state = future.result()
         except Exception as exc:
@@ -282,8 +285,8 @@ class Runnable(StateTraits):
             This code snippet runs one iteration of a sampler to produce a new state::
 
                 new_state = sampler.run(core.State.from_sample({'x': 0, 'y': 0}, bqm))
-
         """
+
         if defer:
             executor = async_executor
         else:
