@@ -23,14 +23,14 @@ logger = logging.getLogger(__name__)
 
 class RacingBranches(Runnable):
 
-    def __init__(self, *branches, endomorphic=True):
+    def __init__(self, *branches, **kwargs):
         """If known upfront codomain for all branches equals domain, state
         can safely be mixed in with branches' results. Otherwise set
         `endomorphic=False`.
         """
         super(RacingBranches, self).__init__()
         self.branches = branches
-        self.endomorphic = endomorphic
+        self.endomorphic = kwargs.get('endomorphic', True)
 
     def __str__(self):
         return " !! ".join("({})".format(b) for b in self.branches) or "(zero racing branches)"

@@ -37,7 +37,7 @@ def bqm_reduced_to(bqm, variables, sample, keep_offset=True):
         sample (dict/list): Mapping of variable labels to values or a list when labels
             are sequential integers. Must include all variables not specified in `variables`.
         keep_offset (bool, optional, default=True): If false, set the reduced binary quadratic
-            model’s offset to zero; otherwise, uses the caluclated energy offset.
+            model's offset to zero; otherwise, uses the caluclated energy offset.
 
     Returns:
             :class:`dimod.BinaryQuadraticModel`: A reduced BQM.
