@@ -33,7 +33,7 @@ setup(
     author=package_info['__author__'],
     author_email=package_info['__authoremail__'],
     description=package_info['__description__'],
-    #long_description=open('README.rst', encoding='utf-8').read(),
+    long_description=open('README.rst', encoding='utf-8').read(),
     url=package_info['__url__'],
     license=package_info['__license__'],
     packages=find_packages(),
