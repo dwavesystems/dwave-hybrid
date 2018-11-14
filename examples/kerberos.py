@@ -14,12 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from os.path import dirname
 import sys
-sys.path.insert(0, dirname(dirname(__file__)))
 
 import dimod
-from kerberos import KerberosSampler
+from hybrid.reference.kerberos import KerberosSampler
 
 problem = sys.argv[1]
 with open(problem) as fp:
