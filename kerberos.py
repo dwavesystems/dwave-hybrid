@@ -23,10 +23,9 @@ from hybrid.samplers import (
     QPUSubproblemAutoEmbeddingSampler,
     SimulatedAnnealingSubproblemSampler,
     InterruptableTabuSampler)
-from hybrid.decomposers import (
-    RandomSubproblemDecomposer, IdentityDecomposer, EnergyImpactDecomposer)
+from hybrid.decomposers import IdentityDecomposer, EnergyImpactDecomposer
 from hybrid.composers import SplatComposer
-from hybrid.core import State, SampleSet
+from hybrid.core import State
 from hybrid.flow import RacingBranches, ArgMinFold, SimpleIterator
 from hybrid.utils import random_sample
 
@@ -70,9 +69,6 @@ class KerberosSampler(dimod.Sampler):
             InterruptableTabuSampler(),
             IdentityDecomposer()
                 | SimulatedAnnealingSubproblemSampler(num_reads=1, sweeps=sa_sweeps)
-                | SplatComposer(),
-            RandomSubproblemDecomposer(size=subproblem_size)
-                | QPUSubproblemAutoEmbeddingSampler(num_reads=qpu_reads)
                 | SplatComposer(),
             EnergyImpactDecomposer(max_size=subproblem_size, min_diff=subproblem_size//2)
                 | QPUSubproblemAutoEmbeddingSampler(num_reads=qpu_reads)
