@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # Copyright 2018 D-Wave Systems Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,7 +13,9 @@
 # limitations under the License.
 
 """
-Kerberos prototype: runs N samplers in parallel. Behaves like a dimod sampler.
+Kerberos hybrid sampler runs 3 sampling branches in parallel. In each iteration,
+best results from tabu search and simulated annealing are combined with best
+results from QPU sampling a subproblem.
 """
 
 import dimod
@@ -49,26 +49,40 @@ class KerberosSampler(dimod.Sampler):
     parameters = None
 
     def __init__(self):
-        self.parameters = {'max_iter': [],
-                           'convergence': [],
-                           'num_reads': [],
-                           'sa_sweeps': [],
-                           'qpu_reads': [],
-                           'max_subproblem_size': []}
+        self.parameters = {
+            'init_sample': [],
+            'max_iter': [],
+            'convergence': [],
+            'num_reads': [],
+            'sa_reads': [],
+            'sa_sweeps': [],
+            'qpu_reads': [],
+            'max_subproblem_size': []
+        }
         self.properties = {}
 
-    def sample(self, bqm, init_solution=None, max_iter=100, convergence=10, num_reads=1,
-            sa_sweeps=1000, qpu_reads=100, max_subproblem_size=50):
+    def sample(self, bqm, init_sample=None, max_iter=100, convergence=10, num_reads=1,
+            sa_reads=1, sa_sweeps=1000, qpu_reads=100, max_subproblem_size=50):
         """Run Tabu search, Simulated annealing and QPU subproblem sampling (for
         high energy impact problem variables) in parallel and return the best
         samples.
         """
+
+        if callable(init_sample):
+            init_state_gen = lambda: State.from_sample(init_sample(), bqm)
+        elif init_sample is None:
+            init_state_gen = lambda: State.from_sample(random_sample(bqm), bqm)
+        elif isinstance(init_sample, dimod.SampleSet):
+            init_state_gen = lambda: State.from_sample(init_sample, bqm)
+        else:
+            raise TypeError("'init_sample' should be a SampleSet or a SampleSet generator")
+
         subproblem_size = min(len(bqm), max_subproblem_size)
 
         iteration = RacingBranches(
             InterruptableTabuSampler(),
             IdentityDecomposer()
-                | SimulatedAnnealingSubproblemSampler(num_reads=1, sweeps=sa_sweeps)
+                | SimulatedAnnealingSubproblemSampler(num_reads=sa_reads, sweeps=sa_sweeps)
                 | SplatComposer(),
             EnergyImpactDecomposer(max_size=subproblem_size, min_diff=subproblem_size//2)
                 | QPUSubproblemAutoEmbeddingSampler(num_reads=qpu_reads)
@@ -76,12 +90,15 @@ class KerberosSampler(dimod.Sampler):
         ) | ArgMinFold()
         main = SimpleIterator(iteration, max_iter=max_iter, convergence=convergence)
 
-        init_state = State.from_sample(random_sample(bqm), bqm)
-        final_state = main.run(init_state)
+        samples = []
+        energies = []
+        for _ in range(num_reads):
+            init_state = init_state_gen()
+            final_state = main.run(init_state)
+            # the best sample from each run is one "read"
+            ss = final_state.result().samples
+            ss.change_vartype(bqm.vartype, inplace=True)
+            samples.append(ss.first.sample)
+            energies.append(ss.first.energy)
 
-        return dimod.Response.from_future(final_state, result_hook=lambda f: f.result().samples)
-
-
-if __name__ == '__main__':
-    response = KerberosSampler().sample_ising({'a': -0.5, 'b': 1.0}, {('a', 'b'): -1})
-    print(list(response.data()))
+        return dimod.SampleSet.from_samples(samples, vartype=bqm.vartype, energy=energies)

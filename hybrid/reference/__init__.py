@@ -12,4 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from kerberos import KerberosSampler
+from hybrid.reference.kerberos import KerberosSampler
