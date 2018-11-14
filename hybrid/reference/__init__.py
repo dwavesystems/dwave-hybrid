@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # Copyright 2018 D-Wave Systems Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,15 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
-
-import dimod
 from hybrid.reference.kerberos import KerberosSampler
-
-problem = sys.argv[1]
-with open(problem) as fp:
-    bqm = dimod.BinaryQuadraticModel.from_coo(fp)
-
-solution = KerberosSampler().sample(bqm, max_iter=10, convergence=3)
-
-print("Solution: {!r}".format(solution.record))
