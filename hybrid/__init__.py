@@ -36,7 +36,7 @@ def _configure_logger(logger):
     return logger
 
 
-def _apply_loglevel_from_env(logger, env='HYBRID_LOG_LEVEL'):
+def _apply_loglevel_from_env(logger, env='DWAVE_HYBRID_LOG_LEVEL'):
     name = os.getenv(env) or os.getenv(env.upper()) or os.getenv(env.lower())
     if not name:
         return
