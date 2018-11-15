@@ -155,11 +155,11 @@ class State(PliableDict):
 
 
 class Present(Future):
-    """Already resolved Future object.
+    """Already resolved :class:`~concurrent.futures.Future` object.
 
-    From user's perspective, `Present` should be treated as `Future`. The only
-    difference is `Present` is "resolved" at construction time (implementation
-    detail).
+    From user's perspective, :class:`Present` should be treated just as another
+    :class:`~concurrent.futures.Future`. The only difference is :class:`Present`
+    is "resolved" at construction time (implementation detail).
     """
 
     def __init__(self, result=None, exception=None):
@@ -218,12 +218,13 @@ class Runnable(StateTraits):
         pass
 
     def iterate(self, state):
-        """Start a blocking iteration of an instantiated :class:`Runnable`.
-
-        Accepts a state and returns a new state.
+        """Execute one blocking iteration of an instantiated :class:`Runnable`.
 
         Args:
             state (:class:`State`): Computation state passed between connected components.
+
+        Returns:
+            :class:`State`: The new state.
 
         Examples:
             This code snippet runs one iteration of a sampler to produce a new state::
