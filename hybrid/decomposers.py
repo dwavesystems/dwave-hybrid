@@ -13,9 +13,9 @@
 # limitations under the License.
 
 import logging
-from itertools import cycle
 import collections
 import random
+from itertools import cycle
 
 import networkx as nx
 
@@ -26,6 +26,10 @@ from hybrid.utils import (
     bqm_induced_by, select_localsearch_adversaries, select_random_subgraph,
     chimera_tiles)
 
+__all__ = [
+    'IdentityDecomposer', 'EnergyImpactDecomposer', 'RandomSubproblemDecomposer',
+    'TilingChimeraDecomposer', 'RandomConstraintDecomposer',
+]
 
 logger = logging.getLogger(__name__)
 

@@ -15,16 +15,18 @@
 import os
 import logging
 
-import hybrid.core
-import hybrid.utils
-import hybrid.traits
-import hybrid.profiling
-import hybrid.exceptions
 
-import hybrid.flow
-import hybrid.samplers
-import hybrid.decomposers
-import hybrid.composers
+def _create_trace_loglevel(logging):
+    "Add TRACE log level and Logger.trace() method."
+
+    logging.TRACE = 5
+    logging.addLevelName(logging.TRACE, "TRACE")
+
+    def _trace(logger, message, *args, **kwargs):
+        if logger.isEnabledFor(logging.TRACE):
+            logger._log(logging.TRACE, message, args, **kwargs)
+
+    logging.Logger.trace = _trace
 
 
 def _configure_logger(logger):
@@ -36,11 +38,11 @@ def _configure_logger(logger):
     return logger
 
 
-def _apply_loglevel_from_env(logger, env='HYBRID_LOG_LEVEL'):
+def _apply_loglevel_from_env(logger, env='DWAVE_HYBRID_LOG_LEVEL'):
     name = os.getenv(env) or os.getenv(env.upper()) or os.getenv(env.lower())
     if not name:
         return
-    levels = {'debug': logging.DEBUG, 'info': logging.INFO,
+    levels = {'trace': logging.TRACE, 'debug': logging.DEBUG, 'info': logging.INFO,
               'warning': logging.WARNING, 'error': logging.ERROR}
     requested_level = levels.get(name.lower())
     if requested_level:
@@ -48,5 +50,18 @@ def _apply_loglevel_from_env(logger, env='HYBRID_LOG_LEVEL'):
 
 
 logger = logging.getLogger(__name__)
+_create_trace_loglevel(logging)
 _configure_logger(logger)
 _apply_loglevel_from_env(logger)
+
+
+import hybrid.core
+import hybrid.utils
+import hybrid.traits
+import hybrid.profiling
+import hybrid.exceptions
+
+import hybrid.flow
+import hybrid.samplers
+import hybrid.decomposers
+import hybrid.composers
