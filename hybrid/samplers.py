@@ -241,11 +241,12 @@ class InterruptableTabuSampler(TabuProblemSampler):
                        "timeout={self.timeout!r})").format(self=self)
 
     @tictoc('int_tabu_sample')
-    def _interruptable_iterate(self, state):
+    def iterate(self, state):
         start = time.time()
         iterno = 1
+        self._stop_event.clear()
         while True:
-            state = self.iterate(state)
+            state = super(InterruptableTabuSampler, self).iterate(state)
             runtime = time.time() - start
             timeout = self.max_timeout is not None and runtime >= self.max_timeout
             if self._stop_event.is_set() or timeout:
@@ -253,10 +254,6 @@ class InterruptableTabuSampler(TabuProblemSampler):
             iterno += 1
         return state.updated(debug=dict(sampler=str(self),
                                         runtime=runtime, iterno=iterno))
-
-    def run(self, state):
-        self._stop_event.clear()
-        return async_executor.submit(self._interruptable_iterate, state)
 
     def stop(self):
         self._stop_event.set()
