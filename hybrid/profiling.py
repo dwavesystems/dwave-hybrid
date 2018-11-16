@@ -133,6 +133,19 @@ def walk_inorder(runnable, visit, level=0):
         walk_inorder(child, visit, level+1)
 
 
-def pprint(runnable, indent=2):
+def print_structure(runnable, indent=2):
     """Pretty print `runnable` tree with `indent` spaces level indentation."""
     walk_inorder(runnable, lambda r, d: print(" "*indent*d, r.name, sep=''))
+
+
+def print_counters(runnable, indent=4):
+    def visit(runnable, level):
+        tab = " " * indent * level
+        print(tab, "* ", runnable.name, sep='')
+        for counter, val in runnable.counters.items():
+            line = "{tab}  - {counter!r}: cnt = {cnt}, time = {time:.3f} s".format(
+                tab=tab, counter=counter, cnt=len(val), time=sum(val))
+            print(line, sep='')
+        print()
+
+    walk_inorder(runnable, visit)
