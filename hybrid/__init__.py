@@ -15,17 +15,6 @@
 import os
 import logging
 
-import hybrid.core
-import hybrid.utils
-import hybrid.traits
-import hybrid.profiling
-import hybrid.exceptions
-
-import hybrid.flow
-import hybrid.samplers
-import hybrid.decomposers
-import hybrid.composers
-
 
 def _create_trace_loglevel(logging):
     "Add TRACE log level and Logger.trace() method."
@@ -64,3 +53,15 @@ logger = logging.getLogger(__name__)
 _create_trace_loglevel(logging)
 _configure_logger(logger)
 _apply_loglevel_from_env(logger)
+
+
+import hybrid.core
+import hybrid.utils
+import hybrid.traits
+import hybrid.profiling
+import hybrid.exceptions
+
+import hybrid.flow
+import hybrid.samplers
+import hybrid.decomposers
+import hybrid.composers

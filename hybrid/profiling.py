@@ -84,6 +84,13 @@ class tictoc(object):
         self.stop()
 
 
+class trace(tictoc):
+    """`tictoc` with TRACE loglevel default."""
+
+    def __init__(self, name=None, loglevel=logging.TRACE):
+        super(trace, self).__init__(name, loglevel)
+
+
 def make_count(counters):
     """Generate counter increment context manager specialized for handling
     counters in `counters` dictionary.
