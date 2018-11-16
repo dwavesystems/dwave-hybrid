@@ -116,3 +116,23 @@ def make_count(counters):
         counters.setdefault(counter_name, []).append(timer.dt)
 
     return _counted_mgr
+
+
+def iter_inorder(runnable):
+    """Inorder DFS traversal of `runnable`, as an iterator."""
+    yield runnable
+    for child in runnable:
+        for node in iter_inorder(child):
+            yield node
+
+
+def walk_inorder(runnable, visit, level=0):
+    """Inorder DFS traversal of `runnable`, as a callback `visit`."""
+    visit(runnable, level)
+    for child in runnable:
+        walk_inorder(child, visit, level+1)
+
+
+def pprint(runnable, indent=2):
+    """Pretty print `runnable` tree with `indent` spaces level indentation."""
+    walk_inorder(runnable, lambda r, d: print(" "*indent*d, r.name, sep=''))
