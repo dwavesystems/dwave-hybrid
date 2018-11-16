@@ -15,6 +15,7 @@
 import time
 import logging
 import functools
+from contextlib import contextmanager
 
 logger = logging.getLogger(__name__)
 
@@ -81,3 +82,30 @@ class tictoc(object):
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.stop()
+
+
+def make_count(counters):
+    """Generate counter increment context manager specialized for handling
+    counters in `counters` dictionary.
+
+    Args:
+        counters (dict): Counters storage.
+
+    Example:
+        counters = {}
+        count = make_count(counters)
+        with count('first'):
+            f()
+        # counters['first'] is now a list holding f's runtime
+    """
+
+    @contextmanager
+    def _counted_mgr(counter_name):
+        with tictoc(name=None, loglevel=None) as timer:
+            try:
+                yield None
+            finally:
+                pass
+        counters.setdefault(counter_name, []).append(timer.dt)
+
+    return _counted_mgr

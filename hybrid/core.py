@@ -15,8 +15,9 @@
 from collections import namedtuple
 from itertools import chain
 from copy import deepcopy
-import operator
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, Future, Executor
+import operator
+import logging
 
 from plucky import merge
 import dimod
@@ -24,6 +25,9 @@ from dimod import SampleSet
 
 from hybrid.traits import StateTraits
 from hybrid.utils import min_sample, sample_as_dict
+from hybrid.profiling import make_count
+
+logger = logging.getLogger(__name__)
 
 
 class ImmediateExecutor(Executor):
@@ -193,12 +197,16 @@ class Runnable(StateTraits):
         Response(rec.array([([1, 1, 1, 1, 1, 1], -1., 1)],
           dtype=[('sample', 'i1', (6,)), ('energy', '<f8'), ('num_occurrences', '<i4')]),
           ['a', 'b', 'c', 'x', 'y', 'z'], {}, 'BINARY')
-    """
 
-    # Implementations must support the iterate or run methods, stop is not required.
+    Note:
+        Implementations must support the iterate or run methods, stop is not required.
+    """
 
     def __init__(self, *args, **kwargs):
         super(Runnable, self).__init__(*args, **kwargs)
+
+        self.counters = {}
+        self.count = make_count(self.counters)
 
     def __str__(self):
         return self.name
@@ -253,17 +261,23 @@ class Runnable(StateTraits):
         Blocks on `state` resolution and `iterate`/`error` execution .
         """
 
-        try:
-            state = future.result()
-        except Exception as exc:
-            return self.error(exc)
+        with self.count('dispatch.resolve'):
+            try:
+                state = future.result()
+            except Exception as exc:
+                with self.count('dispatch.resolve.error'):
+                    return self.error(exc)
 
         if not getattr(self, '_initialized', False):
-            self.init(state)
+            with self.count('dispatch.init'):
+                self.init(state)
             setattr(self, '_initialized', True)
 
         self.validate_input_state_traits(state)
-        new_state = self.iterate(state)
+
+        with self.count('dispatch.iterate'):
+            new_state = self.iterate(state)
+
         self.validate_output_state_traits(new_state)
 
         return new_state
@@ -293,7 +307,8 @@ class Runnable(StateTraits):
         else:
             executor = immediate_executor
 
-        return executor.submit(self.dispatch, state)
+        with self.count('dispatch'):
+            return executor.submit(self.dispatch, state)
 
     def stop(self):
         """Terminate an iteration of an instantiated :class:`Runnable`."""
