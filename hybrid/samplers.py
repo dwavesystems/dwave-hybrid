@@ -18,6 +18,7 @@ samplers for problems and subproblems.
 """
 
 import time
+import logging
 import threading
 from collections import namedtuple
 
@@ -32,7 +33,13 @@ from hybrid.profiling import tictoc
 from hybrid.utils import random_sample
 from hybrid import traits
 
-import logging
+__all__ = [
+    'QPUSubproblemExternalEmbeddingSampler', 'QPUSubproblemAutoEmbeddingSampler',
+    'SimulatedAnnealingSubproblemSampler', 'InterruptableSimulatedAnnealingSubproblemSampler',
+    'TabuSubproblemSampler', 'TabuProblemSampler', 'InterruptableTabuSampler',
+    'RandomSubproblemSampler',
+]
+
 logger = logging.getLogger(__name__)
 
 

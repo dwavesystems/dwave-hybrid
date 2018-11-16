@@ -12,12 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+
 from hybrid.core import Runnable, SampleSet
 from hybrid.profiling import tictoc
 from hybrid.utils import updated_sample
 from hybrid import traits
 
-import logging
+__all__ = ['IdentityComposer', 'SplatComposer']
+
 logger = logging.getLogger(__name__)
 
 
