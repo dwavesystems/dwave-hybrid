@@ -56,6 +56,9 @@ class RacingBranches(Runnable):
     def __repr__(self):
         return "{}({})".format(self.name, ", ".join(map(repr, self.branches)))
 
+    def __iter__(self):
+        return iter(self.branches)
+
     def iterate(self, state):
         futures = [branch.run(state.updated(debug=None)) for branch in self.branches]
 
@@ -126,6 +129,9 @@ class SimpleIterator(Runnable):
     def __repr__(self):
         return ("{self.name}(runnable={self.runnable!r}, max_iter={self.max_iter!r}, "
                 "convergence={self.convergence!r})").format(self=self)
+
+    def __iter__(self):
+        return iter((self.runnable,))
 
     def iterate(self, state):
         last = state

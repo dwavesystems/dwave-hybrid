@@ -214,6 +214,9 @@ class Runnable(StateTraits):
     def __repr__(self):
         return "{}()".format(self.name)
 
+    def __iter__(self):
+        return iter(tuple())
+
     @property
     def name(self):
         return self.__class__.__name__
@@ -368,6 +371,9 @@ class Branch(Runnable):
 
     def __repr__(self):
         return "{}({})".format(self.name, ", ".join(map(repr, self.components)))
+
+    def __iter__(self):
+        return iter(self.components)
 
     def iterate(self, state):
         """Start an iteration of an instantiated :class:`Branch`.
