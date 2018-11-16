@@ -367,10 +367,10 @@ class Branch(Runnable):
             raise TypeError("branch can be composed only with Branch or Runnable")
 
     def __str__(self):
-        return " | ".join(map(str, self.components)) or "(empty branch)"
+        return " | ".join(map(str, self)) or "(empty branch)"
 
     def __repr__(self):
-        return "{}({})".format(self.name, ", ".join(map(repr, self.components)))
+        return "{}(components={!r})".format(self.name, tuple(self))
 
     def __iter__(self):
         return iter(self.components)

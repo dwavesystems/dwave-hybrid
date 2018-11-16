@@ -51,10 +51,10 @@ class RacingBranches(Runnable):
         self.endomorphic = kwargs.get('endomorphic', True)
 
     def __str__(self):
-        return " !! ".join("({})".format(b) for b in self.branches) or "(zero racing branches)"
+        return " !! ".join("({})".format(b) for b in self) or "(zero racing branches)"
 
     def __repr__(self):
-        return "{}({})".format(self.name, ", ".join(map(repr, self.branches)))
+        return "{}{!r}".format(self.name, tuple(self))
 
     def __iter__(self):
         return iter(self.branches)
