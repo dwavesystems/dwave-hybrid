@@ -47,7 +47,7 @@ class QBSolvProblemSampler(Runnable):
         self.bqm = bqm
         self.sampler = EmbeddingComposite(qpu) if qpu is not None else None
 
-    def iterate(self, state):
+    def next(self, state):
         response = QBSolv().sample(self.bqm, solver=self.sampler)
         return state.updated(samples=response,
                              debug=dict(sampler=self.name))

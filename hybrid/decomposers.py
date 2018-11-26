@@ -38,7 +38,7 @@ class IdentityDecomposer(Runnable, traits.ProblemDecomposer):
     """Selects a subproblem that is a full copy of the problem."""
 
     @tictoc('identity_decompose')
-    def iterate(self, state):
+    def next(self, state):
         return state.updated(subproblem=state.problem,
                              debug=dict(decomposer=str(self)))
 
@@ -84,7 +84,7 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
                 "min_diff={self.min_diff!r}, stride={self.stride!r})").format(self=self)
 
     @tictoc('energy_impact_decompose')
-    def iterate(self, state):
+    def next(self, state):
         bqm = state.problem
 
         if self.max_size > len(bqm):
@@ -138,7 +138,7 @@ class RandomSubproblemDecomposer(Runnable, traits.ProblemDecomposer):
         return "{self}(size={self.size!r})".format(self=self)
 
     @tictoc('random_decompose')
-    def iterate(self, state):
+    def next(self, state):
         bqm = state.problem
 
         if self.size > len(bqm):
@@ -183,7 +183,7 @@ class TilingChimeraDecomposer(Runnable, traits.ProblemDecomposer, traits.Embeddi
             self.blocks = cycle(self.blocks)
 
     @tictoc('tiling_chimera_decompose')
-    def iterate(self, state):
+    def next(self, state):
         """Each call returns a subsequent block of size `self.size` Chimera cells."""
         bqm = state.problem
         pos, embedding = next(self.blocks)
@@ -234,7 +234,7 @@ class RandomConstraintDecomposer(Runnable, traits.ProblemDecomposer):
                     CG.add_edge(i, ci)
 
     @tictoc('random_constraint_decomposer')
-    def iterate(self, state):
+    def next(self, state):
         CG = self.constraint_graph
         size = self.size
         constraints = self.constraints

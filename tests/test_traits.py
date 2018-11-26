@@ -25,14 +25,14 @@ class TestRunnableTraits(unittest.TestCase):
 
     def test_valid_input(self):
         class Component(Runnable, traits.SubproblemIntaking):
-            def iterate(self, state):
+            def next(self, state):
                 return True
 
         self.assertTrue(Component().run(State(subproblem=None)).result())
 
     def test_invalid_input(self):
         class Component(Runnable, traits.SubproblemIntaking):
-            def iterate(self, state):
+            def next(self, state):
                 return True
 
         with self.assertRaises(traits.StateTraitMissingError):
@@ -40,14 +40,14 @@ class TestRunnableTraits(unittest.TestCase):
 
     def test_valid_output(self):
         class Component(Runnable, traits.SubproblemProducing):
-            def iterate(self, state):
+            def next(self, state):
                 return state.updated(subproblem=True)
 
         self.assertTrue(Component().run(State()).result().subproblem)
 
     def test_invalid_output(self):
         class Component(Runnable, traits.SubproblemProducing):
-            def iterate(self, state):
+            def next(self, state):
                 return state
 
         with self.assertRaises(traits.StateTraitMissingError):
@@ -58,7 +58,7 @@ class TestMultipleTraits(unittest.TestCase):
 
     def test_explicit_siso_system(self):
         class Component(Runnable, traits.SubproblemIntaking, traits.SubsamplesProducing):
-            def iterate(self, state):
+            def next(self, state):
                 return state.updated(subsamples=True)
 
         self.assertTrue(Component().run(State(subproblem=True)).result().subsamples)
@@ -69,7 +69,7 @@ class TestMultipleTraits(unittest.TestCase):
     def test_explicit_mimo_system(self):
         class Component(Runnable, traits.EmbeddingIntaking, traits.SubproblemIntaking,
                                   traits.SubsamplesProducing, traits.SamplesProducing):
-            def iterate(self, state):
+            def next(self, state):
                 return state.updated(samples=True, subsamples=True)
 
         self.assertTrue(Component().run(State(embedding=True, subproblem=True)).result().samples)
@@ -82,7 +82,7 @@ class TestMultipleTraits(unittest.TestCase):
 
     def test_composed_traits(self):
         class Component(Runnable, traits.ProblemDecomposer):
-            def iterate(self, state):
+            def next(self, state):
                 return state.updated(subproblem=True)
 
         self.assertTrue(Component().run(State(problem=True)).result().subproblem)
@@ -96,7 +96,7 @@ class TestMultipleTraits(unittest.TestCase):
         # ProblemDecomposer ~ ProblemIntaking, SamplesIntaking, SubproblemProducing
 
         class Component(Runnable, traits.ProblemDecomposer):
-            def iterate(self, state):
+            def next(self, state):
                 return state
 
         with self.assertRaises(traits.StateTraitMissingError):
@@ -109,7 +109,7 @@ class TestMultipleTraits(unittest.TestCase):
         # SubproblemComposer ~ SubproblemIntaking, SubsamplesIntaking, ProblemIntaking, SamplesProducing
 
         class Component(Runnable, traits.SubproblemComposer):
-            def iterate(self, state):
+            def next(self, state):
                 return state
 
         with self.assertRaises(traits.StateTraitMissingError):

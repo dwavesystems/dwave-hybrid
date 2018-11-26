@@ -28,7 +28,7 @@ class IdentityComposer(Runnable, traits.SubproblemComposer):
     """Copy `subsamples` to `samples` verbatim."""
 
     @tictoc('identity_compose')
-    def iterate(self, state):
+    def next(self, state):
         return state.updated(samples=state.subsamples, debug=dict(composer=str(self)))
 
 
@@ -36,7 +36,7 @@ class SplatComposer(Runnable, traits.SubproblemComposer):
     """A composer that overwrites current samples with subproblem samples."""
 
     @tictoc('splat_compose')
-    def iterate(self, state):
+    def next(self, state):
         # update the first sample in `state.sampleset`, inplace
         # XXX: assume one global sample, one subsample
         # TODO: generalize
