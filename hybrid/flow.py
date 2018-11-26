@@ -81,7 +81,7 @@ class RacingBranches(Runnable):
 class ArgMinFold(Runnable):
     """Select the :class:`State` from the list of :class:`State`s (output of
     :class:`RacingBranches`) that is best according to a metric defined with
-    a "key" function, `fn`. By default, `fn` favorizes states which contain a
+    a "key" function, `key`. By default, `key` favorizes states which contain a
     sample with minimal energy.
 
     Examples:
@@ -94,25 +94,25 @@ class ArgMinFold(Runnable):
 
     """
 
-    def __init__(self, fn=None):
-        """Return the state which minimizes the objective function `fn`."""
+    def __init__(self, key=None):
+        """Return the state which minimizes the objective function `key`."""
         super(ArgMinFold, self).__init__()
-        if fn is None:
-            fn = attrgetter('samples.first.energy')
-        self.fn = fn
+        if key is None:
+            key = attrgetter('samples.first.energy')
+        self.key = key
 
     def __str__(self):
         return "[]>"
 
     def __repr__(self):
-        return "{}(fn={!r})".format(self.name, self.fn)
+        return "{}(key={!r})".format(self.name, self.key)
 
     def next(self, states):
         # debug info
         for s in states:
-            logger.debug("State: arg={arg}, debug={s.debug!r}".format(arg=self.fn(s), s=s))
+            logger.debug("State: arg={arg}, debug={s.debug!r}".format(arg=self.key(s), s=s))
 
-        return min(states, key=self.fn)
+        return min(states, key=self.key)
 
 
 class SimpleIterator(Runnable):
