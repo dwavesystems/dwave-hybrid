@@ -29,7 +29,6 @@ from tabu import TabuSampler
 from neal import SimulatedAnnealingSampler
 
 from hybrid.core import async_executor, Runnable, SampleSet
-from hybrid.profiling import tictoc
 from hybrid.utils import random_sample
 from hybrid import traits
 
@@ -65,7 +64,6 @@ class QPUSubproblemExternalEmbeddingSampler(Runnable, traits.SubproblemSampler, 
         return ("{self}(num_reads={self.num_reads!r}, "
                        "qpu_sampler={self.sampler!r})").format(self=self)
 
-    @tictoc('qpu_ext_embedding_sample')
     def next(self, state):
         sampler = FixedEmbeddingComposite(self.sampler, embedding=state.embedding)
         response = sampler.sample(state.subproblem, num_reads=self.num_reads)
@@ -95,7 +93,6 @@ class QPUSubproblemAutoEmbeddingSampler(Runnable, traits.SubproblemSampler):
         return ("{self}(num_reads={self.num_reads!r}, "
                        "qpu_sampler={self.sampler!r})").format(self=self)
 
-    @tictoc('qpu_auto_embedding_sample')
     def next(self, state):
         response = self.sampler.sample(state.subproblem, num_reads=self.num_reads)
         return state.updated(subsamples=response,
@@ -123,7 +120,6 @@ class SimulatedAnnealingSubproblemSampler(Runnable, traits.SubproblemSampler):
         return ("{self}(num_reads={self.num_reads!r}, "
                        "sweeps={self.sweeps!r})").format(self=self)
 
-    @tictoc('subneal_sample')
     def next(self, state):
         subbqm = state.subproblem
         response = self.sampler.sample(
@@ -167,7 +163,6 @@ class TabuSubproblemSampler(Runnable, traits.SubproblemSampler):
                        "tenure={self.tenure!r}, "
                        "timeout={self.timeout!r})").format(self=self)
 
-    @tictoc('subtabu_sample')
     def next(self, state):
         subbqm = state.subproblem
         response = self.sampler.sample(
@@ -202,7 +197,6 @@ class TabuProblemSampler(Runnable, traits.ProblemSampler):
                        "tenure={self.tenure!r}, "
                        "timeout={self.timeout!r})").format(self=self)
 
-    @tictoc('tabu_sample')
     def next(self, state):
         sampleset = self.sampler.sample(
             state.problem, init_solution=state.samples, tenure=self.tenure,
@@ -240,7 +234,6 @@ class InterruptableTabuSampler(TabuProblemSampler):
         return ("{self}(quantum_timeout={self.quantum_timeout!r}, "
                        "timeout={self.timeout!r})").format(self=self)
 
-    @tictoc('int_tabu_sample')
     def next(self, state):
         start = time.time()
         iterno = 1
@@ -262,7 +255,6 @@ class InterruptableTabuSampler(TabuProblemSampler):
 class RandomSubproblemSampler(Runnable, traits.SubproblemSampler):
     """A random sample generator for a subproblem."""
 
-    @tictoc('random_sample')
     def next(self, state):
         bqm = state.subproblem
         sample = random_sample(bqm)

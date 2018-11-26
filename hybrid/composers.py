@@ -15,7 +15,6 @@
 import logging
 
 from hybrid.core import Runnable, SampleSet
-from hybrid.profiling import tictoc
 from hybrid.utils import updated_sample
 from hybrid import traits
 
@@ -27,7 +26,6 @@ logger = logging.getLogger(__name__)
 class IdentityComposer(Runnable, traits.SubproblemComposer):
     """Copy `subsamples` to `samples` verbatim."""
 
-    @tictoc('identity_compose')
     def next(self, state):
         return state.updated(samples=state.subsamples, debug=dict(composer=str(self)))
 
@@ -35,7 +33,6 @@ class IdentityComposer(Runnable, traits.SubproblemComposer):
 class SplatComposer(Runnable, traits.SubproblemComposer):
     """A composer that overwrites current samples with subproblem samples."""
 
-    @tictoc('splat_compose')
     def next(self, state):
         # update the first sample in `state.sampleset`, inplace
         # XXX: assume one global sample, one subsample

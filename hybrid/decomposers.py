@@ -20,7 +20,6 @@ from itertools import cycle
 import networkx as nx
 
 from hybrid.core import Runnable, State
-from hybrid.profiling import tictoc
 from hybrid import traits
 from hybrid.utils import (
     bqm_induced_by, select_localsearch_adversaries, select_random_subgraph,
@@ -37,7 +36,6 @@ logger = logging.getLogger(__name__)
 class IdentityDecomposer(Runnable, traits.ProblemDecomposer):
     """Selects a subproblem that is a full copy of the problem."""
 
-    @tictoc('identity_decompose')
     def next(self, state):
         return state.updated(subproblem=state.problem,
                              debug=dict(decomposer=str(self)))
@@ -83,7 +81,6 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
         return ("{self}(max_size={self.max_size!r}, min_gain={self.min_gain!r}, "
                 "min_diff={self.min_diff!r}, stride={self.stride!r})").format(self=self)
 
-    @tictoc('energy_impact_decompose')
     def next(self, state):
         bqm = state.problem
 
@@ -137,7 +134,6 @@ class RandomSubproblemDecomposer(Runnable, traits.ProblemDecomposer):
     def __repr__(self):
         return "{self}(size={self.size!r})".format(self=self)
 
-    @tictoc('random_decompose')
     def next(self, state):
         bqm = state.problem
 
@@ -182,7 +178,6 @@ class TilingChimeraDecomposer(Runnable, traits.ProblemDecomposer, traits.Embeddi
         if self.loop:
             self.blocks = cycle(self.blocks)
 
-    @tictoc('tiling_chimera_decompose')
     def next(self, state):
         """Each call returns a subsequent block of size `self.size` Chimera cells."""
         bqm = state.problem
@@ -233,7 +228,6 @@ class RandomConstraintDecomposer(Runnable, traits.ProblemDecomposer):
                 if any(v in const for v in self.constraints[i]):
                     CG.add_edge(i, ci)
 
-    @tictoc('random_constraint_decomposer')
     def next(self, state):
         CG = self.constraint_graph
         size = self.size
