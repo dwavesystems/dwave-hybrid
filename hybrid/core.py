@@ -204,7 +204,7 @@ class Runnable(StateTraits):
         super(Runnable, self).__init__(*args, **kwargs)
 
         self.counters = {}
-        self.count = make_count(self.counters)
+        self.count = make_count(self.counters, prefix=self.name, loglevel=logging.TRACE)
 
     def __str__(self):
         return self.name

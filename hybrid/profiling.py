@@ -91,9 +91,9 @@ class trace(tictoc):
         super(trace, self).__init__(name, loglevel)
 
 
-def make_count(counters):
+def make_count(counters, prefix=None, loglevel=None):
     """Generate counter increment context manager specialized for handling
-    counters in `counters` dictionary.
+    counters in the provided `counters` dictionary.
 
     Args:
         counters (dict): Counters storage.
@@ -101,14 +101,18 @@ def make_count(counters):
     Example:
         counters = {}
         count = make_count(counters)
-        with count('first'):
-            f()
-        # counters['first'] is now a list holding f's runtime
+
+        for _ in range(10):
+            with count('f'):
+                f()
+
+        # counters['f'] is now a list holding 10 runtimes of `f`
     """
 
     @contextmanager
     def _counted_mgr(counter_name):
-        with tictoc(name=None, loglevel=None) as timer:
+        name = '.'.join([prefix or '', counter_name])
+        with tictoc(name=name, loglevel=loglevel) as timer:
             try:
                 yield None
             finally:
