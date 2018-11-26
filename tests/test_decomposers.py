@@ -31,7 +31,7 @@ class TestEnergyImpactDecomposer(unittest.TestCase):
 
         state = State.from_sample({'a': 1, 'b': 1, 'c': -1}, self.notall)
         eid = EnergyImpactDecomposer(max_size=1, min_gain=0)
-        nextstate = eid.iterate(state)
+        nextstate = eid.next(state)
         self.assertDictEqual(nextstate.subproblem.linear, {'c': 2})
         self.assertDictEqual(nextstate.subproblem.quadratic, {})
 
@@ -40,7 +40,7 @@ class TestEnergyImpactDecomposer(unittest.TestCase):
 
         state = State.from_sample({'a': 1, 'b': 1, 'c': -1}, self.notall)
         eid = EnergyImpactDecomposer(max_size=3, min_gain=None)
-        nextstate = eid.iterate(state)
+        nextstate = eid.next(state)
         self.assertDictEqual(nextstate.subproblem.adj, self.notall.adj)
 
     def test_adaptive_vars(self):
@@ -48,7 +48,7 @@ class TestEnergyImpactDecomposer(unittest.TestCase):
 
         state = State.from_sample({'a': 1, 'b': 1, 'c': -1}, self.notall)
         eid = EnergyImpactDecomposer(max_size=3, min_gain=2.0)
-        nextstate = eid.iterate(state)
+        nextstate = eid.next(state)
         self.assertDictEqual(nextstate.subproblem.linear, {'c': 2})
         self.assertDictEqual(nextstate.subproblem.quadratic, {})
 
@@ -58,7 +58,7 @@ class TestEnergyImpactDecomposer(unittest.TestCase):
         state = State.from_sample({'a': 1, 'b': 1, 'c': -1}, self.notall)
         eid = EnergyImpactDecomposer(max_size=3, min_gain=5.0)
         with self.assertRaises(ValueError):
-            nextstate = eid.iterate(state)
+            nextstate = eid.next(state)
 
 
 class TestConstraintDecomposer(unittest.TestCase):
@@ -80,7 +80,7 @@ class TestConstraintDecomposer(unittest.TestCase):
         for i in range(len(constraints)):
             self.assertIn(i, G.nodes)
 
-    def test_iterate(self):
+    def test_next(self):
         bqm = dimod.BinaryQuadraticModel.empty(dimod.SPIN)
 
         variables = list('abcdefg')

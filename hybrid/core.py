@@ -192,14 +192,12 @@ class Runnable(StateTraits):
         >>> # Set up the sampler runnable
         >>> sampler = samplers.TabuProblemSampler(bqm, tenure=2, timeout=5)
         >>> # Run one iteration of the sampler
-        >>> new_state = sampler.iterate(core.State.from_sample({'x': 0, 'y': 0, 'z': 1, 'a': 1, 'b': 1, 'c': 0}, bqm))
+        >>> new_state = sampler.next(core.State.from_sample({'x': 0, 'y': 0, 'z': 1, 'a': 1, 'b': 1, 'c': 0}, bqm))
         >>> print(new_state.samples)      # doctest: +SKIP
         Response(rec.array([([1, 1, 1, 1, 1, 1], -1., 1)],
           dtype=[('sample', 'i1', (6,)), ('energy', '<f8'), ('num_occurrences', '<i4')]),
           ['a', 'b', 'c', 'x', 'y', 'z'], {}, 'BINARY')
 
-    Note:
-        Implementations must support the iterate or run methods, stop is not required.
     """
 
     def __init__(self, *args, **kwargs):
@@ -222,13 +220,13 @@ class Runnable(StateTraits):
         return self.__class__.__name__
 
     def init(self, state):
-        """Run prior to the first iterate/run, with the first state received.
+        """Run prior to the first next/run, with the first state received.
 
         Default to NOP.
         """
         pass
 
-    def iterate(self, state):
+    def next(self, state):
         """Execute one blocking iteration of an instantiated :class:`Runnable`.
 
         Args:
@@ -240,7 +238,7 @@ class Runnable(StateTraits):
         Examples:
             This code snippet runs one iteration of a sampler to produce a new state::
 
-                new_state = sampler.iterate(core.State.from_sample({'x': 0, 'y': 0}, bqm))
+                new_state = sampler.next(core.State.from_sample({'x': 0, 'y': 0}, bqm))
 
         """
         raise NotImplementedError
@@ -255,13 +253,13 @@ class Runnable(StateTraits):
         raise exc
 
     def dispatch(self, future):
-        """Dispatch `state` got by resolving `future` to either `iterate` or `error`.
+        """Dispatch `state` got by resolving `future` to either `next` or `error`.
 
         Args:
             state (:class:`concurrent.futures.Future`-like object): :class:`State` future.
 
-        Returns state from `iterate`/`error`, or passes-thru an exception raised there.
-        Blocks on `state` resolution and `iterate`/`error` execution .
+        Returns state from `next`/`error`, or passes-thru an exception raised there.
+        Blocks on `state` resolution and `next`/`error` execution .
         """
 
         with self.count('dispatch.resolve'):
@@ -278,8 +276,8 @@ class Runnable(StateTraits):
 
         self.validate_input_state_traits(state)
 
-        with self.count('dispatch.iterate'):
-            new_state = self.iterate(state)
+        with self.count('dispatch.next'):
+            new_state = self.next(state)
 
         self.validate_output_state_traits(new_state)
 
@@ -343,7 +341,7 @@ class Branch(Runnable):
         >>> branch = EnergyImpactDecomposer(bqm, max_size=6, min_gain=-10) |
         ...                  QPUSubproblemAutoEmbeddingSampler(num_reads=2) |
         ...                  SplatComposer(bqm)
-        >>> new_state = branch.iterate(core.State.from_sample(min_sample(bqm), bqm)
+        >>> new_state = branch.next(core.State.from_sample(min_sample(bqm), bqm)
         >>> print(new_state.subsamples)      # doctest: +SKIP
         Response(rec.array([([-1,  1, -1,  1, -1,  1], -5., 1),
            ([ 1, -1,  1, -1, -1,  1], -5., 1)],
@@ -375,7 +373,7 @@ class Branch(Runnable):
     def __iter__(self):
         return iter(self.components)
 
-    def iterate(self, state):
+    def next(self, state):
         """Start an iteration of an instantiated :class:`Branch`.
 
         Accepts a state and returns a new state.
@@ -387,7 +385,7 @@ class Branch(Runnable):
         Examples:
             This code snippet runs one iteration of a branch to produce a new state::
 
-                new_state = branch.iterate(core.State.from_sample(min_sample(bqm), bqm)
+                new_state = branch.next(core.State.from_sample(min_sample(bqm), bqm)
 
         """
         for component in self.components:
@@ -498,7 +496,7 @@ class HybridRunnable(Runnable):
         self.inputs.add(self.input)
         self.outputs.add(self.output)
 
-    def iterate(self, state):
+    def next(self, state):
         response = self.sampler.sample(state[self.input], **self.sample_kwargs)
         return state.updated(**{self.output: response})
 

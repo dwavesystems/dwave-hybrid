@@ -59,7 +59,7 @@ class RacingBranches(Runnable):
     def __iter__(self):
         return iter(self.branches)
 
-    def iterate(self, state):
+    def next(self, state):
         futures = [branch.run(state.updated(debug=None)) for branch in self.branches]
 
         states = []
@@ -107,7 +107,7 @@ class ArgMinFold(Runnable):
     def __repr__(self):
         return "{}(fn={!r})".format(self.name, self.fn)
 
-    def iterate(self, states):
+    def next(self, states):
         # debug info
         for s in states:
             logger.debug("State: arg={arg}, debug={s.debug!r}".format(arg=self.fn(s), s=s))
@@ -133,7 +133,7 @@ class SimpleIterator(Runnable):
     def __iter__(self):
         return iter((self.runnable,))
 
-    def iterate(self, state):
+    def next(self, state):
         last = state
         cnt = self.convergence
 
