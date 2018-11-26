@@ -117,38 +117,48 @@ class ArgMinFold(Runnable):
 
 class SimpleIterator(Runnable):
 
-    def __init__(self, runnable, max_iter=1000, convergence=10):
+    def __init__(self, runnable, max_iter=1000, convergence=10, key=None):
+        """Iterate `runnable` for up to `max_iter` times, or until state quality
+        metric defined via `key` function shows no improvements for at least
+        `convergence` times.
+        """
         super(SimpleIterator, self).__init__()
         self.runnable = runnable
         self.max_iter = max_iter
         self.convergence = convergence
+        if key is None:
+            key = attrgetter('samples.first.energy')
+        self.key = key
 
     def __str__(self):
         return "Loop over {}".format(self.runnable)
 
     def __repr__(self):
         return ("{self.name}(runnable={self.runnable!r}, max_iter={self.max_iter!r}, "
-                "convergence={self.convergence!r})").format(self=self)
+                "convergence={self.convergence!r}, key={self.key!r})").format(self=self)
 
     def __iter__(self):
         return iter((self.runnable,))
 
     def next(self, state):
         last = state
+        last_key = self.key(last)
         cnt = self.convergence
 
         for iterno in range(self.max_iter):
             state = self.runnable.run(state).result()
+            state_key = self.key(state)
 
-            logger.info("iterno={i}, State: energy={s.samples.first.energy}, debug={s.debug!r}".format(i=iterno, s=state))
+            logger.info("iterno={iterno}, State: key={key}, debug={debug!r}".format(
+                iterno=iterno, key=state_key, debug=state.debug))
 
-            if state.samples.first.energy == last.samples.first.energy:
+            if state_key == last_key:
                 cnt -= 1
             else:
                 cnt = self.convergence
             if cnt <= 0:
                 break
 
-            last = state
+            last_key = state_key
 
         return state.updated(debug=dict(n_iter=iterno+1))
