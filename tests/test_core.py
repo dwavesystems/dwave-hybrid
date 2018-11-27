@@ -12,12 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import unittest
 import concurrent.futures
+import logging
+import itertools
 
 import dimod
 from tabu import TabuSampler
 
+import hybrid
 from hybrid.core import (
     PliableDict, State, SampleSet, HybridSampler,
     HybridRunnable, HybridProblemRunnable, HybridSubproblemRunnable)
@@ -152,3 +156,29 @@ class TestHybridRunnable(unittest.TestCase):
 
         self.assertIsInstance(response, concurrent.futures.Future)
         self.assertEqual(response.result().samples.record[0].energy, -3.0)
+
+
+class TestLogging(unittest.TestCase):
+
+    def test_init(self):
+        self.assertTrue(hasattr(logging, 'TRACE'))
+        self.assertEqual(getattr(logging, 'TRACE'), 5)
+
+        logger = logging.getLogger(__name__)
+        self.assertTrue(callable(logger.trace))
+
+    def test_loglevel_from_env(self):
+        logger = logging.getLogger(__name__)
+
+        def ll_check(env, name):
+            os.environ[env] = name
+            hybrid._apply_loglevel_from_env(logger)
+            self.assertEqual(logger.getEffectiveLevel(), getattr(logging, name.upper()))
+
+        levels = ('trace', 'debug', 'info', 'warning', 'error', 'critical')
+        combinations = itertools.product(
+            ['DWAVE_HYBRID_LOG_LEVEL'],
+            itertools.chain((l.lower() for l in levels), (l.upper() for l in levels)))
+
+        for env, name in combinations:
+            ll_check(env, name)
