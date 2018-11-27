@@ -29,6 +29,7 @@ from hybrid.decomposers import IdentityDecomposer
 from hybrid.composers import IdentityComposer
 from hybrid.samplers import TabuProblemSampler
 from hybrid.utils import min_sample, sample_as_dict
+from hybrid.testing import isolated_environ
 
 
 class TestPliableDict(unittest.TestCase):
@@ -171,13 +172,14 @@ class TestLogging(unittest.TestCase):
         logger = logging.getLogger(__name__)
 
         def ll_check(env, name):
-            os.environ[env] = name
-            hybrid._apply_loglevel_from_env(logger)
-            self.assertEqual(logger.getEffectiveLevel(), getattr(logging, name.upper()))
+            with isolated_environ():
+                os.environ[env] = name
+                hybrid._apply_loglevel_from_env(logger)
+                self.assertEqual(logger.getEffectiveLevel(), getattr(logging, name.upper()))
 
         levels = ('trace', 'debug', 'info', 'warning', 'error', 'critical')
         combinations = itertools.product(
-            ['DWAVE_HYBRID_LOG_LEVEL'],
+            ['DWAVE_HYBRID_LOG_LEVEL', 'dwave_hybrid_log_level'],
             itertools.chain((l.lower() for l in levels), (l.upper() for l in levels)))
 
         for env, name in combinations:
