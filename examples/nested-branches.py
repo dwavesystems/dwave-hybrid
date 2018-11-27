@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import sys
+import operator
 
 import dimod
 
@@ -41,7 +42,7 @@ iteration = RacingBranches(
             TabuSubproblemSampler(tenure=20, timeout=10),
             endomorphic=False
         )
-        | ArgMinFold(lambda state: state.subsamples.record[0].energy)
+        | ArgMinFold(operator.attrgetter('subsamples.first.energy'))
         | SplatComposer()
 ) | ArgMinFold()
 
@@ -51,4 +52,4 @@ init_state = State.from_sample(min_sample(bqm), bqm)
 
 solution = main.run(init_state).result()
 
-print("Solution: energy={s.samples.first.energy}, debug={s.debug!r}".format(s=solution))
+print("Solution: energy={s.samples.first.energy}".format(s=solution))

@@ -60,15 +60,28 @@ class RacingBranches(Runnable):
         return iter(self.branches)
 
     def next(self, state):
-        futures = [branch.run(state.updated(debug=None)) for branch in self.branches]
+        future_to_branch = {
+            branch.run(state.updated()): branch for branch in self.branches
+        }
 
         states = []
         if self.endomorphic:
             states.append(state)
-        for f in concurrent.futures.as_completed(futures):
-            # as soon as one is done, stop all others
-            for branch in self.branches:
-                branch.stop()
+
+        # as soon as one is done, stop all others
+        done, _ = concurrent.futures.wait(
+            future_to_branch,
+            return_when=concurrent.futures.FIRST_COMPLETED)
+        self.stop()
+
+        # debug info
+        branch = future_to_branch[done.pop()]
+        idx = self.branches.index(branch)
+        logger.debug("{name} won idx={idx} branch={branch!r}".format(
+            name=self.name, idx=idx, branch=branch))
+
+        # collect resolved states
+        for f in concurrent.futures.as_completed(future_to_branch):
             states.append(f.result())
 
         return states
@@ -81,7 +94,7 @@ class RacingBranches(Runnable):
 class ArgMinFold(Runnable):
     """Select the :class:`State` from the list of :class:`State`s (output of
     :class:`RacingBranches`) that is best according to a metric defined with
-    a "key" function, `fn`. By default, `fn` favorizes states which contain a
+    a "key" function, `key`. By default, `key` favorizes states which contain a
     sample with minimal energy.
 
     Examples:
@@ -94,61 +107,72 @@ class ArgMinFold(Runnable):
 
     """
 
-    def __init__(self, fn=None):
-        """Return the state which minimizes the objective function `fn`."""
+    def __init__(self, key=None):
+        """Return the state which minimizes the objective function `key`."""
         super(ArgMinFold, self).__init__()
-        if fn is None:
-            fn = attrgetter('samples.first.energy')
-        self.fn = fn
+        if key is None:
+            key = attrgetter('samples.first.energy')
+        self.key = key
 
     def __str__(self):
         return "[]>"
 
     def __repr__(self):
-        return "{}(fn={!r})".format(self.name, self.fn)
+        return "{}(key={!r})".format(self.name, self.key)
 
     def next(self, states):
         # debug info
-        for s in states:
-            logger.debug("State: arg={arg}, debug={s.debug!r}".format(arg=self.fn(s), s=s))
+        for idx, state in enumerate(states):
+            logger.debug("{name} State(idx={idx}, arg={arg})".format(
+                name=self.name, idx=idx, arg=self.key(state)))
 
-        return min(states, key=self.fn)
+        return min(states, key=self.key)
 
 
 class SimpleIterator(Runnable):
 
-    def __init__(self, runnable, max_iter=1000, convergence=10):
+    def __init__(self, runnable, max_iter=1000, convergence=10, key=None):
+        """Iterate `runnable` for up to `max_iter` times, or until state quality
+        metric defined via `key` function shows no improvements for at least
+        `convergence` times.
+        """
         super(SimpleIterator, self).__init__()
         self.runnable = runnable
         self.max_iter = max_iter
         self.convergence = convergence
+        if key is None:
+            key = attrgetter('samples.first.energy')
+        self.key = key
 
     def __str__(self):
         return "Loop over {}".format(self.runnable)
 
     def __repr__(self):
         return ("{self.name}(runnable={self.runnable!r}, max_iter={self.max_iter!r}, "
-                "convergence={self.convergence!r})").format(self=self)
+                "convergence={self.convergence!r}, key={self.key!r})").format(self=self)
 
     def __iter__(self):
         return iter((self.runnable,))
 
     def next(self, state):
         last = state
+        last_key = self.key(last)
         cnt = self.convergence
 
         for iterno in range(self.max_iter):
             state = self.runnable.run(state).result()
+            state_key = self.key(state)
 
-            logger.info("iterno={i}, State: energy={s.samples.first.energy}, debug={s.debug!r}".format(i=iterno, s=state))
+            logger.info("{name} Iteration(iterno={iterno}, best_state_key={key})".format(
+                name=self.name, iterno=iterno, key=state_key))
 
-            if state.samples.first.energy == last.samples.first.energy:
+            if state_key == last_key:
                 cnt -= 1
             else:
                 cnt = self.convergence
             if cnt <= 0:
                 break
 
-            last = state
+            last_key = state_key
 
-        return state.updated(debug=dict(n_iter=iterno+1))
+        return state

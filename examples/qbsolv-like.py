@@ -46,4 +46,4 @@ init_state = State.from_sample(min_sample(bqm), bqm)
 solution = main.run(init_state).result()
 
 # show results
-print("Solution: sample={s.samples.first}, debug={s.debug!r}".format(s=solution))
+print("Solution: sample={s.samples.first}".format(s=solution))
