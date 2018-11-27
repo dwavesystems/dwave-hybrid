@@ -60,15 +60,21 @@ class RacingBranches(Runnable):
         return iter(self.branches)
 
     def next(self, state):
-        futures = [branch.run(state.updated(debug=None)) for branch in self.branches]
+        future_to_branch = {
+            branch.run(state.updated(debug=None)): branch for branch in self.branches
+        }
 
         states = []
         if self.endomorphic:
             states.append(state)
-        for f in concurrent.futures.as_completed(futures):
+
+        for f in concurrent.futures.as_completed(future_to_branch):
             # as soon as one is done, stop all others
-            for branch in self.branches:
-                branch.stop()
+            logger.debug("First branch to finish: {!r}".format(future_to_branch[f]))
+            self.stop()
+            break
+
+        for f in concurrent.futures.as_completed(future_to_branch):
             states.append(f.result())
 
         return states
@@ -109,8 +115,9 @@ class ArgMinFold(Runnable):
 
     def next(self, states):
         # debug info
-        for s in states:
-            logger.debug("State: arg={arg}, debug={s.debug!r}".format(arg=self.key(s), s=s))
+        for idx, state in enumerate(states):
+            logger.debug("{name} State(idx={idx}, arg={arg})".format(
+                name=self.name, idx=idx, arg=self.key(state)))
 
         return min(states, key=self.key)
 
@@ -149,8 +156,8 @@ class SimpleIterator(Runnable):
             state = self.runnable.run(state).result()
             state_key = self.key(state)
 
-            logger.info("iterno={iterno}, State: key={key}, debug={debug!r}".format(
-                iterno=iterno, key=state_key, debug=state.debug))
+            logger.info("{name} Iteration(iterno={iterno}, best_state_key={key})".format(
+                name=self.name, iterno=iterno, key=state_key))
 
             if state_key == last_key:
                 cnt -= 1
