@@ -71,7 +71,7 @@ class PliableDict(dict):
 class State(PliableDict):
     """Computation state passed along a branch between connected components.
 
-    State is a `dict` subclass and contains at least keys `samples`, `problem` and `debug`.
+    State is a `dict` subclass and contains at least keys `samples`, `problem`.
 
     Examples:
         >>> import dimod           # Create a binary quadratic model
@@ -79,18 +79,16 @@ class State(PliableDict):
         >>> hybrid.core.State.from_sample(hybrid.utils.min_sample(bqm), bqm)   # doctest: +SKIP
         {'problem': BinaryQuadraticModel({0: -1, 1: -1}, {(0, 1): 2}, 0.0, Vartype.BINARY),
          'samples': SampleSet(rec.array([([0, 0], 0., 1)],
-            dtype=[('sample', 'i1', (2,)), ('energy', '<f8'), ('num_occurrences', '<i4')]), [0, 1], {}, 'BINARY'),
-         'debug': {}}
+            dtype=[('sample', 'i1', (2,)), ('energy', '<f8'), ('num_occurrences', '<i4')]), [0, 1], {}, 'BINARY')}
     """
 
     def __init__(self, *args, **kwargs):
-        """State is a `PliableDict` (`dict` subclass) which always contains
-        at least three keys: `samples`, `problem` and `debug`.
+        """State is a `PliableDict` (`dict` subclass) which usually contains
+        at least two keys: `samples` and `problem`.
         """
         super(State, self).__init__(*args, **kwargs)
         self.setdefault('samples', None)
         self.setdefault('problem', None)
-        self.setdefault('debug', PliableDict())
 
     def copy(self):
         """Simple deep copy of itself. Functionally identical to
@@ -102,27 +100,27 @@ class State(PliableDict):
         """Return a (deep) copy of itself, updated from `kwargs`.
 
         It has `dict.update` semantics with immutability of `sorted`. One
-        exception (currently) is for the `debug` key, for which we do a
-        depth-unlimited recursive merge.
+        exception (currently) is for the `debug` key (if it exists) for which
+        we do a depth-unlimited recursive merge.
 
         Example:
 
             >>> state = State()
             >>> state
-            {'debug': {}, 'problem': None, 'samples': None}
+            {problem': None, 'samples': None}
 
             >>> newstate = state.updated(problem="test")
             >>> newstate
-            {'debug': {}, 'problem': 'test', 'samples': None}
+            {problem': 'test', 'samples': None}
         """
 
         overwrite = lambda a,b: b
 
         # use a special merge strategy for `debug` (op=overwrite, max_depth=None)
         debug = merge(self.get('debug', {}), kwargs.get('debug', {}), op=overwrite)
-        if debug is not None:
+        if debug:
+            self.setdefault('debug', PliableDict())
             kwargs['debug'] = PliableDict(debug)
-
         return State(merge(self, kwargs, max_depth=1, op=overwrite))
 
     def result(self):

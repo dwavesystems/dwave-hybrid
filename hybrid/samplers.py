@@ -67,8 +67,7 @@ class QPUSubproblemExternalEmbeddingSampler(Runnable, traits.SubproblemSampler, 
     def next(self, state):
         sampler = FixedEmbeddingComposite(self.sampler, embedding=state.embedding)
         response = sampler.sample(state.subproblem, num_reads=self.num_reads)
-        return state.updated(subsamples=response,
-                             debug=dict(sampler=str(self)))
+        return state.updated(subsamples=response)
 
 
 class QPUSubproblemAutoEmbeddingSampler(Runnable, traits.SubproblemSampler):
@@ -95,8 +94,7 @@ class QPUSubproblemAutoEmbeddingSampler(Runnable, traits.SubproblemSampler):
 
     def next(self, state):
         response = self.sampler.sample(state.subproblem, num_reads=self.num_reads)
-        return state.updated(subsamples=response,
-                             debug=dict(sampler=str(self)))
+        return state.updated(subsamples=response)
 
 
 class SimulatedAnnealingSubproblemSampler(Runnable, traits.SubproblemSampler):
@@ -125,8 +123,7 @@ class SimulatedAnnealingSubproblemSampler(Runnable, traits.SubproblemSampler):
         response = self.sampler.sample(
             subbqm, num_reads=self.num_reads, sweeps=self.sweeps,
             interrupt_function=lambda: self._stop_event.is_set())
-        return state.updated(subsamples=response,
-                             debug=dict(sampler=str(self)))
+        return state.updated(subsamples=response)
 
     def stop(self):
         self._stop_event.set()
@@ -167,8 +164,7 @@ class TabuSubproblemSampler(Runnable, traits.SubproblemSampler):
         subbqm = state.subproblem
         response = self.sampler.sample(
             subbqm, tenure=self.tenure, timeout=self.timeout, num_reads=self.num_reads)
-        return state.updated(subsamples=response,
-                             debug=dict(sampler=str(self)))
+        return state.updated(subsamples=response)
 
 
 class TabuProblemSampler(Runnable, traits.ProblemSampler):
@@ -201,8 +197,7 @@ class TabuProblemSampler(Runnable, traits.ProblemSampler):
         sampleset = self.sampler.sample(
             state.problem, init_solution=state.samples, tenure=self.tenure,
             timeout=self.timeout, num_reads=self.num_reads)
-        return state.updated(samples=sampleset,
-                             debug=dict(sampler=str(self)))
+        return state.updated(samples=sampleset)
 
 
 class InterruptableTabuSampler(TabuProblemSampler):
@@ -245,8 +240,8 @@ class InterruptableTabuSampler(TabuProblemSampler):
             if self._stop_event.is_set() or timeout:
                 break
             iterno += 1
-        return state.updated(debug=dict(sampler=str(self),
-                                        runtime=runtime, iterno=iterno))
+        # TODO: store iterno in local counter
+        return state
 
     def stop(self):
         self._stop_event.set()
@@ -261,5 +256,4 @@ class RandomSubproblemSampler(Runnable, traits.SubproblemSampler):
         sampleset = SampleSet.from_samples(sample,
                                            vartype=bqm.vartype,
                                            energy=bqm.energy(sample))
-        return state.updated(subsamples=sampleset,
-                             debug=dict(sampler=str(self)))
+        return state.updated(subsamples=sampleset)

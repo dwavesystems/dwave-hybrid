@@ -259,8 +259,7 @@ example, :math:`x=y=z=a=b=c=1`.
     >>> print(new_state.result())
     State(samples=Response(rec.array([([1, 1, 1, 1, 1, 1], -1., 1)],
         dtype=[('sample', 'i1', (6,)), ('energy', '<f8'), ('num_occurrences', '<i4')]),
-        ['a', 'b', 'c', 'x', 'y', 'z'], {}, 'BINARY'),
-        debug={'sampler': 'InterruptableTabuSampler', 'runtime': 62.85970854759216, 'iterno': 2082})
+        ['a', 'b', 'c', 'x', 'y', 'z'], {}, 'BINARY'))
 
 
 RandomSubproblemSampler

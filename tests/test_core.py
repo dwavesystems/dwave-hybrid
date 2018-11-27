@@ -49,7 +49,7 @@ class TestPliableDict(unittest.TestCase):
 class TestState(unittest.TestCase):
 
     def test_construction(self):
-        self.assertDictEqual(State(), dict(samples=None, problem=None, debug={}))
+        self.assertDictEqual(State(), dict(samples=None, problem=None))
         self.assertEqual(State(samples=[1]).samples, [1])
         self.assertEqual(State(problem={'a': 1}).problem, {'a': 1})
         self.assertEqual(State(debug={'a': 1}).debug, {'a': 1})

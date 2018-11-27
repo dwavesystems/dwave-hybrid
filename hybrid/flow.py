@@ -61,7 +61,7 @@ class RacingBranches(Runnable):
 
     def next(self, state):
         future_to_branch = {
-            branch.run(state.updated(debug=None)): branch for branch in self.branches
+            branch.run(state.updated()): branch for branch in self.branches
         }
 
         states = []
@@ -175,4 +175,4 @@ class SimpleIterator(Runnable):
 
             last_key = state_key
 
-        return state.updated(debug=dict(n_iter=iterno+1))
+        return state

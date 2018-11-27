@@ -27,7 +27,7 @@ class IdentityComposer(Runnable, traits.SubproblemComposer):
     """Copy `subsamples` to `samples` verbatim."""
 
     def next(self, state):
-        return state.updated(samples=state.subsamples, debug=dict(composer=str(self)))
+        return state.updated(samples=state.subsamples)
 
 
 class SplatComposer(Runnable, traits.SubproblemComposer):
@@ -42,5 +42,4 @@ class SplatComposer(Runnable, traits.SubproblemComposer):
         composed_sample = updated_sample(sample, subsample)
         composed_energy = state.problem.energy(composed_sample)
         return state.updated(
-            samples=SampleSet.from_samples(composed_sample, state.samples.vartype, composed_energy),
-            debug=dict(composer=str(self)))
+            samples=SampleSet.from_samples(composed_sample, state.samples.vartype, composed_energy))

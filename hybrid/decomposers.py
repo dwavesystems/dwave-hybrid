@@ -37,8 +37,7 @@ class IdentityDecomposer(Runnable, traits.ProblemDecomposer):
     """Selects a subproblem that is a full copy of the problem."""
 
     def next(self, state):
-        return state.updated(subproblem=state.problem,
-                             debug=dict(decomposer=str(self)))
+        return state.updated(subproblem=state.problem)
 
 
 class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
@@ -110,8 +109,7 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
 
         # induce sub-bqm based on selected variables and global sample
         subbqm = bqm_induced_by(bqm, next_vars, sample)
-        return state.updated(subproblem=subbqm,
-                             debug=dict(decomposer=str(self)))
+        return state.updated(subproblem=subbqm)
 
 
 class RandomSubproblemDecomposer(Runnable, traits.ProblemDecomposer):
@@ -143,8 +141,7 @@ class RandomSubproblemDecomposer(Runnable, traits.ProblemDecomposer):
         variables = select_random_subgraph(bqm, self.size)
         sample = state.samples.change_vartype(bqm.vartype).first.sample
         subbqm = bqm_induced_by(bqm, variables, sample)
-        return state.updated(subproblem=subbqm,
-                             debug=dict(decomposer=str(self)))
+        return state.updated(subproblem=subbqm)
 
 
 class TilingChimeraDecomposer(Runnable, traits.ProblemDecomposer, traits.EmbeddingProducing):
@@ -185,8 +182,7 @@ class TilingChimeraDecomposer(Runnable, traits.ProblemDecomposer, traits.Embeddi
         variables = embedding.keys()
         sample = state.samples.change_vartype(bqm.vartype).first.sample
         subbqm = bqm_induced_by(bqm, variables, sample)
-        return state.updated(subproblem=subbqm, embedding=embedding,
-                             debug=dict(decomposer=str(self)))
+        return state.updated(subproblem=subbqm, embedding=embedding)
 
 
 class RandomConstraintDecomposer(Runnable, traits.ProblemDecomposer):
@@ -255,5 +251,4 @@ class RandomConstraintDecomposer(Runnable, traits.ProblemDecomposer):
 
         sample = state.samples.change_vartype(bqm.vartype).first.sample
         subbqm = bqm_induced_by(bqm, variables, sample)
-        return state.updated(subproblem=subbqm,
-                             debug=dict(decomposer=str(self)))
+        return state.updated(subproblem=subbqm)

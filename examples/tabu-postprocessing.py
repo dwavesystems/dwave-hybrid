@@ -47,4 +47,4 @@ init_state = State.from_sample(min_sample(bqm), bqm)
 
 solution = main.run(init_state).result()
 
-print("Solution: energy={s.samples.first.energy}, debug={s.debug!r}".format(s=solution))
+print("Solution: energy={s.samples.first.energy}".format(s=solution))
