@@ -68,12 +68,19 @@ class RacingBranches(Runnable):
         if self.endomorphic:
             states.append(state)
 
-        for f in concurrent.futures.as_completed(future_to_branch):
-            # as soon as one is done, stop all others
-            logger.debug("First branch to finish: {!r}".format(future_to_branch[f]))
-            self.stop()
-            break
+        # as soon as one is done, stop all others
+        done, _ = concurrent.futures.wait(
+            future_to_branch,
+            return_when=concurrent.futures.FIRST_COMPLETED)
+        self.stop()
 
+        # debug info
+        branch = future_to_branch[done.pop()]
+        idx = self.branches.index(branch)
+        logger.debug("{name} won idx={idx} branch={branch!r}".format(
+            name=self.name, idx=idx, branch=branch))
+
+        # collect resolved states
         for f in concurrent.futures.as_completed(future_to_branch):
             states.append(f.result())
 
