@@ -18,6 +18,7 @@ import concurrent.futures
 import logging
 import itertools
 
+import mock
 import dimod
 from tabu import TabuSampler
 
@@ -172,7 +173,7 @@ class TestLogging(unittest.TestCase):
         logger = logging.getLogger(__name__)
 
         def ll_check(env, name):
-            with isolated_environ():
+            with isolated_environ(remove_dwave=True):
                 os.environ[env] = name
                 hybrid._apply_loglevel_from_env(logger)
                 self.assertEqual(logger.getEffectiveLevel(), getattr(logging, name.upper()))
@@ -184,3 +185,22 @@ class TestLogging(unittest.TestCase):
 
         for env, name in combinations:
             ll_check(env, name)
+
+    def test_trace_logging(self):
+        logger = logging.getLogger(__name__)
+        hybrid._create_trace_loglevel(logging)  # force local _trace override
+
+        with isolated_environ(remove_dwave=True):
+            # trace on
+            os.environ['DWAVE_HYBRID_LOG_LEVEL'] = 'trace'
+            hybrid._apply_loglevel_from_env(logger)
+            with mock.patch.object(logger, '_log') as m:
+                logger.trace('test')
+                m.assert_called_with(logging.TRACE, 'test', ())
+
+            # trace off
+            os.environ['DWAVE_HYBRID_LOG_LEVEL'] = 'debug'
+            hybrid._apply_loglevel_from_env(logger)
+            with mock.patch.object(logger, '_log') as m:
+                logger.trace('test')
+                self.assertFalse(m.called)
