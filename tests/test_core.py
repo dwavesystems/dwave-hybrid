@@ -24,14 +24,51 @@ from tabu import TabuSampler
 
 import hybrid
 from hybrid.core import (
-    PliableDict, State, SampleSet, HybridSampler,
-    HybridRunnable, HybridProblemRunnable, HybridSubproblemRunnable)
+    PliableDict, State, SampleSet, ImmediateExecutor, Present, Future,
+    HybridSampler,HybridRunnable, HybridProblemRunnable, HybridSubproblemRunnable)
 from hybrid.decomposers import IdentityDecomposer
 from hybrid.composers import IdentityComposer
 from hybrid.samplers import TabuProblemSampler
 from hybrid.utils import min_sample, sample_as_dict
 from hybrid.testing import isolated_environ
 from hybrid.exceptions import RunnableError
+
+
+class TestPresent(unittest.TestCase):
+
+    def test_res(self):
+        for val in 1, 'x', True, False, State(problem=1), lambda: None:
+            f = Present(result=val)
+            self.assertIsInstance(f, Future)
+            self.assertTrue(f.done())
+            self.assertEqual(f.result(), val)
+
+    def test_exc(self):
+        for exc in ValueError, KeyError, ZeroDivisionError:
+            f = Present(exception=exc)
+            self.assertIsInstance(f, Future)
+            self.assertTrue(f.done())
+            self.assertRaises(exc, f.result)
+
+    def test_invalid_init(self):
+        self.assertRaises(ValueError, Present)
+
+
+class TestImmediateExecutor(unittest.TestCase):
+
+    def test_submit_res(self):
+        ie = ImmediateExecutor()
+        f = ie.submit(lambda x: not x, True)
+        self.assertIsInstance(f, Present)
+        self.assertIsInstance(f, Future)
+        self.assertEqual(f.result(), False)
+
+    def test_submit_exc(self):
+        ie = ImmediateExecutor()
+        f = ie.submit(lambda: 1/0)
+        self.assertIsInstance(f, Present)
+        self.assertIsInstance(f, Future)
+        self.assertRaises(ZeroDivisionError, f.result)
 
 
 class TestPliableDict(unittest.TestCase):
@@ -51,6 +88,25 @@ class TestPliableDict(unittest.TestCase):
         d = PliableDict(x=1)
         self.assertEqual(d.x, 1)
         self.assertEqual(d.y, None)
+
+
+class TestSampleSet(unittest.TestCase):
+
+    def test_default(self):
+        ss = dimod.SampleSet.from_samples([1], dimod.SPIN, [0])
+        self.assertEqual(ss, SampleSet(ss.record, ss.variables, ss.info, ss.vartype))
+
+    def test_empty(self):
+        empty = SampleSet.empty()
+        self.assertEqual(len(empty), 0)
+
+        impliedempty = SampleSet()
+        self.assertEqual(impliedempty, empty)
+
+    def test_from_bqm_sample(self):
+        bqm = dimod.BinaryQuadraticModel({}, {'ab': 1}, 0, dimod.SPIN)
+        ss = SampleSet.from_bqm_sample(bqm, {'a': 1, 'b': -1})
+        self.assertEqual(ss.first.energy, -1)
 
 
 class TestState(unittest.TestCase):
@@ -96,6 +152,17 @@ class TestState(unittest.TestCase):
         # test clear
         self.assertEqual(s2.updated(emb=None).emb, None)
         self.assertEqual(s2.updated(debug=None).debug, None)
+
+    def test_copy(self):
+        s1 = State(a=PliableDict(x=1))
+        s2 = s1.copy()
+        self.assertEqual(s1, s2)
+
+        s1.a.x = 2
+        self.assertNotEqual(s1, s2)
+        self.assertNotEqual(id(s1), id(s2))
+        self.assertEqual(s1.a.x, 2)
+        self.assertEqual(s2.a.x, 1)
 
 
 class TestHybridSampler(unittest.TestCase):

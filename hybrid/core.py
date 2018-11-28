@@ -60,7 +60,13 @@ class PliableDict(dict):
         True
     """
 
+    # some attribute lookups will be delegated to superclass, to handle things like pickling
+    _delegated = frozenset(('__reduce_ex__', '__reduce__', '__getstate__', '__setstate__'))
+
     def __getattr__(self, name):
+        if name in self._delegated:
+            return super(PliableDict, self).__getattr__(name)
+
         return self.get(name)
 
     def __setattr__(self, name, value):
@@ -189,9 +195,9 @@ class Present(Future):
 
     def __init__(self, result=None, exception=None):
         super(Present, self).__init__()
-        if result:
+        if result is not None:
             self.set_result(result)
-        elif exception:
+        elif exception is not None:
             self.set_exception(exception)
         else:
             raise ValueError("can't provide both 'result' and 'exception'")
