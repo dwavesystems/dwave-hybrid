@@ -31,6 +31,7 @@ from hybrid.composers import IdentityComposer
 from hybrid.samplers import TabuProblemSampler
 from hybrid.utils import min_sample, sample_as_dict
 from hybrid.testing import isolated_environ
+from hybrid.exceptions import RunnableError
 
 
 class TestPliableDict(unittest.TestCase):
@@ -204,3 +205,9 @@ class TestLogging(unittest.TestCase):
             with mock.patch.object(logger, '_log') as m:
                 logger.trace('test')
                 self.assertFalse(m.called)
+
+
+class TestExceptions(unittest.TestCase):
+
+    def test_init(self):
+        self.assertEqual(RunnableError('msg', 1).state, 1)

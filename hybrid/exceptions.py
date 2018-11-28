@@ -24,3 +24,7 @@ class RunnableError(Exception):
 
 class InvalidStateError(Exception):
     pass
+
+
+class StateTraitMissingError(InvalidStateError):
+    pass
