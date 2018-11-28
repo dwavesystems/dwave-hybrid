@@ -21,7 +21,6 @@ import logging
 
 from plucky import merge
 import dimod
-from dimod import SampleSet
 
 from hybrid.traits import StateTraits
 from hybrid.utils import min_sample, sample_as_dict
@@ -66,6 +65,32 @@ class PliableDict(dict):
 
     def __setattr__(self, name, value):
         self[name] = value
+
+
+class SampleSet(dimod.SampleSet):
+    """The `dimod.SampleSet` extended with a few helper methods."""
+
+    def __init__(self, *args, **kwargs):
+        if not args and not kwargs:
+            # construct empty SampleSet
+            empty = self.empty()
+            super(SampleSet, self).__init__(empty.record, empty.variables,
+                                            empty.info, empty.vartype)
+        else:
+            super(SampleSet, self).__init__(*args, **kwargs)
+
+    @classmethod
+    def empty(cls):
+        return cls.from_samples([], vartype=dimod.SPIN, energy=0)
+
+    @classmethod
+    def from_bqm_samples(cls, bqm, samples):
+        """Construct SampleSet from samples on BQM, filling in vartype and
+        energies.
+        """
+        return cls.from_samples(samples,
+                                vartype=bqm.vartype,
+                                energy=[bqm.energy(sample) for sample in samples])
 
 
 class State(PliableDict):
