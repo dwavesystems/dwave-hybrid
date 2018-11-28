@@ -25,6 +25,7 @@ from tabu import TabuSampler
 import hybrid
 from hybrid.core import (
     PliableDict, State, SampleSet, ImmediateExecutor, Present, Future,
+    Runnable, Branch,
     HybridSampler,HybridRunnable, HybridProblemRunnable, HybridSubproblemRunnable)
 from hybrid.decomposers import IdentityDecomposer
 from hybrid.composers import IdentityComposer
@@ -163,6 +164,83 @@ class TestState(unittest.TestCase):
         self.assertNotEqual(id(s1), id(s2))
         self.assertEqual(s1.a.x, 2)
         self.assertEqual(s2.a.x, 1)
+
+
+class TestRunnable(unittest.TestCase):
+
+    def test_look_and_feel(self):
+        r = Runnable()
+        self.assertEqual(r.name, 'Runnable')
+        self.assertEqual(str(r), 'Runnable')
+        self.assertEqual(repr(r), 'Runnable()')
+        self.assertEqual(tuple(r), tuple())
+        self.assertRaises(NotImplementedError, r.next, State())
+        self.assertIsNone(r.stop())
+        self.assertIsInstance(r | r, Branch)
+
+    def test_simple_run(self):
+        r = Runnable()
+
+        # async run with valid state
+        f = r.run(State())
+        self.assertIsInstance(f, Future)
+        self.assertNotIsInstance(f, Present)
+        self.assertRaises(NotImplementedError, f.result)
+
+        # sync run with valid state
+        f = r.run(State(), defer=False)
+        self.assertIsInstance(f, Present)
+        self.assertRaises(NotImplementedError, f.result)
+
+        # run with error state, check exc is propagated (default)
+        f = r.run(Present(exception=ZeroDivisionError))
+        self.assertRaises(ZeroDivisionError, f.result)
+
+        class MyRunnable(Runnable):
+            def init(self, state):
+                self.first = state.problem
+            def next(self, state):
+                return state.updated(problem=state.problem + 1)
+
+        r = MyRunnable()
+        s1 = State(problem=1)
+        s2 = r.run(s1).result()
+
+        self.assertEqual(r.first, s1.problem)
+        self.assertEqual(s2.problem, s1.problem + 1)
+
+    def test_error_prop(self):
+        class MyRunnable(Runnable):
+            def next(self, state):
+                return state
+            def error(self, exc):
+                return State(error=True)
+
+        r = MyRunnable()
+        s1 = Present(exception=KeyError())
+        s2 = r.run(s1).result()
+
+        self.assertEqual(s2.error, True)
+
+    def test_chaining(self):
+        class Inc(Runnable):
+            def next(self, state):
+                return state.updated(x=state.x + 1)
+
+        class Pow(Runnable):
+            def __init__(self, exp):
+                super(Pow, self).__init__()
+                self.exp = exp
+
+            def next(self, state):
+                return state.updated(x=state.x ** self.exp)
+
+        b = Inc() | Pow(3)
+
+        s1 = State(x=1)
+        s2 = b.run(s1).result()
+
+        self.assertEqual(s2.x, (1 + 1) ** 3)
 
 
 class TestHybridSampler(unittest.TestCase):
