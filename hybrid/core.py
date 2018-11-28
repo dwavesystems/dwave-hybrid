@@ -84,13 +84,18 @@ class SampleSet(dimod.SampleSet):
         return cls.from_samples([], vartype=dimod.SPIN, energy=0)
 
     @classmethod
+    def from_bqm_sample(cls, bqm, sample):
+        return cls.from_bqm_samples(bqm, [sample])
+
+    @classmethod
     def from_bqm_samples(cls, bqm, samples):
         """Construct SampleSet from samples on BQM, filling in vartype and
         energies.
         """
-        return cls.from_samples(samples,
-                                vartype=bqm.vartype,
-                                energy=[bqm.energy(sample) for sample in samples])
+        return cls.from_samples(
+            samples,
+            vartype=bqm.vartype,
+            energy=[bqm.energy(sample) for sample in samples])
 
 
 class State(PliableDict):
@@ -171,14 +176,7 @@ class State(PliableDict):
         per-sample energy is calculated from the BQM, and State.problem is set
         to the BQM.
         """
-        return cls(
-            problem=bqm,
-            samples=SampleSet.from_samples(
-                samples,
-                vartype=bqm.vartype,
-                energy=[bqm.energy(sample) for sample in samples]
-            )
-        )
+        return cls(problem=bqm, samples=SampleSet.from_bqm_samples(bqm, samples))
 
 
 class Present(Future):
