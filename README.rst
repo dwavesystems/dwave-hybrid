@@ -68,7 +68,7 @@ Example
     solution = main.run(init_state).result()
 
     # Print results
-    print("Solution: sample={s.samples.first}, debug={s.debug!r}".format(s=solution))
+    print("Solution: sample={s.samples.first}".format(s=solution))
 
 
 .. example-end-marker

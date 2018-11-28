@@ -80,6 +80,14 @@ class TestMultipleTraits(unittest.TestCase):
         with self.assertRaises(traits.StateTraitMissingError):
             Component().run(State(subproblem=True)).result()
 
+    def test_atypical_output_only_system(self):
+        class Component(Runnable, traits.ProblemProducing, traits.EmbeddingProducing):
+            def next(self, state):
+                return state.updated(problem=True, embedding=True)
+
+        self.assertTrue(Component().run(State()).result().problem)
+        self.assertTrue(Component().run(State()).result().embedding)
+
     def test_composed_traits(self):
         class Component(Runnable, traits.ProblemDecomposer):
             def next(self, state):
