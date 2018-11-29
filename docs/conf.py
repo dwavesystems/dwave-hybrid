@@ -100,4 +100,5 @@ intersphinx_mapping = {'python': ('https://docs.python.org/3', None),
                        'minorminer': ('https://docs.ocean.dwavesys.com/projects/minorminer/en/latest/', None),
                        'qbsolv': ('https://docs.ocean.dwavesys.com/projects/qbsolv/en/latest/', None),
                        'oceandocs': ('https://docs.ocean.dwavesys.com/en/latest/', None),
-                       'sysdocs_gettingstarted': ('https://docs.dwavesys.com/docs/latest/', None)}
+                       'sysdocs_gettingstarted': ('https://docs.dwavesys.com/docs/latest/', None),
+                       'tabu': ('https://docs.ocean.dwavesys.com/projects/d-wave-systems-dwave-tabu/en/latest/', None)}
