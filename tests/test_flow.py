@@ -93,3 +93,16 @@ class TestArgMinFold(unittest.TestCase):
         fold = ArgMinFold(key=lambda s: -s.samples.first.energy)
         best = fold.run(Present(result=states)).result()
         self.assertEqual(best.samples.first.energy, 1)
+
+
+class TestSimpleIterator(unittest.TestCase):
+
+    def test_basic(self):
+        class Inc(Runnable):
+            def next(self, state):
+                return state.updated(cnt=state.cnt + 1)
+
+        it = SimpleIterator(Inc(), max_iter=100, convergence=100, key=lambda _: None)
+        s = it.run(State(cnt=0)).result()
+
+        self.assertEqual(s.cnt, 100)
