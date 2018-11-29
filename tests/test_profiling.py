@@ -57,7 +57,7 @@ class TestCoreRunnablesIterable(unittest.TestCase):
         self.assertEqual(self.children(IdentityComposer()), [])
         self.assertEqual(self.children(SplatComposer()), [])
         # sample of samplers
-        self.assertEqual(self.children(QPUSubproblemAutoEmbeddingSampler()), [])
+        self.assertEqual(self.children(QPUSubproblemAutoEmbeddingSampler(qpu_sampler=False)), [])
         self.assertEqual(self.children(SimulatedAnnealingSubproblemSampler()), [])
         self.assertEqual(self.children(TabuProblemSampler()), [])
         self.assertEqual(self.children(InterruptableTabuSampler()), [])
