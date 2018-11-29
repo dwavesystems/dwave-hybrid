@@ -21,7 +21,6 @@ import logging
 
 from plucky import merge
 import dimod
-from dimod import SampleSet
 
 from hybrid.traits import StateTraits
 from hybrid.utils import min_sample, sample_as_dict
@@ -61,11 +60,48 @@ class PliableDict(dict):
         True
     """
 
+    # some attribute lookups will be delegated to superclass, to handle things like pickling
+    _delegated = frozenset(('__reduce_ex__', '__reduce__', '__getstate__', '__setstate__'))
+
     def __getattr__(self, name):
+        if name in self._delegated:
+            return super(PliableDict, self).__getattr__(name)
+
         return self.get(name)
 
     def __setattr__(self, name, value):
         self[name] = value
+
+
+class SampleSet(dimod.SampleSet):
+    """The `dimod.SampleSet` extended with a few helper methods."""
+
+    def __init__(self, *args, **kwargs):
+        if not args and not kwargs:
+            # construct empty SampleSet
+            empty = self.empty()
+            super(SampleSet, self).__init__(empty.record, empty.variables,
+                                            empty.info, empty.vartype)
+        else:
+            super(SampleSet, self).__init__(*args, **kwargs)
+
+    @classmethod
+    def empty(cls):
+        return cls.from_samples([], vartype=dimod.SPIN, energy=0)
+
+    @classmethod
+    def from_bqm_sample(cls, bqm, sample):
+        return cls.from_bqm_samples(bqm, [sample])
+
+    @classmethod
+    def from_bqm_samples(cls, bqm, samples):
+        """Construct SampleSet from samples on BQM, filling in vartype and
+        energies.
+        """
+        return cls.from_samples(
+            samples,
+            vartype=bqm.vartype,
+            energy=[bqm.energy(sample) for sample in samples])
 
 
 class State(PliableDict):
@@ -146,14 +182,7 @@ class State(PliableDict):
         per-sample energy is calculated from the BQM, and State.problem is set
         to the BQM.
         """
-        return cls(
-            problem=bqm,
-            samples=SampleSet.from_samples(
-                samples,
-                vartype=bqm.vartype,
-                energy=[bqm.energy(sample) for sample in samples]
-            )
-        )
+        return cls(problem=bqm, samples=SampleSet.from_bqm_samples(bqm, samples))
 
 
 class Present(Future):
@@ -166,9 +195,9 @@ class Present(Future):
 
     def __init__(self, result=None, exception=None):
         super(Present, self).__init__()
-        if result:
+        if result is not None:
             self.set_result(result)
-        elif exception:
+        elif exception is not None:
             self.set_exception(exception)
         else:
             raise ValueError("can't provide both 'result' and 'exception'")
@@ -391,8 +420,9 @@ class Branch(Runnable):
         return state.result()
 
     def error(self, exc):
-        """Be explicit about propagating input error."""
-        raise exc
+        """Pass on the exception from input to the error handler of the first
+        runnable in branch."""
+        return self.next(Present(exception=exc))
 
     def stop(self):
         """Try terminating all components in an instantiated :class:`Branch`."""
@@ -483,7 +513,9 @@ class HybridRunnable(Runnable):
 
         if not isinstance(sampler, dimod.Sampler):
             raise TypeError("'sampler' should be 'dimod.Sampler'")
-        if not isinstance(fields, tuple) or not len(fields) == 2:
+        try:
+            assert len(tuple(fields)) == 2
+        except:
             raise ValueError("'fields' should be two-tuple with input/output state fields")
 
         self.sampler = sampler
