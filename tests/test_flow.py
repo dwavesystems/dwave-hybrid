@@ -21,8 +21,8 @@ import operator
 import dimod
 
 from hybrid.flow import RacingBranches, ArgMinFold, SimpleIterator
-from hybrid.core import State, Runnable
-from hybrid.utils import min_sample
+from hybrid.core import State, Runnable, Present
+from hybrid.utils import min_sample, max_sample
 
 
 class TestRacingBranches(unittest.TestCase):
@@ -62,3 +62,34 @@ class TestRacingBranches(unittest.TestCase):
         rb = RacingBranches(Slow(), Fast(), Slow(), endomorphic=False)
         res = rb.run(State(x=0)).result()
         self.assertEqual([s.x for s in res], [2, 1, 2])
+
+
+class TestArgMinFold(unittest.TestCase):
+
+    def test_look_and_feel(self):
+        fold = ArgMinFold()
+        self.assertEqual(fold.name, 'ArgMinFold')
+        self.assertEqual(str(fold), '[]>')
+        self.assertEqual(repr(fold), "ArgMinFold(key=operator.attrgetter('samples.first.energy'))")
+
+        fold = ArgMinFold(key=min)
+        self.assertEqual(repr(fold), "ArgMinFold(key=<built-in function min>)")
+
+    def test_default_fold(self):
+        bqm = dimod.BinaryQuadraticModel({'a': 1}, {}, 0, dimod.SPIN)
+        states = [
+            State.from_sample(min_sample(bqm), bqm),    # energy: -1
+            State.from_sample(max_sample(bqm), bqm),    # energy: +1
+        ]
+        best = ArgMinFold().run(Present(result=states)).result()
+        self.assertEqual(best.samples.first.energy, -1)
+
+    def test_custom_fold(self):
+        bqm = dimod.BinaryQuadraticModel({'a': 1}, {}, 0, dimod.SPIN)
+        states = [
+            State.from_sample(min_sample(bqm), bqm),    # energy: -1
+            State.from_sample(max_sample(bqm), bqm),    # energy: +1
+        ]
+        fold = ArgMinFold(key=lambda s: -s.samples.first.energy)
+        best = fold.run(Present(result=states)).result()
+        self.assertEqual(best.samples.first.energy, 1)
