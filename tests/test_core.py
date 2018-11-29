@@ -243,6 +243,75 @@ class TestRunnable(unittest.TestCase):
         self.assertEqual(s2.x, (1 + 1) ** 3)
 
 
+class TestBranch(unittest.TestCase):
+
+    def test_composition(self):
+        class A(Runnable):
+            def next(self, state):
+                return state.updated(x=state.x + 1)
+        class B(Runnable):
+            def next(self, state):
+                return state.updated(x=state.x * 7)
+
+        a, b = A(), B()
+        s = State(x=1)
+
+        b1 = Branch(components=(a, b))
+        self.assertEqual(b1.components, (a, b))
+        self.assertEqual(b1.run(s).result().x, (s.x + 1) * 7)
+
+        b2 = b1 | b | a
+        self.assertEqual(b2.components, (a, b, b, a))
+        self.assertEqual(b2.run(s).result().x, (s.x + 1) * 7 * 7 + 1)
+
+        with self.assertRaises(TypeError):
+            b1 | 1
+
+    def test_look_and_feel(self):
+        class A(Runnable): pass
+        class B(Runnable): pass
+
+        b = A() | B()
+        self.assertEqual(b.name, 'Branch')
+        self.assertEqual(str(b), 'A | B')
+        self.assertEqual(repr(b), 'Branch(components=(A(), B()))')
+        self.assertEqual(tuple(b), b.components)
+        self.assertIsInstance(b, Branch)
+        self.assertIsInstance(b | b, Branch)
+
+    def test_error_prop(self):
+        class ErrorSilencer(Runnable):
+            def next(self, state):
+                return state
+            def error(self, exc):
+                return State(error=True)
+
+        class Identity(Runnable):
+            def next(self, state):
+                return state
+
+        branch = ErrorSilencer() | Identity()
+        s1 = Present(exception=KeyError())
+        s2 = branch.run(s1).result()
+
+        self.assertEqual(s2.error, True)
+
+    def test_stop(self):
+        class Stoppable(Runnable):
+            def init(self, state):
+                self.stopped = False
+            def next(self, state):
+                return state
+            def stop(self):
+                self.stopped = True
+
+        branch = Branch([Stoppable()])
+        branch.run(State())
+        branch.stop()
+
+        self.assertTrue(next(iter(branch)).stopped)
+
+
 class TestHybridSampler(unittest.TestCase):
 
     def test_simple(self):
@@ -258,6 +327,9 @@ class TestHybridSampler(unittest.TestCase):
 
         with self.assertRaises(TypeError):
             HybridSampler()
+
+        with self.assertRaises(TypeError):
+            HybridSampler(1)
 
         with self.assertRaises(TypeError):
             HybridSampler(sampler).sample(1)
@@ -282,6 +354,20 @@ class TestHybridRunnable(unittest.TestCase):
 
         self.assertIsInstance(response, concurrent.futures.Future)
         self.assertEqual(response.result().samples.record[0].energy, -3.0)
+
+    def test_validation(self):
+        with self.assertRaises(TypeError):
+            HybridRunnable(1, 'ab')
+
+        with self.assertRaises(ValueError):
+            HybridRunnable(TabuSampler(), None)
+
+        with self.assertRaises(ValueError):
+            HybridRunnable(TabuSampler(), ('a'))
+
+        self.assertIsInstance(HybridRunnable(TabuSampler(), 'ab'), HybridRunnable)
+        self.assertIsInstance(HybridRunnable(TabuSampler(), ('a', 'b')), HybridRunnable)
+        self.assertIsInstance(HybridRunnable(TabuSampler(), ['a', 'b']), HybridRunnable)
 
     def test_problem_sampler_runnable(self):
         runnable = HybridProblemRunnable(TabuSampler())

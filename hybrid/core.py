@@ -420,8 +420,9 @@ class Branch(Runnable):
         return state.result()
 
     def error(self, exc):
-        """Be explicit about propagating input error."""
-        raise exc
+        """Pass on the exception from input to the error handler of the first
+        runnable in branch."""
+        return self.next(Present(exception=exc))
 
     def stop(self):
         """Try terminating all components in an instantiated :class:`Branch`."""
@@ -512,7 +513,9 @@ class HybridRunnable(Runnable):
 
         if not isinstance(sampler, dimod.Sampler):
             raise TypeError("'sampler' should be 'dimod.Sampler'")
-        if not isinstance(fields, tuple) or not len(fields) == 2:
+        try:
+            assert len(tuple(fields)) == 2
+        except:
             raise ValueError("'fields' should be two-tuple with input/output state fields")
 
         self.sampler = sampler
