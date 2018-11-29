@@ -60,9 +60,7 @@ class RacingBranches(Runnable):
         return iter(self.branches)
 
     def next(self, state):
-        future_to_branch = {
-            branch.run(state.updated()): branch for branch in self.branches
-        }
+        futures = [branch.run(state.updated()) for branch in self.branches]
 
         states = []
         if self.endomorphic:
@@ -70,18 +68,18 @@ class RacingBranches(Runnable):
 
         # as soon as one is done, stop all others
         done, _ = concurrent.futures.wait(
-            future_to_branch,
+            futures,
             return_when=concurrent.futures.FIRST_COMPLETED)
         self.stop()
 
         # debug info
-        branch = future_to_branch[done.pop()]
-        idx = self.branches.index(branch)
+        idx = futures.index(done.pop())
+        branch = self.branches[idx]
         logger.debug("{name} won idx={idx} branch={branch!r}".format(
             name=self.name, idx=idx, branch=branch))
 
-        # collect resolved states
-        for f in concurrent.futures.as_completed(future_to_branch):
+        # collect resolved states (in original order, not completion order!)
+        for f in futures:
             states.append(f.result())
 
         return states
