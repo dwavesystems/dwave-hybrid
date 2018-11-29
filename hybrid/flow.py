@@ -29,9 +29,13 @@ class RacingBranches(Runnable):
             Comma-separated branches.
         endomorphic (bool):
             Set to ``False`` if you are not sure that the codomain of all branches
-            is the domain.
+            is the domain; for example, if there might be a mix of subproblems
+            and problems moving between components.
 
     Examples:
+        This example runs two branches: a classical tabu search interrupted by
+        samples of subproblems returned from a D-Wave system.
+
         >>> RacingBranches(                     # doctest: +SKIP
                 InterruptableTabuSampler(),
                 EnergyImpactDecomposer(max_size=2)
@@ -60,6 +64,8 @@ class RacingBranches(Runnable):
         return iter(self.branches)
 
     def next(self, state):
+        """Execute one blocking iteration of an instantiated :class:`RacingBranches`."""
+
         futures = [branch.run(state.updated()) for branch in self.branches]
 
         states = []
@@ -85,17 +91,23 @@ class RacingBranches(Runnable):
         return states
 
     def stop(self):
+        """Terminate an iteration of an instantiated :class:`RacingBranches`."""
         for branch in self.branches:
             branch.stop()
 
 
 class ArgMinFold(Runnable):
-    """Select the :class:`State` from the list of :class:`State`s (output of
-    :class:`RacingBranches`) that is best according to a metric defined with
-    a "key" function, `key`. By default, `key` favorizes states which contain a
-    sample with minimal energy.
+    """Selects the best state from the list of states (output of
+    :class:`RacingBranches`).
+
+    Best state is judged according to a metric defined with a "key" function, `key`.
+    By default, `key` favors states containing a sample with minimal energy.
 
     Examples:
+        This example runs two branches---a classical tabu search interrupted by
+        samples of subproblems returned from a D-Wave system--- and selects the
+        state with the minimum-energy sample.
+
         >>> RacingBranches(                     # doctest: +SKIP
                 InterruptableTabuSampler(),
                 EnergyImpactDecomposer(max_size=2)
@@ -119,6 +131,7 @@ class ArgMinFold(Runnable):
         return "{}(key={!r})".format(self.name, self.key)
 
     def next(self, states):
+        """Execute one blocking iteration of an instantiated :class:`ArgMinFold`."""
         # debug info
         for idx, state in enumerate(states):
             logger.debug("{name} State(idx={idx}, arg={arg})".format(
@@ -128,12 +141,11 @@ class ArgMinFold(Runnable):
 
 
 class SimpleIterator(Runnable):
+    """Iterates `runnable` for up to `max_iter` times, or until a state quality
+    metric, defined by the `key` function, shows no improvement for at least
+    `convergence` time."""
 
     def __init__(self, runnable, max_iter=1000, convergence=10, key=None):
-        """Iterate `runnable` for up to `max_iter` times, or until state quality
-        metric defined via `key` function shows no improvements for at least
-        `convergence` times.
-        """
         super(SimpleIterator, self).__init__()
         self.runnable = runnable
         self.max_iter = max_iter
@@ -153,6 +165,7 @@ class SimpleIterator(Runnable):
         return iter((self.runnable,))
 
     def next(self, state):
+        """Execute one blocking iteration of an instantiated :class:`SimpleIterator`."""
         last = state
         last_key = self.key(last)
         cnt = self.convergence
