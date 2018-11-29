@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 try:
     perf_counter = time.perf_counter
-except AttributeError:
+except AttributeError:  # pragma: no cover
     # python 2
     perf_counter = time.time
 

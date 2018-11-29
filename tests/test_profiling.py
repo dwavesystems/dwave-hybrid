@@ -14,10 +14,10 @@
 
 import unittest
 
-import dimod
-
-from hybrid.core import Runnable, Branch
+from hybrid.core import Runnable, Branch, State
 from hybrid.flow import RacingBranches, ArgMinFold, SimpleIterator
+from hybrid.profiling import tictoc, iter_inorder, walk_inorder
+from hybrid.testing import mock
 from hybrid.composers import *
 from hybrid.samplers import *
 from hybrid.decomposers import *
@@ -65,3 +65,52 @@ class TestCoreRunnablesIterable(unittest.TestCase):
         self.assertEqual(self.children(IdentityDecomposer()), [])
         self.assertEqual(self.children(EnergyImpactDecomposer(max_size=1)), [])
         self.assertEqual(self.children(RandomSubproblemDecomposer(size=1)), [])
+
+
+class TestTictoc(unittest.TestCase):
+
+    def test_ctx_mgr(self):
+        with mock.patch('hybrid.profiling.perf_counter', side_effect=[0, 1]):
+            with tictoc() as t:
+                pass
+            self.assertEqual(t.tick, 0)
+            self.assertEqual(t.dt, 1)
+
+    def test_decorator(self):
+        with mock.patch('hybrid.profiling.perf_counter', side_effect=[0, 1]):
+            def f():
+                pass
+            deco = tictoc('f')
+            ff = deco(f)
+            ff()
+
+            self.assertEqual(deco.tick, 0)
+            self.assertEqual(deco.dt, 1)
+
+
+class TestRunnableWalkers(unittest.TestCase):
+
+    def test_iter_walk(self):
+        flow = SimpleIterator(RacingBranches(Runnable(), Runnable()) | ArgMinFold())
+        names = [r.name for r in iter_inorder(flow)]
+        self.assertEqual(names, ['SimpleIterator', 'Branch', 'RacingBranches', 'Runnable', 'Runnable', 'ArgMinFold'])
+
+    def test_callback_walk(self):
+        flow = SimpleIterator(RacingBranches(Runnable(), Runnable()) | ArgMinFold())
+        names = []
+        walk_inorder(flow, visit=lambda r, _: names.append(r.name))
+        self.assertEqual(names, ['SimpleIterator', 'Branch', 'RacingBranches', 'Runnable', 'Runnable', 'ArgMinFold'])
+
+
+class TestCounters(unittest.TestCase):
+
+    def test_counter_called(self):
+        class Ident(Runnable):
+            def next(self, state):
+                with self.count('my-counter'):
+                    return state
+
+        r = Ident()
+        r.run(State()).result()
+
+        self.assertEqual(len(r.counters['my-counter']), 1)
