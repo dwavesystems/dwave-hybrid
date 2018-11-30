@@ -53,9 +53,8 @@ class PliableDict(dict):
 
         >>> d = PliableDict(x=1)
         >>> d.y = 2
-        >>> d
+        >>> d                     # doctest: +SKIP
         {'x': 1, 'y': 2}
-
         >>> d.z is None
         True
     """
@@ -133,18 +132,17 @@ class State(PliableDict):
         return deepcopy(self)
 
     def updated(self, **kwargs):
-        """Return a (deep) copy of itself, updated from `kwargs`.
+        """Return a (deep) copy of the state, updated from `kwargs`.
 
-        It has `dict.update` semantics with immutability of `sorted`. One
-        exception (currently) is for the `debug` key (if it exists) for which
-        we do a depth-unlimited recursive merge.
+        It has `dict.update` semantics with immutability of `sorted`. Currently an
+        exception is the `debug` key, if it exists, for which a depth-unlimited
+        recursive merge is executed.
 
         Example:
 
             >>> state = State()
             >>> state
             {problem': None, 'samples': None}
-
             >>> newstate = state.updated(problem="test")
             >>> newstate
             {problem': 'test', 'samples': None}
@@ -170,17 +168,33 @@ class State(PliableDict):
 
     @classmethod
     def from_sample(cls, sample, bqm):
-        """Convenience method for constructing State from raw (dict) sample;
-        energy is calculated from the BQM, and State.problem is also set to that
-        BQM.
+        """Convenience method for constructing a state from a raw (dict) sample.
+
+        Energy is calculated from the binary quadratic model (BQM), and `State.problem`
+        is also set to that BQM.
+
+        Example:
+
+            >>> import dimod
+            >>> bqm = dimod.BinaryQuadraticModel.from_ising({}, {'ab': 0.5, 'bc': 0.5, 'ca': 0.5})
+            >>> state = State.from_sample({'a': -1, 'b': -1, 'c': -1}, bqm)
+
         """
         return cls.from_samples([sample], bqm)
 
     @classmethod
     def from_samples(cls, samples, bqm):
-        """Convenience method for constructing State from raw (dict) samples;
-        per-sample energy is calculated from the BQM, and State.problem is set
-        to the BQM.
+        """Convenience method for constructing a state from raw (dict) samples.
+
+        Per-sample energy is calculated from the binary quadratic model (BQM), and
+        `State.problem` is set to the BQM.
+
+        Example:
+
+            >>> import dimod
+            >>> bqm = dimod.BinaryQuadraticModel.from_ising({}, {'ab': 0.5, 'bc': 0.5, 'ca': 0.5})
+            >>> state = State.from_samples({'a': -1, 'b': -1, 'c': -1},
+            ...                            {'a': -1, 'b': -1, 'c': 1}, bqm)
         """
         return cls(problem=bqm, samples=SampleSet.from_bqm_samples(bqm, samples))
 
@@ -188,9 +202,11 @@ class State(PliableDict):
 class Present(Future):
     """Already resolved :class:`~concurrent.futures.Future` object.
 
-    From user's perspective, :class:`Present` should be treated just as another
-    :class:`~concurrent.futures.Future`. The only difference is :class:`Present`
-    is "resolved" at construction time (implementation detail).
+    Users should treat this class as just another :class:`~concurrent.futures.Future`,
+    the difference being an implementation detail: :class:`Present` is "resolved" at
+    construction time.
+
+    See the example of the :meth:`Runnable.run` method.
     """
 
     def __init__(self, result=None, exception=None):
@@ -204,11 +220,11 @@ class Present(Future):
 
 
 class Runnable(StateTraits):
-    """Component that can be run for an iteration such as samplers and branches.
+    """Component such as samplers and branches that can be run for an iteration.
 
     Examples:
         This example runs a tabu search on a binary quadratic model. An initial state is
-        manually set with invalid solution :math:`x=y=0, z=1; a=b=1, c=0` and an updated
+        manually set to :math:`x=y=0, z=1; a=b=1, c=0` and an updated
         state is created by running the sampler for one iteration.
 
         >>> import dimod           # Create a binary quadratic model
@@ -244,6 +260,7 @@ class Runnable(StateTraits):
 
     @property
     def name(self):
+        """Return the :class:`Runnable` class name."""
         return self.__class__.__name__
 
     def init(self, state):
@@ -271,22 +288,26 @@ class Runnable(StateTraits):
         raise NotImplementedError
 
     def error(self, exc):
-        """Called when previous component raised an exception (instead of new state).
+        """Return a valid new state or raise an exception.
 
-        Must return a valid new `State`, or raise an exception.
+        Called when the previous component raised an exception instead of generating a
+        new state.
 
-        Default to re-raise of input exception. Runnable errors must be explicitly silenced.
+        The default implementation raises again the input exception. Runnable errors
+        must be explicitly silenced.
         """
         raise exc
 
     def dispatch(self, future):
-        """Dispatch `state` got by resolving `future` to either `next` or `error`.
+        """Dispatch state from resolving `future` to either `next` or `error` methods.
 
         Args:
             state (:class:`concurrent.futures.Future`-like object): :class:`State` future.
 
-        Returns state from `next`/`error`, or passes-thru an exception raised there.
-        Blocks on `state` resolution and `next`/`error` execution .
+        Returns state from :meth:`next` or :meth:`error`, or passes through an exception
+        raised there.
+
+        Blocks on state resolution and execution of :meth:`next` or :meth:`error`.
         """
 
         with self.count('dispatch.resolve'):
@@ -314,20 +335,26 @@ class Runnable(StateTraits):
         """Execute the next step/iteration of an instantiated :class:`Runnable`.
 
         Accepts a state in a :class:`~concurrent.futures.Future`-like object and
-        return a new state in a :class:`~concurrent.futures.Future`-like object.
+        returns a new state in a :class:`~concurrent.futures.Future`-like object.
 
         Args:
             state (:class:`State`):
-                Computation state future-lookalike passed between connected components.
+                Computation state future-like object passed between connected components.
 
             defer (bool, optional, default=True):
-                Return result future immediately, and run the computation asynchronously.
-                If set to false, block on computation, and return the resolved future.
+                If True, returns a future immediately and runs the computation
+                asynchronously. If False, blocks on computation until the resolved
+                future is returned.
 
         Examples:
-            This code snippet runs one iteration of a sampler to produce a new state::
+            These two code snippets run one iteration of a sampler to produce a new state.
+            The second sets the 'defer' argument to False.
 
-                new_state = sampler.run(core.State.from_sample({'x': 0, 'y': 0}, bqm))
+            >>> sampler.run(State.from_sample(min_sample(bqm), bqm))   # doctest: +SKIP
+            <Future at 0x20cbe22ea20 state=running>
+
+            >>> sampler.run(State.from_sample(min_sample(bqm), bqm), defer=False)   # doctest: +SKIP
+            <Present at 0x20ca68cd2b0 state=finished returned State>
         """
 
         if defer:
@@ -421,7 +448,8 @@ class Branch(Runnable):
 
     def error(self, exc):
         """Pass on the exception from input to the error handler of the first
-        runnable in branch."""
+        runnable in branch.
+        """
         return self.next(Present(exception=exc))
 
     def stop(self):
@@ -431,20 +459,30 @@ class Branch(Runnable):
 
 
 class HybridSampler(dimod.Sampler):
-    """Produce `dimod.Sampler` from `hybrid.Runnable`-based sampler."""
+    """Produces a `dimod.Sampler` from a `hybrid.Runnable`-based sampler.
+
+    Args:
+        runnable_solver (`Runnable`):
+            Hybrid runnable, likely composed, that accepts a binary quadratic
+            model in the input state and produces sample(s) in the output state.
+
+    Example:
+        This example produces a :std:doc:`dimod <dimod:index>` sampler from
+        :class:`~hybrid.samplers.TabuProblemSampler` and uses its `sample_ising`
+        mixin to solve a simple Ising problem.
+
+        >>> hybrid_sampler = TabuProblemSampler()
+        >>> dimod_sampler = HybridSampler(hybrid_sampler)
+        >>> solution = dimod_sampler.sample_ising({}, {'ab': 0.5, 'bc': 0.5, 'ca': 0.5})
+        >>> solution.first.energy
+        -0.5
+    """
 
     properties = None
     parameters = None
 
     def __init__(self, runnable_solver):
-        """Construct the sampler off of a (composed) `Runnable` BQM solver.
-
-        Args:
-            runnable_solver (`Runnable`):
-                Hybrid runnable (likely composed) that accepts a BQM (in input
-                state) and produces (at least one) sample (in output state).
-
-        """
+        """Construct the sampler off of a (composed) `Runnable` BQM solver."""
         if not isinstance(runnable_solver, Runnable):
             raise TypeError("'sampler' should be 'hybrid.Runnable'")
         self._runnable_solver = runnable_solver
@@ -485,10 +523,10 @@ class HybridSampler(dimod.Sampler):
 
 
 class HybridRunnable(Runnable):
-    """Produce `hybrid.Runnable` from `dimod.Sampler` (dual of `HybridSampler`).
+    """Produces a `hybrid.Runnable` from a `dimod.Sampler` (dual of `HybridSampler`).
 
-    The runnable will sample from a problem defined in state field named `fields[0]`,
-    and populate the state field referred to as in `fields[1]`.
+    The runnable samples from a problem defined in a state field named `fields[0]`
+    and populates the state field referred to by `fields[1]`.
 
     Args:
         sampler (:class:`dimod.Sampler`):
@@ -499,12 +537,18 @@ class HybridRunnable(Runnable):
             Sampler-specific parameters passed to sampler on every call/iteration.
 
     Example:
-        Create a runnable from a `dwave-tabu`-based dimod sampler, `TabuSampler`,
-        and run in on your `bqm`:
+        This example creates a :class:`Runnable` from dimod sampler
+        :std:doc:`TabuSampler <tabu:index>`, runs it on an Ising model, and finds
+        the lowest energy.
 
-            runnable = HybridRunnable(tabu.TabuSampler(), fields=('subproblem', 'subsample'), timeout=100)
-            state = State.from_sample(min_sample(bqm), bqm)
-            state = runnable.run(state)
+        >>> from tabu import TabuSampler
+        >>> import dimod
+        >>> bqm = dimod.BinaryQuadraticModel.from_ising({}, {'ab': 0.5, 'bc': 0.5, 'ca': 0.5})
+        >>> runnable = HybridRunnable(TabuSampler(), fields=('subproblem', 'subsamples'), timeout=100)
+        >>> state0 = State(subproblem=bqm, subsamples=SampleSet.from_bqm_sample(bqm, min_sample(bqm)))
+        >>> state = runnable.run(state0)
+        >>> state.result()['subsamples'].first.energy     # doctest: +SKIP
+        -0.5
 
     """
 
@@ -532,9 +576,11 @@ class HybridRunnable(Runnable):
 
 
 class HybridProblemRunnable(HybridRunnable):
-    """Produce `hybrid.Runnable` from `dimod.Sampler` (dual of `HybridSampler`).
+    """Produces a `hybrid.Runnable` from a `dimod.Sampler` (dual of `HybridSampler`).
 
-    The runnable will sample from `state.problem`, and populate `state.samples`.
+    The runnable samples from `state.problem` and populates `state.samples`.
+
+    See an example in :class:`hybrid.core.HybridRunnable`.
     """
 
     def __init__(self, sampler, **sample_kwargs):
@@ -543,9 +589,11 @@ class HybridProblemRunnable(HybridRunnable):
 
 
 class HybridSubproblemRunnable(HybridRunnable):
-    """Produce `hybrid.Runnable` from `dimod.Sampler` (dual of `HybridSampler`).
+    """Produces a `hybrid.Runnable` from a `dimod.Sampler` (dual of `HybridSampler`).
 
-    The runnable will sample from `state.subproblem`, and populate `state.subsamples`.
+    The runnable samplea from `state.subproblem` and populates `state.subsamples`.
+
+    See an example in :class:`hybrid.core.HybridRunnable`.
     """
 
     def __init__(self, sampler, **sample_kwargs):
