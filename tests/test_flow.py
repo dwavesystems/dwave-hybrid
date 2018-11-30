@@ -67,10 +67,10 @@ class TestRacingBranches(unittest.TestCase):
 class TestArgMinFold(unittest.TestCase):
 
     def test_look_and_feel(self):
-        fold = ArgMinFold()
+        fold = ArgMinFold(key=False)
         self.assertEqual(fold.name, 'ArgMinFold')
         self.assertEqual(str(fold), '[]>')
-        self.assertEqual(repr(fold), "ArgMinFold(key=operator.attrgetter('samples.first.energy'))")
+        self.assertEqual(repr(fold), "ArgMinFold(key=False)")
 
         fold = ArgMinFold(key=min)
         self.assertEqual(repr(fold), "ArgMinFold(key=<built-in function min>)")
