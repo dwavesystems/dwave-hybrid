@@ -46,7 +46,7 @@ class TestPresent(unittest.TestCase):
 
     def test_exc(self):
         for exc in ValueError, KeyError, ZeroDivisionError:
-            f = Present(exception=exc)
+            f = Present(exception=exc())
             self.assertIsInstance(f, Future)
             self.assertTrue(f.done())
             self.assertRaises(exc, f.result)
@@ -193,7 +193,7 @@ class TestRunnable(unittest.TestCase):
         self.assertRaises(NotImplementedError, f.result)
 
         # run with error state, check exc is propagated (default)
-        f = r.run(Present(exception=ZeroDivisionError))
+        f = r.run(Present(exception=ZeroDivisionError()))
         self.assertRaises(ZeroDivisionError, f.result)
 
         class MyRunnable(Runnable):
