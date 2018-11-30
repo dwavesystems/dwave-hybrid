@@ -6,3 +6,4 @@ env/
 build/
 dist/
 wheels/
+docs/**/generated/

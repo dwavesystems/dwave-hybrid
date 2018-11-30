@@ -1,0 +1,55 @@
+version: 2
+jobs:
+  test-3.7: &test-template
+    docker:
+      - image: python:3.7
+
+    steps:
+      - checkout
+      - restore_cache:
+          key: v1-dependencies-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ checksum "docs/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+      - run: python -m virtualenv env
+      - run: env/bin/pip install -r tests/requirements.txt -r docs/requirements.txt
+      - save_cache:
+          key: v1-dependencies-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ checksum "docs/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+          paths:
+            - ./env
+      - run: env/bin/pip install .
+      - run: env/bin/coverage run -m unittest discover
+      - run:
+          name: doctest
+          command: |
+            . env/bin/activate
+            make -C docs/ doctest
+      - store_artifacts:
+          path: ./dist
+
+  test-3.6:
+    <<: *test-template
+    docker:
+      - image: python:3.6
+
+  test-3.5:
+    <<: *test-template
+    docker:
+      - image: python:3.5
+
+  test-3.4:
+    <<: *test-template
+    docker:
+      - image: python:3.4
+
+  test-2.7:
+    <<: *test-template
+    docker:
+      - image: python:2.7
+
+workflows:
+  version: 2
+  test:
+    jobs:
+      - test-3.7
+      - test-3.6
+      - test-3.5
+      - test-3.4
+      - test-2.7
