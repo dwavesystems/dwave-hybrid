@@ -60,7 +60,9 @@ class PliableDict(dict):
     """
 
     # some attribute lookups will be delegated to superclass, to handle things like pickling
-    _delegated = frozenset(('__reduce_ex__', '__reduce__', '__getstate__', '__setstate__'))
+    _delegated = frozenset(('__reduce_ex__', '__reduce__',
+                            '__getstate__', '__setstate__',
+                            '__getinitargs__', '__getnewargs__'))
 
     def __getattr__(self, name):
         if name in self._delegated:
