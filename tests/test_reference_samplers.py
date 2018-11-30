@@ -12,19 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import unittest
 
-class RunnableError(Exception):
-    """Generic Runnable exception error that includes the error context, in
-    particular, the `State` that caused the runnable component to fail."""
+import dimod
+from neal import SimulatedAnnealingSampler
 
-    def __init__(self, message, state):
-        super(RunnableError, self).__init__(message)
-        self.state = state
+from hybrid.reference.kerberos import KerberosSampler
 
 
-class InvalidStateError(Exception):
-    pass
+class TestKerberos(unittest.TestCase):
 
-
-class StateTraitMissingError(InvalidStateError):
-    pass
+    def test_basic_operation(self):
+        bqm = dimod.BinaryQuadraticModel({}, {'ab': 1, 'bc': 1, 'ca': 1}, 0, dimod.SPIN)
+        sampleset = KerberosSampler().sample(
+            bqm, qpu_sampler=SimulatedAnnealingSampler(), max_subproblem_size=1)

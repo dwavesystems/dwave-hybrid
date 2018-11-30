@@ -43,14 +43,13 @@ from hybrid.profiling import tictoc
 class QBSolvProblemSampler(Runnable):
     """QBSolv wrapper for hybrid."""
 
-    def __init__(self, bqm, qpu=None):
-        self.bqm = bqm
-        self.sampler = EmbeddingComposite(qpu) if qpu is not None else None
+    def __init__(self, qpu_sampler=None):
+        super(QBSolvProblemSampler, self).__init__()
+        self.sampler = qpu_sampler
 
     def next(self, state):
-        response = QBSolv().sample(self.bqm, solver=self.sampler)
-        return state.updated(samples=response,
-                             debug=dict(sampler=self.name))
+        response = QBSolv().sample(state.problem, solver=self.sampler)
+        return state.updated(samples=response)
 
 
 problems = chain(
@@ -63,32 +62,32 @@ problems = chain(
 
 solver_factories = [
     ("10 second Tabu",
-        lambda bqm, **kw: TabuProblemSampler(bqm, timeout=10000)),
+        lambda **kw: TabuProblemSampler(timeout=10000)),
 
     ("10k sweeps Simulated Annealing",
-        lambda bqm, **kw: IdentityDecomposer(bqm) | SimulatedAnnealingSubproblemSampler(sweeps=10000) | SplatComposer(bqm)),
+        lambda **kw: IdentityDecomposer() | SimulatedAnnealingSubproblemSampler(sweeps=10000) | SplatComposer()),
 
     ("qbsolv-like solver",
-        lambda bqm, qpu, **kw: SimpleIterator(RacingBranches(
-            InterruptableTabuSampler(bqm, quantum_timeout=200),
-            EnergyImpactDecomposer(bqm, max_size=50, min_diff=30)
+        lambda qpu, **kw: SimpleIterator(RacingBranches(
+            InterruptableTabuSampler(quantum_timeout=200),
+            EnergyImpactDecomposer(max_size=50, min_diff=30)
             | QPUSubproblemAutoEmbeddingSampler(qpu_sampler=qpu)
-            | SplatComposer(bqm)
+            | SplatComposer()
         ) | ArgMinFold(), max_iter=100, convergence=10)),
 
     ("tiling chimera solver",
-        lambda bqm, qpu, **kw: SimpleIterator(RacingBranches(
-            InterruptableTabuSampler(bqm, quantum_timeout=200),
-            TilingChimeraDecomposer(bqm, size=(16,16,4))
+        lambda qpu, **kw: SimpleIterator(RacingBranches(
+            InterruptableTabuSampler(quantum_timeout=200),
+            TilingChimeraDecomposer(size=(16,16,4))
             | QPUSubproblemExternalEmbeddingSampler(qpu_sampler=qpu)
-            | SplatComposer(bqm),
+            | SplatComposer(),
         ) | ArgMinFold(), max_iter=100, convergence=10)),
 
     ("qbsolv-classic",
-        lambda bqm, **kw: QBSolvProblemSampler(bqm)),
+        lambda **kw: QBSolvProblemSampler()),
 
     ("qbsolv-qpu",
-        lambda bqm, qpu, **kw: QBSolvProblemSampler(bqm, qpu=qpu)),
+        lambda qpu, **kw: QBSolvProblemSampler(qpu_sampler=qpu)),
 
 ]
 
@@ -97,7 +96,7 @@ def run(problems, solver_factories):
     results = OrderedDict()
 
     # reuse the cloud client
-    qpu = DWaveSampler()
+    qpu = EmbeddingComposite(DWaveSampler())
 
     for problem in problems:
         results[problem] = OrderedDict()
@@ -109,7 +108,7 @@ def run(problems, solver_factories):
             case = '{!r} with {!r}'.format(problem, name)
 
             try:
-                solver = factory(bqm=bqm, qpu=qpu)
+                solver = factory(qpu=qpu)
                 init_state = State.from_sample(min_sample(bqm), bqm)
 
                 with tictoc(case) as timer:

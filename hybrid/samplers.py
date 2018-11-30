@@ -76,7 +76,7 @@ class QPUSubproblemAutoEmbeddingSampler(Runnable, traits.SubproblemSampler):
     Args:
         num_reads (int, optional, default=100):
             Number of states (output solutions) to read from the sampler.
-        qpu_sampler (:class:`dimod.Sampler`, optional, default=DWaveSampler()):
+        qpu_sampler (:class:`dimod.Sampler`, optional, default=EmbeddingComposite(DWaveSampler())):
             Quantum sampler such as a D-Wave system.
     """
 
@@ -85,8 +85,8 @@ class QPUSubproblemAutoEmbeddingSampler(Runnable, traits.SubproblemSampler):
 
         self.num_reads = num_reads
         if qpu_sampler is None:
-            qpu_sampler = DWaveSampler()
-        self.sampler = EmbeddingComposite(qpu_sampler)
+            qpu_sampler = EmbeddingComposite(DWaveSampler())
+        self.sampler = qpu_sampler
 
     def __repr__(self):
         return ("{self}(num_reads={self.num_reads!r}, "

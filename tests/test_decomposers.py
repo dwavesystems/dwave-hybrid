@@ -17,7 +17,8 @@ import unittest
 
 import dimod
 
-from hybrid.decomposers import EnergyImpactDecomposer, RandomConstraintDecomposer
+from hybrid.decomposers import (
+    EnergyImpactDecomposer, RandomSubproblemDecomposer, RandomConstraintDecomposer)
 from hybrid.core import State
 from hybrid.utils import min_sample
 
@@ -59,6 +60,26 @@ class TestEnergyImpactDecomposer(unittest.TestCase):
         eid = EnergyImpactDecomposer(max_size=3, min_gain=5.0)
         with self.assertRaises(ValueError):
             nextstate = eid.next(state)
+
+
+class TestRandomSubproblemDecomposer(unittest.TestCase):
+    bqm = dimod.BinaryQuadraticModel({}, {'ab': 1, 'bc': 1}, 0, dimod.SPIN)
+    state = State.from_sample(min_sample(bqm), bqm)
+
+    def test_simple(self):
+        runnable = RandomSubproblemDecomposer(size=1)
+        state = self.state
+        for _ in range(10):
+            state = runnable.next(state)
+            self.assertEqual(len(state.subproblem.variables), 1)
+            self.assertIn(next(iter(state.subproblem.variables)), self.bqm.variables)
+
+    def test_look_and_feel(self):
+        self.assertEqual(repr(RandomSubproblemDecomposer(7)), 'RandomSubproblemDecomposer(size=7)')
+
+    def test_validation(self):
+        with self.assertRaises(ValueError):
+            RandomSubproblemDecomposer(len(self.bqm)+1).run(self.state).result()
 
 
 class TestConstraintDecomposer(unittest.TestCase):
