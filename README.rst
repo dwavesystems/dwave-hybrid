@@ -1,3 +1,16 @@
+.. image:: https://badge.fury.io/py/dwave-hybrid.svg
+    :target: https://badge.fury.io/py/dwave-hybrid
+    :alt: Last version on PyPI
+
+.. image:: https://circleci.com/gh/dwavesystems/dwave-hybrid.svg?style=svg
+    :target: https://circleci.com/gh/dwavesystems/dwave-hybrid
+    :alt: Linux/Mac build status
+
+.. image:: https://readthedocs.com/projects/d-wave-systems-dwave-hybrid/badge/?version=latest
+    :target: https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/
+    :alt: Documentation Status
+
+
 =============
 D-Wave Hybrid
 =============
