@@ -1,8 +1,12 @@
 version: 2
 jobs:
-  test-3.7: &test-template
+  #
+  # linux
+  #
+
+  test-3.7: &test-linux-template
     docker:
-      - image: python:3.7
+      - image: circleci/python:3.7
 
     steps:
       - checkout
@@ -20,29 +24,108 @@ jobs:
           name: doctest
           command: |
             . env/bin/activate
-            make -C docs/ doctest
-      - store_artifacts:
-          path: ./dist
+            make -C docs/ doctest || true
 
   test-3.6:
-    <<: *test-template
+    <<: *test-linux-template
     docker:
-      - image: python:3.6
+      - image: circleci/python:3.6
 
   test-3.5:
-    <<: *test-template
+    <<: *test-linux-template
     docker:
-      - image: python:3.5
+      - image: circleci/python:3.5
 
   test-3.4:
-    <<: *test-template
+    <<: *test-linux-template
     docker:
-      - image: python:3.4
+      - image: circleci/python:3.4
 
   test-2.7:
-    <<: *test-template
+    <<: *test-linux-template
     docker:
-      - image: python:2.7
+      - image: circleci/python:2.7
+
+  #
+  # macos
+  #
+
+  test-osx-3.7: &test-osx-template
+    macos:
+      xcode: "10.1.0"
+    environment:
+      PYTHON: 3.7.0
+      HOMEBREW_NO_AUTO_UPDATE: 1
+    steps:
+      - checkout
+      - run: brew install pyenv
+      - restore_cache:
+          keys:
+            - pyenv-{{ .Environment.CIRCLE_JOB }}
+      - run: pyenv install $PYTHON -s
+      - save_cache:
+          key: pyenv-{{ .Environment.CIRCLE_JOB }}
+          paths:
+            - ~/.pyenv
+      - run:
+          name: create virtualenv
+          command: |
+            eval "$(pyenv init -)"
+            pyenv local $PYTHON
+            python -m pip install virtualenv
+            python -m virtualenv env
+      - restore_cache:
+          keys:
+          - v1-dependencies-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+      - run: &install-dependencies-template
+          name: install dependencies
+          command: |
+            . env/bin/activate
+            python --version
+            pip install -r tests/requirements.txt
+      - save_cache:
+          paths:
+            - ./env
+          key: v1-dependencies-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ checksum "docs/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+      - run: env/bin/pip install .
+      - run: env/bin/coverage run -m unittest discover
+
+  test-osx-3.6:
+    <<: *test-osx-template
+    environment:
+      PYTHON: 3.6.5
+
+  test-osx-3.5:
+    <<: *test-osx-template
+    environment:
+      PYTHON: 3.5.5
+
+  test-osx-3.4:
+    <<: *test-osx-template
+    environment:
+      PYTHON: 3.4.8
+
+  test-osx-2.7:
+    <<: *test-osx-template
+    environment:
+      PYTHON: 2.7.15
+
+  #
+  # deploy
+  #
+
+  pypi-deploy:
+    <<: *test-linux-template
+    steps:
+      - checkout
+      - restore_cache:
+          key: v1-dependencies-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ checksum "docs/requirements.txt" }}-test-3.7
+      - run: env/bin/pip install wheel twine
+      - run: env/bin/python setup.py sdist bdist_wheel
+      - store_artifacts:
+          path: ./dist
+      - run: env/bin/twine upload -u "$PYPI_USERNAME" -p "$PYPI_PASSWORD" --skip-existing ./dist/*
+
 
 workflows:
   version: 2
@@ -53,3 +136,20 @@ workflows:
       - test-3.5
       - test-3.4
       - test-2.7
+      - test-osx-3.7
+      - test-osx-3.6
+      - test-osx-3.5
+      - test-osx-3.4
+      - test-osx-2.7
+
+  deploy:
+    jobs:
+      - test-3.7
+      - pypi-deploy:
+          requires:
+            - test-3.7
+          filters:
+            tags:
+              only: /^[0-9]+(\.[0-9]+)*(\.dev([0-9]+)?)?$/
+            branches:
+              ignore: /.*/
