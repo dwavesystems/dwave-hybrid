@@ -1,6 +1,10 @@
 version: 2
 jobs:
-  test-3.7: &test-template
+  #
+  # linux
+  #
+
+  test-3.7: &linux-test-template
     docker:
       - image: circleci/python:3.7
 
@@ -21,28 +25,96 @@ jobs:
           command: |
             . env/bin/activate
             make -C docs/ doctest || true
+      - run: env/bin/python setup.py sdist
       - store_artifacts:
           path: ./dist
 
   test-3.6:
-    <<: *test-template
+    <<: *linux-test-template
     docker:
       - image: circleci/python:3.6
 
   test-3.5:
-    <<: *test-template
+    <<: *linux-test-template
     docker:
       - image: circleci/python:3.5
 
   test-3.4:
-    <<: *test-template
+    <<: *linux-test-template
     docker:
       - image: circleci/python:3.4
 
   test-2.7:
-    <<: *test-template
+    <<: *linux-test-template
     docker:
       - image: circleci/python:2.7
+
+  #
+  # macos
+  #
+
+  test-osx-3.7: &osx-test-template
+    macos:
+      xcode: "10.1.0"
+    environment:
+      PYTHON: 3.7.0
+    steps:
+      - checkout
+      - run: brew install pyenv
+      - restore_cache:
+          keys:
+            - pyenv-{{ .Environment.CIRCLE_JOB }}
+      - run: pyenv install $PYTHON -s
+      - save_cache:
+          key: pyenv-{{ .Environment.CIRCLE_JOB }}
+          paths:
+            - ~/.pyenv
+      - run:
+          name: create virtualenv
+          command: |
+            eval "$(pyenv init -)"
+            pyenv local $PYTHON
+            python -m pip install virtualenv
+            python -m virtualenv env
+      - restore_cache:
+          keys:
+          - v1-dependencies-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+      - run: &install-dependencies-template
+          name: install dependencies
+          command: |
+            . env/bin/activate
+            python --version
+            pip install -r tests/requirements.txt
+      - save_cache:
+          paths:
+            - ./env
+          key: v1-dependencies-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ checksum "docs/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+      - run: env/bin/pip install .
+      - run: env/bin/coverage run -m unittest discover
+      - run: env/bin/python setup.py sdist
+      - store_artifacts:
+          path: ./dist
+
+  test-osx-3.6:
+    <<: *osx-test-template
+    environment:
+      PYTHON: 3.6.5
+
+  test-osx-3.5:
+    <<: *osx-test-template
+    environment:
+      PYTHON: 3.5.5
+
+  test-osx-3.4:
+    <<: *osx-test-template
+    environment:
+      PYTHON: 3.4.8
+
+  test-osx-2.7:
+    <<: *osx-test-template
+    environment:
+      PYTHON: 2.7.15
+
 
 workflows:
   version: 2
@@ -53,3 +125,8 @@ workflows:
       - test-3.5
       - test-3.4
       - test-2.7
+      - test-osx-3.7
+      - test-osx-3.6
+      - test-osx-3.5
+      - test-osx-3.4
+      - test-osx-2.7
