@@ -1,3 +1,16 @@
+.. image:: https://badge.fury.io/py/dwave-hybrid.svg
+    :target: https://badge.fury.io/py/dwave-hybrid
+    :alt: Last version on PyPI
+
+.. image:: https://circleci.com/gh/dwavesystems/dwave-hybrid.svg?style=svg
+    :target: https://circleci.com/gh/dwavesystems/dwave-hybrid
+    :alt: Linux/Mac build status
+
+.. image:: https://readthedocs.com/projects/d-wave-systems-dwave-hybrid/badge/?version=latest
+    :target: https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/
+    :alt: Documentation Status
+
+
 =============
 D-Wave Hybrid
 =============
@@ -21,9 +34,9 @@ Installation or Building
 
 .. installation-start-marker
 
-**Package not yet available on PyPI.** Install in developer (edit) mode::
+Install from a package on PyPI::
 
-    pip install -e git+https://github.com/dwavesystems/dwave-hybrid.git#egg=dwave-hybrid
+    pip install dwave-hybrid
 
 or from source::
 
@@ -72,3 +85,9 @@ Example
 
 
 .. example-end-marker
+
+
+License
+=======
+
+Released under the Apache License 2.0. See `<LICENSE>`_ file.
