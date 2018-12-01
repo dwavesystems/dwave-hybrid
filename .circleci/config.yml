@@ -149,7 +149,7 @@ workflows:
             tags:
               only: /^[0-9]+(\.[0-9]+)*(\.dev([0-9]+)?)?$/
             branches:
-              only: master
+              ignore: /.*/
       - pypi-deploy:
           requires:
             - test-3.7
@@ -157,4 +157,4 @@ workflows:
             tags:
               only: /^[0-9]+(\.[0-9]+)*(\.dev([0-9]+)?)?$/
             branches:
-              only: master
+              ignore: /.*/
