@@ -14,11 +14,14 @@ environment:
 matrix:
   fast_finish: true
 
+cache:
+  - '%PYTHON%' -> requirements.txt, tests\requirements.txt
+
 build_script:
-  - "%PYTHON%\\python.exe -m pip install ."
+  - "%PYTHON%\\python.exe -m pip install -r tests\\requirements.txt"
 
 before_test:
-  - "%PYTHON%\\python.exe -m pip install -r tests\\requirements.txt"
+  - "%PYTHON%\\python.exe -m pip install ."
 
 test_script:
   - "%PYTHON%\\python.exe -m unittest discover"
