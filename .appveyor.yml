@@ -14,9 +14,6 @@ environment:
 matrix:
   fast_finish: true
 
-install:
-  - "python -m pip install --upgrade pip"
-
 build_script:
   - "%PYTHON%\\python.exe -m pip install ."
 
