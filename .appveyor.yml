@@ -14,6 +14,9 @@ environment:
 install:
   - "python -m pip install --upgrade pip"
 
+build_script:
+  - "%PYTHON%\\python.exe -m pip install ."
+
 before_test:
   - "%PYTHON%\\python.exe -m pip install -r tests\\requirements.txt"
 
