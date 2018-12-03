@@ -15,7 +15,7 @@ matrix:
   fast_finish: true
 
 cache:
-  - '%PYTHON%' -> requirements.txt, tests\requirements.txt
+  - '%PYTHON% -> requirements.txt, tests\requirements.txt'
 
 build_script:
   - "%PYTHON%\\python.exe -m pip install -r tests\\requirements.txt"
