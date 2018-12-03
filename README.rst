@@ -6,6 +6,10 @@
     :target: https://circleci.com/gh/dwavesystems/dwave-hybrid
     :alt: Linux/Mac build status
 
+.. image:: https://ci.appveyor.com/api/projects/status/porqyytww2elwjv8/branch/master?svg=true
+    :target: https://ci.appveyor.com/project/dwave-adtt/dwave-hybrid/branch/master
+    :alt: Windows build status
+
 .. image:: https://readthedocs.com/projects/d-wave-systems-dwave-hybrid/badge/?version=latest
     :target: https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/
     :alt: Documentation Status
