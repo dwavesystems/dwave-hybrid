@@ -17,7 +17,6 @@ Classes
 .. autoclass:: InterruptableTabuSampler
 .. autoclass:: RandomSubproblemSampler
 
-
 Examples
 ========
 

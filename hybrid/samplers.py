@@ -50,6 +50,9 @@ class QPUSubproblemExternalEmbeddingSampler(Runnable, traits.SubproblemSampler, 
             Number of states (output solutions) to read from the sampler.
         qpu_sampler (:class:`dimod.Sampler`, optional, default=DWaveSampler()):
             Quantum sampler such as a D-Wave system.
+
+    Examples:
+        See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/samplers.html#examples.
     """
 
     def __init__(self, num_reads=100, qpu_sampler=None):
@@ -78,6 +81,9 @@ class QPUSubproblemAutoEmbeddingSampler(Runnable, traits.SubproblemSampler):
             Number of states (output solutions) to read from the sampler.
         qpu_sampler (:class:`dimod.Sampler`, optional, default=EmbeddingComposite(DWaveSampler())):
             Quantum sampler such as a D-Wave system.
+
+    Examples:
+        See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/samplers.html#examples.
     """
 
     def __init__(self, num_reads=100, qpu_sampler=None):
@@ -105,6 +111,9 @@ class SimulatedAnnealingSubproblemSampler(Runnable, traits.SubproblemSampler):
             Number of states (output solutions) to read from the sampler.
         sweeps (int, optional, default=1000):
             Number of sweeps or steps.
+
+    Examples:
+        See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/samplers.html#examples.
     """
 
     def __init__(self, num_reads=1, sweeps=1000):
@@ -146,6 +155,9 @@ class TabuSubproblemSampler(Runnable, traits.SubproblemSampler):
             of problem variables up to a maximum value of 20.
         timeout (int, optional, default=20):
             Total running time in milliseconds.
+
+    Examples:
+        See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/samplers.html#examples.
     """
 
     def __init__(self, num_reads=1, tenure=None, timeout=20):
@@ -179,6 +191,9 @@ class TabuProblemSampler(Runnable, traits.ProblemSampler):
             of problem variables up to a maximum value of 20.
         timeout (int, optional, default=20):
             Total running time in milliseconds.
+
+    Examples:
+        See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/samplers.html#examples.
     """
 
     def __init__(self, num_reads=1, tenure=None, timeout=20):
@@ -217,6 +232,9 @@ class InterruptableTabuSampler(TabuProblemSampler):
             expiration of the `timeout` parameter.
         timeout (int, optional, default=20):
             Total running time in milliseconds.
+
+    Examples:
+        See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/samplers.html#examples.
     """
 
     def __init__(self, quantum_timeout=20, timeout=None, **kwargs):

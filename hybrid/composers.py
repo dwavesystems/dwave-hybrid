@@ -31,7 +31,11 @@ class IdentityComposer(Runnable, traits.SubproblemComposer):
 
 
 class SplatComposer(Runnable, traits.SubproblemComposer):
-    """A composer that overwrites current samples with subproblem samples."""
+    """A composer that overwrites current samples with subproblem samples.
+
+    Examples:
+        See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/composers.html#examples.
+    """
 
     def next(self, state):
         # update the first sample in `state.sampleset`, inplace
