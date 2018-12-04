@@ -31,11 +31,10 @@ Properties
 Methods
 =======
 
-For users of building-block classes alone (not controlled by elements of
-:ref:`infrastructure <flow>` classes), the method of main interest is `run`
-(and occasionally `stop`) plus methods of generating states. Developers should
-understand and might implement versions of the `init`, `next`, `error`, and `stop`
-methods.
+For users, the methods of main interest are `run` (and occasionally `stop`) for
+:class:`Runnable` and its subclasses and the methods of generating states for
+the :class:`State` class. Developers should understand and might implement versions
+of the `init`, `next`, `error`, and `stop` methods.
 
 .. autosummary::
    :toctree: generated/
