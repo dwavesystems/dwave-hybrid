@@ -16,6 +16,7 @@ matrix:
 
 cache:
   - '%PYTHON%\Lib\site-packages -> requirements.txt, tests\requirements.txt'
+  - '%AppData%\pip\Cache'
 
 build_script:
   - "%PYTHON%\\python.exe -m pip install -r tests\\requirements.txt"
