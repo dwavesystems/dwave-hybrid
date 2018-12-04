@@ -60,6 +60,9 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
             the `min_diff` criteria. A shift of 3, for example, skips three high
             contributors to the current and previous iteration in favor of selecting three
             variables not in the previous iteration.
+
+    Examples:
+        See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/decomposers.html#examples.
     """
 
     def __init__(self, max_size, min_gain=0.0, min_diff=1, stride=1):
@@ -121,6 +124,9 @@ class RandomSubproblemDecomposer(Runnable, traits.ProblemDecomposer):
     Args:
         size (int):
             Number of variables in the subproblem.
+
+    Examples:
+        See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/decomposers.html#examples.
     """
 
     def __init__(self, size):
@@ -158,6 +164,9 @@ class TilingChimeraDecomposer(Runnable, traits.ProblemDecomposer, traits.Embeddi
             n the columns, and t the size of shore in the Chimera lattice.
         loop (Bool, optional, default=True):
             Cycle continually through the tiles.
+
+    Examples:
+        See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/decomposers.html#examples.
     """
 
     def __init__(self, size=(4,4,4), loop=True):
@@ -197,6 +206,9 @@ class RandomConstraintDecomposer(Runnable, traits.ProblemDecomposer):
         constraints (list[set]):
             Groups of variables in the BQM, as a list of sets, where each set is associated
             with a constraint.
+
+    Examples:
+        See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/decomposers.html#examples.
     """
 
     def __init__(self, size, constraints):
