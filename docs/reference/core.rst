@@ -4,8 +4,8 @@
 Building Blocks
 ===============
 
-Building-block classes for configuring hybrid, asynchronous decomposition samplers,
-together with the provided :ref:`infrastructure <flow>` classes.
+Building-block classes for hybrid workflows together with the provided
+:ref:`infrastructure <flow>` classes.
 
 .. automodule:: hybrid.core
 
@@ -32,9 +32,10 @@ Methods
 =======
 
 For users of building-block classes alone (not controlled by elements of
-:ref:`infrastructure <flow>` classes), the methods of main interest are `run`
-and `next` plus methods of generating states. Developers might implement versions
-of methods such as `error`.
+:ref:`infrastructure <flow>` classes), the method of main interest is `run`
+(and occasionally `stop`) plus methods of generating states. Developers should
+understand and might implement versions of the `init`, `next`, `error`, and `stop`
+methods.
 
 .. autosummary::
    :toctree: generated/
@@ -52,8 +53,8 @@ of methods such as `error`.
    State.from_samples
 
 
-Hybrid/Dimod Conversion
-=======================
+Hybrid Runnables and Dimod Samplers
+===================================
 
 These classes handle conversion between `dwave-hybrid` and :std:doc:`dimod <dimod:index>`.
 
