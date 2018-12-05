@@ -143,10 +143,10 @@ class State(PliableDict):
         Example:
 
             >>> state = State()
-            >>> state
+            >>> state     # doctest: +SKIP
             {problem': None, 'samples': None}
             >>> newstate = state.updated(problem="test")
-            >>> newstate
+            >>> newstate  # doctest: +SKIP
             {problem': 'test', 'samples': None}
         """
 
@@ -243,9 +243,9 @@ class Runnable(StateTraits):
         ...                                  ('b', 'a'): 2.0, ('c', 'a'): -4.0, ('c', 'b'): -4.0, ('a', 'z'): -4.0},
         ...                                  -1.0, 'BINARY')
         >>> # Set up the sampler runnable
-        >>> sampler = samplers.TabuProblemSampler(bqm, tenure=2, timeout=5)
+        >>> sampler = TabuProblemSampler(tenure=2, timeout=5)
         >>> # Run one iteration of the sampler
-        >>> new_state = sampler.next(core.State.from_sample({'x': 0, 'y': 0, 'z': 1, 'a': 1, 'b': 1, 'c': 0}, bqm))
+        >>> new_state = sampler.next(State.from_sample({'x': 0, 'y': 0, 'z': 1, 'a': 1, 'b': 1, 'c': 0}, bqm))
         >>> print(new_state.samples)      # doctest: +SKIP
         Response(rec.array([([1, 1, 1, 1, 1, 1], -1., 1)],
           dtype=[('sample', 'i1', (6,)), ('energy', '<f8'), ('num_occurrences', '<i4')]),
@@ -392,7 +392,7 @@ class Branch(Runnable):
             update a current set of samples, such as: :code:`decomposer | sampler | composer`.
 
     Examples:
-        This example runs one iteration of a branch comprising a decomposer, a D-Wave system,
+        This example runs one iteration of a branch comprising a decomposer, local Tabu solver,
         and a composer. A 10-variable binary quadratic model is decomposed by the energy
         impact of its variables into a 6-variable subproblem to be sampled twice
         with a manually set initial state of all -1 values.
@@ -402,10 +402,10 @@ class Branch(Runnable):
         ...                                  {(t, (t+1) % 10): 1 for t in range(10)},
         ...                                  0, 'SPIN')
         >>> # Run one iteration on a branch
-        >>> branch = EnergyImpactDecomposer(bqm, max_size=6, min_gain=-10) |
-        ...                  QPUSubproblemAutoEmbeddingSampler(num_reads=2) |
-        ...                  SplatComposer(bqm)
-        >>> new_state = branch.next(core.State.from_sample(min_sample(bqm), bqm)
+        >>> branch = (EnergyImpactDecomposer(max_size=6, min_gain=-10) |
+        ...           TabuSubproblemSampler(num_reads=2) |
+        ...           SplatComposer())
+        >>> new_state = branch.next(State.from_sample(min_sample(bqm), bqm))
         >>> print(new_state.subsamples)      # doctest: +SKIP
         Response(rec.array([([-1,  1, -1,  1, -1,  1], -5., 1),
            ([ 1, -1,  1, -1, -1,  1], -5., 1)],
@@ -591,7 +591,7 @@ class HybridProblemRunnable(HybridRunnable):
     The runnable samples from `state.problem` and populates `state.samples`.
 
     See an example in :class:`hybrid.core.HybridRunnable`. An example of the duality
-    with `HybridSampler` is,   
+    with `HybridSampler` is,
     HybridProblemRunnable(HybridSampler(TabuProblemSampler())) == TabuProblemSampler()
     """
 

@@ -17,14 +17,14 @@ jobs:
       - save_cache:
           key: v1-dependencies-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ checksum "docs/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
           paths:
-            - ./env
+            - env
       - run: env/bin/pip install .
       - run: env/bin/coverage run -m unittest discover
       - run:
           name: doctest
           command: |
             . env/bin/activate
-            make -C docs/ doctest || true
+            make -C docs/ doctest
 
   test-3.6:
     <<: *test-linux-template
@@ -85,7 +85,7 @@ jobs:
             pip install -r tests/requirements.txt
       - save_cache:
           paths:
-            - ./env
+            - env
           key: v1-dependencies-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ checksum "docs/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
       - run: env/bin/pip install .
       - run: env/bin/coverage run -m unittest discover
@@ -123,7 +123,7 @@ jobs:
       - run: env/bin/pip install wheel twine
       - run: env/bin/python setup.py sdist bdist_wheel
       - store_artifacts:
-          path: ./dist
+          path: dist
       - run: env/bin/twine upload -u "$PYPI_USERNAME" -p "$PYPI_PASSWORD" --skip-existing ./dist/*
 
 
