@@ -201,6 +201,14 @@ class State(PliableDict):
         return cls(problem=bqm, samples=SampleSet.from_bqm_samples(bqm, samples))
 
 
+class States(list):
+    def __init__(self, *args):
+        super(States, self).__init__(args)
+
+    def result(self):
+        return self
+
+
 class Present(Future):
     """Already resolved :class:`~concurrent.futures.Future` object.
 
