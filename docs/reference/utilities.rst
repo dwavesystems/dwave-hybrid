@@ -14,17 +14,17 @@ Methods
 .. autosummary::
    :toctree: generated/
 
-   bqm_reduced_to
-   bqm_induced_by
    bqm_edges_between_variables
+   bqm_induced_by
+   bqm_reduced_to
+   chimera_tiles
    flip_energy_gains
+   max_sample
+   min_sample
+   random_sample
+   random_sample_seq
+   sample_as_dict
+   sample_as_list
    select_localsearch_adversaries
    select_random_subgraph
-   chimera_tiles
    updated_sample
-   sample_as_list
-   sample_as_dict
-   random_sample_seq
-   random_sample
-   min_sample
-   max_sample

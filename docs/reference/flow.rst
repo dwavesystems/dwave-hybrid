@@ -1,11 +1,10 @@
 .. _flow:
 
-=========
-Framework
-=========
+================
+Flow Structuring
+================
 
-Infrastructure classes for hybrid workflows together with the provided
-:ref:`building-block <core>` classes.
+Classes that structure (hybrid) workflows.
 
 .. automodule:: hybrid.flow
 
