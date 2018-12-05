@@ -77,21 +77,21 @@ class TestArgMinFold(unittest.TestCase):
 
     def test_default_fold(self):
         bqm = dimod.BinaryQuadraticModel({'a': 1}, {}, 0, dimod.SPIN)
-        states = [
+        states = States(
             State.from_sample(min_sample(bqm), bqm),    # energy: -1
             State.from_sample(max_sample(bqm), bqm),    # energy: +1
-        ]
-        best = ArgMinFold().run(Present(result=states)).result()
+        )
+        best = ArgMinFold().run(states).result()
         self.assertEqual(best.samples.first.energy, -1)
 
     def test_custom_fold(self):
         bqm = dimod.BinaryQuadraticModel({'a': 1}, {}, 0, dimod.SPIN)
-        states = [
+        states = States(
             State.from_sample(min_sample(bqm), bqm),    # energy: -1
             State.from_sample(max_sample(bqm), bqm),    # energy: +1
-        ]
+        )
         fold = ArgMinFold(key=lambda s: -s.samples.first.energy)
-        best = fold.run(Present(result=states)).result()
+        best = fold.run(states).result()
         self.assertEqual(best.samples.first.energy, 1)
 
 

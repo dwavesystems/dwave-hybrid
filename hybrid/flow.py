@@ -70,7 +70,7 @@ class RacingBranches(Runnable):
 
         futures = [branch.run(state.updated()) for branch in self.branches]
 
-        states = []
+        states = States()
         if self.endomorphic:
             states.append(state)
 
