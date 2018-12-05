@@ -100,8 +100,18 @@ class ArgMinFold(Runnable):
     """Selects the best state from the list of states (output of
     :class:`RacingBranches`).
 
-    Best state is judged according to a metric defined with a "key" function, `key`.
-    By default, `key` favors states containing a sample with minimal energy.
+    Args:
+        key (callable/str):
+            Best state is judged according to a metric defined with a `key`.
+            `key` can be a `callable` with a signature::
+
+                key :: (State s, Ord k) => s -> k
+
+            or a string holding a key name/path to be extracted from the input
+            state with `operator.attrgetter` method.
+
+            By default, `key == operator.attrgetter('samples.first.energy')`,
+            thus favoring states containing a sample with the minimal energy.
 
     Examples:
         This example runs two branches---a classical tabu search interrupted by
