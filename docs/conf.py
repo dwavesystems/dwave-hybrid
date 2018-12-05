@@ -79,6 +79,14 @@ todo_include_todos = True
 
 modindex_common_prefix = ['hybrid.']
 
+doctest_global_setup = """
+from hybrid.samplers import *
+from hybrid.core import *
+from hybrid.utils import *
+from hybrid.decomposers import *
+from hybrid.composers import *
+"""
+
 # -- Options for HTML output ----------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for

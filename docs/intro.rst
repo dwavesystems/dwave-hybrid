@@ -59,7 +59,7 @@ algorithm run on the entire problem. Only a sampler :class:`.Runnable` component
 >>> state = State.from_sample({'a': 0, 'b': 0, 'c': 0}, bqm)
 >>> # Sample the problem
 >>> new_state = sampler.run(state).result()
->>> print(new_state.samples)
+>>> print(new_state.samples)          # doctest: +SKIP
 SampleSet(rec.array([([ 1, -1, -1], -0.5, 1)],
           dtype=[('sample', 'i1', (3,)), ('energy', '<f8'), ('num_occurrences', '<i4')]),
           ['a', 'b', 'c'], {}, 'SPIN')
@@ -88,7 +88,7 @@ The example below uses Kerberos to solve a large QUBO.
 
 >>> import dimod
 >>> from hybrid.reference.kerberos import KerberosSampler
->>> with open('problems/random-chimera/8192.01.qubo') as problem:
+>>> with open('../problems/random-chimera/8192.01.qubo') as problem:
 ...     bqm = dimod.BinaryQuadraticModel.from_coo(problem)
 >>> len(bqm)
 8192
