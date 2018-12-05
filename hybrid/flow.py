@@ -17,7 +17,7 @@ from operator import attrgetter
 
 import six
 
-from hybrid.core import Runnable
+from hybrid.core import Runnable, States
 
 import logging
 logger = logging.getLogger(__name__)
@@ -96,6 +96,51 @@ class RacingBranches(Runnable):
         """Terminate an iteration of an instantiated :class:`RacingBranches`."""
         for branch in self.branches:
             branch.stop()
+
+
+class Map(Runnable):
+    """Runs a specified runnable in parallel on all input states.
+
+    Args:
+        runnable (:class:`Runnable`):
+            A runnable executed for every input state.
+
+    Examples:
+        This example runs `TabuProblemSampler` on two input states in parallel,
+        returning when both are done.
+
+        >>> Map(TabuProblemSampler).run([State(problem=bqm1), State(problem=bqm2)])
+        [<state_1_with_solution>, <state_2_with_solution>]
+
+    """
+
+    def __init__(self, runnable, *args, **kwargs):
+        if not isinstance(runnable, Runnable):
+            raise TypeError("'runnable' is not instance of Runnable")
+
+        super(Map, self).__init__(*args, **kwargs)
+        self.runnable = runnable
+
+    def __str__(self):
+        return "[]()"
+
+    def __repr__(self):
+        return "{}(runnable={!r})".format(self.name, self.runnable)
+
+    def __iter__(self):
+        return iter(tuple())
+
+    def next(self, states):
+        self._futures = [self.runnable.run(state) for state in states]
+
+        concurrent.futures.wait(self._futures,
+                                return_when=concurrent.futures.ALL_COMPLETED)
+
+        return States(*(f.result() for f in self._futures))
+
+    def stop(self):
+        for future in self._futures:
+            future.cancel()
 
 
 class ArgMinFold(Runnable):

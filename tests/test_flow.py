@@ -20,8 +20,8 @@ import operator
 
 import dimod
 
-from hybrid.flow import RacingBranches, ArgMinFold, SimpleIterator
-from hybrid.core import State, Runnable, Present
+from hybrid.flow import RacingBranches, ArgMinFold, SimpleIterator, Map
+from hybrid.core import State, States, Runnable, Present
 from hybrid.utils import min_sample, max_sample
 
 
@@ -106,3 +106,28 @@ class TestSimpleIterator(unittest.TestCase):
         s = it.run(State(cnt=0)).result()
 
         self.assertEqual(s.cnt, 100)
+
+
+class TestMap(unittest.TestCase):
+
+    def test_isolated(self):
+        class Inc(Runnable):
+            def next(self, state):
+                return state.updated(cnt=state.cnt + 1)
+
+        states = States(State(cnt=1), State(cnt=2))
+        result = Map(Inc()).run(states).result()
+
+        self.assertEqual(result[0].cnt, states[0].cnt + 1)
+        self.assertEqual(result[1].cnt, states[1].cnt + 1)
+
+    def test_branch(self):
+        class Inc(Runnable):
+            def next(self, state):
+                return state.updated(cnt=state.cnt + 1)
+
+        states = States(State(cnt=1), State(cnt=2))
+        branch = Map(Inc()) | ArgMinFold('cnt')
+        result = branch.run(states).result()
+
+        self.assertEqual(result.cnt, states[0].cnt + 1)
