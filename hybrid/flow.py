@@ -15,7 +15,9 @@
 import concurrent.futures
 from operator import attrgetter
 
-from hybrid.core import Runnable
+import six
+
+from hybrid.core import Runnable, States
 
 import logging
 logger = logging.getLogger(__name__)
@@ -68,7 +70,7 @@ class RacingBranches(Runnable):
 
         futures = [branch.run(state.updated()) for branch in self.branches]
 
-        states = []
+        states = States()
         if self.endomorphic:
             states.append(state)
 
@@ -96,12 +98,67 @@ class RacingBranches(Runnable):
             branch.stop()
 
 
+class Map(Runnable):
+    """Runs a specified runnable in parallel on all input states.
+
+    Args:
+        runnable (:class:`Runnable`):
+            A runnable executed for every input state.
+
+    Examples:
+        This example runs `TabuProblemSampler` on two input states in parallel,
+        returning when both are done.
+
+        >>> Map(TabuProblemSampler).run([State(problem=bqm1), State(problem=bqm2)])
+        [<state_1_with_solution>, <state_2_with_solution>]
+
+    """
+
+    def __init__(self, runnable, *args, **kwargs):
+        if not isinstance(runnable, Runnable):
+            raise TypeError("'runnable' is not instance of Runnable")
+
+        super(Map, self).__init__(*args, **kwargs)
+        self.runnable = runnable
+
+    def __str__(self):
+        return "[]()"
+
+    def __repr__(self):
+        return "{}(runnable={!r})".format(self.name, self.runnable)
+
+    def __iter__(self):
+        return iter(tuple())
+
+    def next(self, states):
+        self._futures = [self.runnable.run(state) for state in states]
+
+        concurrent.futures.wait(self._futures,
+                                return_when=concurrent.futures.ALL_COMPLETED)
+
+        return States(*(f.result() for f in self._futures))
+
+    def stop(self):
+        for future in self._futures:
+            future.cancel()
+
+
 class ArgMinFold(Runnable):
     """Selects the best state from the list of states (output of
     :class:`RacingBranches`).
 
-    Best state is judged according to a metric defined with a "key" function, `key`.
-    By default, `key` favors states containing a sample with minimal energy.
+    Args:
+        key (callable/str):
+            Best state is judged according to a metric defined with a `key`.
+            `key` can be a `callable` with a signature::
+
+                key :: (State s, Ord k) => s -> k
+
+            or a string holding a key name/path to be extracted from the input
+            state with `operator.attrgetter` method.
+
+            By default, `key == operator.attrgetter('samples.first.energy')`,
+            thus favoring states containing a sample with the minimal energy.
 
     Examples:
         This example runs two branches---a classical tabu search interrupted by
@@ -121,7 +178,9 @@ class ArgMinFold(Runnable):
         """Return the state which minimizes the objective function `key`."""
         super(ArgMinFold, self).__init__()
         if key is None:
-            key = attrgetter('samples.first.energy')
+            key = 'samples.first.energy'
+        if isinstance(key, six.string_types):
+            key = attrgetter(key)
         self.key = key
 
     def __str__(self):

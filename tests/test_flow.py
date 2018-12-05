@@ -20,8 +20,8 @@ import operator
 
 import dimod
 
-from hybrid.flow import RacingBranches, ArgMinFold, SimpleIterator
-from hybrid.core import State, Runnable, Present
+from hybrid.flow import RacingBranches, ArgMinFold, SimpleIterator, Map
+from hybrid.core import State, States, Runnable, Present
 from hybrid.utils import min_sample, max_sample
 
 
@@ -77,21 +77,21 @@ class TestArgMinFold(unittest.TestCase):
 
     def test_default_fold(self):
         bqm = dimod.BinaryQuadraticModel({'a': 1}, {}, 0, dimod.SPIN)
-        states = [
+        states = States(
             State.from_sample(min_sample(bqm), bqm),    # energy: -1
             State.from_sample(max_sample(bqm), bqm),    # energy: +1
-        ]
-        best = ArgMinFold().run(Present(result=states)).result()
+        )
+        best = ArgMinFold().run(states).result()
         self.assertEqual(best.samples.first.energy, -1)
 
     def test_custom_fold(self):
         bqm = dimod.BinaryQuadraticModel({'a': 1}, {}, 0, dimod.SPIN)
-        states = [
+        states = States(
             State.from_sample(min_sample(bqm), bqm),    # energy: -1
             State.from_sample(max_sample(bqm), bqm),    # energy: +1
-        ]
+        )
         fold = ArgMinFold(key=lambda s: -s.samples.first.energy)
-        best = fold.run(Present(result=states)).result()
+        best = fold.run(states).result()
         self.assertEqual(best.samples.first.energy, 1)
 
 
@@ -106,3 +106,28 @@ class TestSimpleIterator(unittest.TestCase):
         s = it.run(State(cnt=0)).result()
 
         self.assertEqual(s.cnt, 100)
+
+
+class TestMap(unittest.TestCase):
+
+    def test_isolated(self):
+        class Inc(Runnable):
+            def next(self, state):
+                return state.updated(cnt=state.cnt + 1)
+
+        states = States(State(cnt=1), State(cnt=2))
+        result = Map(Inc()).run(states).result()
+
+        self.assertEqual(result[0].cnt, states[0].cnt + 1)
+        self.assertEqual(result[1].cnt, states[1].cnt + 1)
+
+    def test_branch(self):
+        class Inc(Runnable):
+            def next(self, state):
+                return state.updated(cnt=state.cnt + 1)
+
+        states = States(State(cnt=1), State(cnt=2))
+        branch = Map(Inc()) | ArgMinFold('cnt')
+        result = branch.run(states).result()
+
+        self.assertEqual(result.cnt, states[0].cnt + 1)
