@@ -392,7 +392,7 @@ class Branch(Runnable):
             update a current set of samples, such as: :code:`decomposer | sampler | composer`.
 
     Examples:
-        This example runs one iteration of a branch comprising a decomposer, a D-Wave system,
+        This example runs one iteration of a branch comprising a decomposer, local Tabu solver,
         and a composer. A 10-variable binary quadratic model is decomposed by the energy
         impact of its variables into a 6-variable subproblem to be sampled twice
         with a manually set initial state of all -1 values.
@@ -403,7 +403,7 @@ class Branch(Runnable):
         ...                                  0, 'SPIN')
         >>> # Run one iteration on a branch
         >>> branch = (EnergyImpactDecomposer(max_size=6, min_gain=-10) |
-        ...           QPUSubproblemAutoEmbeddingSampler(num_reads=2) |
+        ...           TabuSubproblemSampler(num_reads=2) |
         ...           SplatComposer())
         >>> new_state = branch.next(State.from_sample(min_sample(bqm), bqm))
         >>> print(new_state.subsamples)      # doctest: +SKIP

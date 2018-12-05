@@ -92,6 +92,6 @@ The example below uses Kerberos to solve a large QUBO.
 ...     bqm = dimod.BinaryQuadraticModel.from_coo(problem)
 >>> len(bqm)
 8192
->>> solution = KerberosSampler().sample(bqm, max_iter=10, convergence=3)
+>>> solution = KerberosSampler().sample(bqm, max_iter=10, convergence=3)    # doctest: +SKIP
 >>> solution.first.energy     # doctest: +SKIP
 -4647.0
