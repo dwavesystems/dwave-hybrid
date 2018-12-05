@@ -15,6 +15,8 @@
 import concurrent.futures
 from operator import attrgetter
 
+import six
+
 from hybrid.core import Runnable
 
 import logging
@@ -131,7 +133,9 @@ class ArgMinFold(Runnable):
         """Return the state which minimizes the objective function `key`."""
         super(ArgMinFold, self).__init__()
         if key is None:
-            key = attrgetter('samples.first.energy')
+            key = 'samples.first.energy'
+        if isinstance(key, six.string_types):
+            key = attrgetter(key)
         self.key = key
 
     def __str__(self):
