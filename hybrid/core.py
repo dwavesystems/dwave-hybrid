@@ -195,8 +195,8 @@ class State(PliableDict):
 
             >>> import dimod
             >>> bqm = dimod.BinaryQuadraticModel.from_ising({}, {'ab': 0.5, 'bc': 0.5, 'ca': 0.5})
-            >>> state = State.from_samples({'a': -1, 'b': -1, 'c': -1},
-            ...                            {'a': -1, 'b': -1, 'c': 1}, bqm)
+            >>> state = State.from_samples([{'a': -1, 'b': -1, 'c': -1},
+            ...                            {'a': -1, 'b': -1, 'c': 1}], bqm)
         """
         return cls(problem=bqm, samples=SampleSet.from_bqm_samples(bqm, samples))
 
@@ -273,7 +273,7 @@ class Runnable(StateTraits):
         pass
 
     def next(self, state):
-        """Execute one blocking iteration of an instantiated :class:`Runnable`.
+        """Execute one blocking iteration of an instantiated :class:`Runnable` with a valid state as input.
 
         Args:
             state (:class:`State`): Computation state passed between connected components.
@@ -290,7 +290,7 @@ class Runnable(StateTraits):
         raise NotImplementedError
 
     def error(self, exc):
-        """Return a valid new state or raise an exception.
+        """Execute one blocking iteration of an instantiated :class:`Runnable` with an exception as input.
 
         Called when the previous component raised an exception instead of generating a
         new state.
@@ -582,7 +582,9 @@ class HybridProblemRunnable(HybridRunnable):
 
     The runnable samples from `state.problem` and populates `state.samples`.
 
-    See an example in :class:`hybrid.core.HybridRunnable`.
+    See an example in :class:`hybrid.core.HybridRunnable`. An example of the duality
+    with `HybridSampler` is,   
+    HybridProblemRunnable(HybridSampler(TabuProblemSampler())) == TabuProblemSampler()
     """
 
     def __init__(self, sampler, **sample_kwargs):

@@ -4,8 +4,8 @@
 Framework
 =========
 
-Infrastructure classes for configuring hybrid, asynchronous decomposition samplers,
-together with the provided :ref:`building-block <core>` classes.
+Infrastructure classes for hybrid workflows together with the provided
+:ref:`building-block <core>` classes.
 
 .. automodule:: hybrid.flow
 
@@ -19,10 +19,4 @@ Classes
 Methods
 =======
 
-.. autosummary::
-   :toctree: generated/
-
-   ArgMinFold.next
-   RacingBranches.next
-   RacingBranches.stop
-   SimpleIterator.next
+See :ref:`core` for methods inherited from the :class:`~hybrid.core.Runnable` superclass.
