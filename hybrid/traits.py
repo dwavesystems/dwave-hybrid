@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from hybrid.exceptions import StateTraitMissingError
+from collections import abc
+
+from hybrid.exceptions import StateTraitMissingError, StateDimensionalityError
 
 
 class StateTraits(object):
@@ -21,18 +23,78 @@ class StateTraits(object):
     def __init__(self):
         self.inputs = set()
         self.outputs = set()
+        self.multi_input = False
+        self.multi_output = False
 
-    def validate_state_trait(self, state, trait):
+    def validate_state_trait(self, state, trait, io):
+        """Validate single input/output (`io`) `state` `trait`."""
         if trait not in state:
-            raise StateTraitMissingError("state is missing %r" % trait)
+            raise StateTraitMissingError("{} state is missing {!r}".format(io, trait))
 
-    def validate_input_state_traits(self, state):
-        for trait in self.inputs:
-            self.validate_state_trait(state, trait)
+    def validate_input_state_traits(self, inp):
+        if self.multi_input:
+            if not isinstance(inp, abc.Sequence):
+                raise StateDimensionalityError("state sequence required on input")
 
-    def validate_output_state_traits(self, state):
-        for trait in self.outputs:
-            self.validate_state_trait(state, trait)
+            for state in inp:
+                for trait in self.inputs:
+                    self.validate_state_trait(state, trait, "input")
+
+        else:
+            if not isinstance(inp, abc.Mapping):
+                raise StateDimensionalityError("single state required on input")
+
+            for trait in self.inputs:
+                self.validate_state_trait(inp, trait, "input")
+
+    def validate_output_state_traits(self, out):
+        if self.multi_output:
+            if not isinstance(out, abc.Sequence):
+                raise StateDimensionalityError("state sequence required on output")
+
+            for state in out:
+                for trait in self.outputs:
+                    self.validate_state_trait(state, trait, "output")
+
+        else:
+            if not isinstance(out, abc.Mapping):
+                raise StateDimensionalityError("single state required on output")
+
+            for trait in self.outputs:
+                self.validate_state_trait(out, trait, "output")
+
+
+class SingleInputState(StateTraits):
+    def __init__(self):
+        super(SingleInputState, self).__init__()
+        self.multi_input = False
+
+class MultiInputStates(StateTraits):
+    def __init__(self):
+        super(MultiInputStates, self).__init__()
+        self.multi_input = True
+
+class SingleOutputState(StateTraits):
+    def __init__(self):
+        super(SingleOutputState, self).__init__()
+        self.multi_output = False
+
+class MultiOutputStates(StateTraits):
+    def __init__(self):
+        super(MultiOutputStates, self).__init__()
+        self.multi_output = True
+
+class SISO(SingleInputState, SingleOutputState):
+    pass
+
+class SIMO(SingleInputState, MultiOutputStates):
+    pass
+
+class MIMO(MultiInputStates, MultiOutputStates):
+    pass
+
+class MISO(MultiInputStates, SingleOutputState):
+    pass
 
 
 class ProblemIntaking(StateTraits):

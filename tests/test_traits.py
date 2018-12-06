@@ -26,7 +26,7 @@ class TestRunnableTraits(unittest.TestCase):
     def test_valid_input(self):
         class Component(Runnable, traits.SubproblemIntaking):
             def next(self, state):
-                return True
+                return State()
 
         self.assertTrue(Component().run(State(subproblem=None)).result())
 
