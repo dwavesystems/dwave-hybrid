@@ -19,12 +19,13 @@ from functools import partial
 import six
 
 from hybrid.core import Runnable, States
+from hybrid import traits
 
 import logging
 logger = logging.getLogger(__name__)
 
 
-class RacingBranches(Runnable):
+class RacingBranches(Runnable, traits.SIMO):
     """Runs parallel :class:`Branch` classes.
 
     Args:
@@ -56,6 +57,14 @@ class RacingBranches(Runnable):
         super(RacingBranches, self).__init__()
         self.branches = branches
         self.endomorphic = kwargs.get('endomorphic', True)
+
+        if not self.branches:
+            raise ValueError("racing branches requires at least one branch")
+
+        # patch components's I/O requirements based on the subcomponents' requirements
+        # TODO: automate
+        self.inputs = set.union(*(branch.inputs for branch in self.branches))
+        self.outputs = set.intersection(*(branch.outputs for branch in self.branches))
 
     def __str__(self):
         return " !! ".join("({})".format(b) for b in self) or "(zero racing branches)"
@@ -99,7 +108,7 @@ class RacingBranches(Runnable):
             branch.stop()
 
 
-class Map(Runnable):
+class Map(Runnable, traits.MIMO):
     """Runs a specified runnable in parallel on all input states.
 
     Args:
@@ -121,6 +130,11 @@ class Map(Runnable):
 
         super(Map, self).__init__(*args, **kwargs)
         self.runnable = runnable
+
+        # patch components's I/O requirements based on the subcomponents' requirements
+        # TODO: automate
+        self.inputs = runnable.inputs
+        self.outputs = runnable.outputs
 
     def __str__(self):
         return "[]()"
@@ -159,6 +173,8 @@ class Lambda(Runnable):
         init (callable):
             Implementation of runnable's `init` method. See :meth:`Runnable.init`.
 
+    Note: traits are not enforced, apart from the SISO requirement.
+
     Examples:
         This example creates and runs a simple runnable that multiplies state
         variables `a` and `b`, storing them in `c`.
@@ -192,7 +208,7 @@ class Lambda(Runnable):
             self.name, self.next, self.error, self.init)
 
 
-class ArgMinFold(Runnable):
+class ArgMinFold(Runnable, traits.MISO):
     """Selects the best state from the list of states (output of
     :class:`RacingBranches`).
 

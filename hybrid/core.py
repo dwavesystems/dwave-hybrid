@@ -417,6 +417,16 @@ class Branch(Runnable):
         super(Branch, self).__init__(*args, **kwargs)
         self.components = tuple(components)
 
+        if not self.components:
+            raise ValueError("branch has to contain at least one component")
+
+        # patch branch's I/O requirements based on the first and last component
+        # TODO: automate
+        self.inputs = self.components[0].inputs
+        self.multi_input = self.components[0].multi_input
+        self.outputs = self.components[-1].outputs
+        self.multi_output = self.components[-1].multi_output
+
     def __or__(self, other):
         """Composition of Branch with runnable components (L-to-R) returns a new
         runnable Branch.
