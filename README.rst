@@ -23,12 +23,17 @@ D-Wave Hybrid
 
 A general, minimal Python framework for building hybrid asynchronous decomposition
 samplers for quadratic unconstrained binary optimization (QUBO) problems.
-It facilitates experimentation with structures and parameters for
-tailoring a decomposition solver to a problem.
+
+*dwave-hybrid* facilitates three aspects of solution development:
+
+*   Hybrid approaches to combining quantum and classical compute resources
+*   Evaluating a portfolio of algorithmic components and problem-decomposition strategies
+*   Experimenting with workflow structures and parameters to obtain the best application results
 
 The framework enables rapid development and insight into expected performance
 of productized versions of its experimental prototypes.
-It does not provide real-time performance.
+
+Your optimized algorithmic components and other contributions to this project are welcome!
 
 .. index-end-marker
 
