@@ -16,7 +16,7 @@ import unittest
 
 import dimod
 
-from hybrid.core import State, Runnable
+from hybrid.core import State, States, Runnable, Branch
 from hybrid.utils import min_sample
 from hybrid import traits
 
@@ -129,3 +129,49 @@ class TestMultipleTraits(unittest.TestCase):
         self.assertTrue(
             # problem and samples are included by default
             Component().run(State(subproblem=True, subsamples=True)).result())
+
+
+class TestMultipleStateTraits(unittest.TestCase):
+
+    def test_siso(self):
+        class ValidSISO(Runnable, traits.SISO):
+            def next(self, state):
+                return state
+
+        with self.assertRaises(traits.StateDimensionalityError):
+            ValidSISO().run(States()).result()
+        self.assertEqual(ValidSISO().run(State(x=1)).result().x, 1)
+
+        class InvalidSISO(Runnable, traits.SISO):
+            def next(self, state):
+                # should return a single State()
+                return States(state, state)
+
+        with self.assertRaises(traits.StateDimensionalityError):
+            InvalidSISO().run(State()).result()
+            InvalidSISO().run(States()).result()
+
+    def test_mimo_with_specific_state_traits(self):
+        # input: list of states with subproblem
+        # output: list of states with subsamples
+        class SubproblemSamplerMIMO(Runnable, traits.MIMO, traits.SubproblemSampler):
+            def next(self, states):
+                return States(State(subsamples=1), State(subsamples=2))
+
+        with self.assertRaises(traits.StateDimensionalityError):
+            SubproblemSamplerMIMO().run(State()).result()
+        with self.assertRaises(traits.StateTraitMissingError):
+            SubproblemSamplerMIMO().run(States(State())).result()
+
+        r = SubproblemSamplerMIMO().run(States(State(subproblem=True))).result()
+        self.assertEqual(r[0].subsamples, 1)
+        self.assertEqual(r[1].subsamples, 2)
+
+    def test_invalid_mimo(self):
+        class InvalidMIMO(Runnable, traits.MIMO):
+            def next(self, states):
+                # should return States()
+                return State()
+
+        with self.assertRaises(traits.StateDimensionalityError):
+            InvalidMIMO().run(States()).result()
