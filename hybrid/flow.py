@@ -14,6 +14,7 @@
 
 import concurrent.futures
 from operator import attrgetter
+from functools import partial
 
 import six
 
@@ -141,6 +142,54 @@ class Map(Runnable):
     def stop(self):
         for future in self._futures:
             future.cancel()
+
+
+class Lambda(Runnable):
+    """Creates a runnable on fly, given just its `next` function (optionally
+    `init` and `error` functions can be specified too).
+
+    Args:
+        next (callable):
+            Implementation of runnable's `next` method, provided as a callable
+            (usually lambda expression for simple operations). Signature of the
+            callable has to match the signature of :meth:`Runnable.next()`, i.e.
+            it accepts two arguments: runnable instance and state instance.
+        error (callable):
+            Implementation of runnable's `error` method. See :meth:`Runnable.error`.
+        init (callable):
+            Implementation of runnable's `init` method. See :meth:`Runnable.init`.
+
+    Examples:
+        This example creates and runs a simple runnable that multiplies state
+        variables `a` and `b`, storing them in `c`.
+
+        >>> Lambda(lambda _, s: s.updated(c=s.a * s.b)).run(State(a=2, b=3)).result()
+        {'a': 2, 'b': 3, 'c': 6, ...}
+
+        This example applies `x += 1` to a sequence of input states.
+
+        >>> Map(Lambda(lambda _, s: s.updated(x=s.x + 1))).run(States(State(x=0), State(x=1))).result()
+        [{'x': 1, ...}, {'x': 2, ...}]
+    """
+
+    def __init__(self, next, error=None, init=None, *args, **kwargs):
+        if not callable(next):
+            raise TypeError("'next' is not callable")
+        if error is not None and not callable(error):
+            raise TypeError("'error' is not callable")
+        if init is not None and not callable(init):
+            raise TypeError("'init' is not callable")
+
+        super(Lambda, self).__init__(*args, **kwargs)
+        self.next = partial(next, self)
+        if error is not None:
+            self.error = partial(error, self)
+        if init is not None:
+            self.init = partial(init, self)
+
+    def __repr__(self):
+        return "{}(next={!r}, error={!r}, init={!r})".format(
+            self.name, self.next, self.error, self.init)
 
 
 class ArgMinFold(Runnable):
