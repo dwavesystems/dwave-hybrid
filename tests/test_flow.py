@@ -20,7 +20,7 @@ import operator
 
 import dimod
 
-from hybrid.flow import RacingBranches, ArgMinFold, SimpleIterator, Map
+from hybrid.flow import RacingBranches, ArgMinFold, SimpleIterator, Map, Lambda
 from hybrid.core import State, States, Runnable, Present
 from hybrid.utils import min_sample, max_sample
 
@@ -131,3 +131,58 @@ class TestMap(unittest.TestCase):
         result = branch.run(states).result()
 
         self.assertEqual(result.cnt, states[0].cnt + 1)
+
+    def test_input_validation(self):
+        with self.assertRaises(TypeError):
+            Map(False)
+        with self.assertRaises(TypeError):
+            Map(lambda: None)
+        with self.assertRaises(TypeError):
+            Map(Runnable)
+        self.assertIsInstance(Map(Runnable()), Runnable)
+
+
+class TestLambda(unittest.TestCase):
+
+    def test_basic_runnable(self):
+        runnable = Lambda(lambda _, s: s.updated(c=s.a * s.b))
+        state = State(a=2, b=3)
+        result = runnable.run(state).result()
+
+        self.assertEqual(result.c, state.a * state.b)
+
+    def test_error_and_init(self):
+        runnable = Lambda(
+            next=lambda self, state: state.updated(c=state.a * state.b),
+            error=lambda self, exc: State(error=exc),
+            init=lambda self, state: setattr(self, 'first', state.c)
+        )
+
+        # test init
+        state = State(a=2, b=3, c=0)
+        result = runnable.run(state).result()
+
+        self.assertEqual(runnable.first, 0)
+        self.assertEqual(result.c, state.a * state.b)
+
+        # test error prop
+        exc = ZeroDivisionError()
+        result = runnable.run(Present(exception=exc)).result()
+
+        self.assertEqual(result.error, exc)
+
+    def test_map_lambda(self):
+        states = States(State(cnt=1), State(cnt=2))
+        result = Map(Lambda(lambda _, s: s.updated(cnt=s.cnt + 1))).run(states).result()
+
+        self.assertEqual(result[0].cnt, states[0].cnt + 1)
+        self.assertEqual(result[1].cnt, states[1].cnt + 1)
+
+    def test_input_validation(self):
+        with self.assertRaises(TypeError):
+            Lambda(False)
+        with self.assertRaises(TypeError):
+            Lambda(lambda: None, False)
+        with self.assertRaises(TypeError):
+            Lambda(lambda: None, lambda: None, False)
+        self.assertIsInstance(Lambda(lambda: None, lambda: None, lambda: None), Runnable)

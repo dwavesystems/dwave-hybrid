@@ -163,7 +163,7 @@ class Lambda(Runnable):
         This example creates and runs a simple runnable that multiplies state
         variables `a` and `b`, storing them in `c`.
 
-        >>> Lambda(lambda _, s: s.updated(s.c=s.a * s.b)).run(State(a=2, b=3)).result()
+        >>> Lambda(lambda _, s: s.updated(c=s.a * s.b)).run(State(a=2, b=3)).result()
         {'a': 2, 'b': 3, 'c': 6, ...}
 
         This example applies `x += 1` to a sequence of input states.
