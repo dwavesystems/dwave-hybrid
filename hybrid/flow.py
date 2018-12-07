@@ -276,7 +276,9 @@ class Lambda(Runnable):
         init (callable):
             Implementation of runnable's `init` method. See :meth:`Runnable.init`.
 
-    Note: traits are not enforced, apart from the SISO requirement.
+    Note:
+        Traits are not enforced, apart from the SISO requirement. Also, note
+        `Lambda` runnables can only implement SISO systems.
 
     Examples:
         This example creates and runs a simple runnable that multiplies state
@@ -387,6 +389,17 @@ class Loop(Runnable):
             key = attrgetter('samples.first.energy')
         self.key = key
 
+        # preemptively check runnable's i/o dimensionality
+        if runnable.multi_input != runnable.multi_output:
+            raise TypeError("runnable's input dimensionality does not match "
+                            "the output dimensionality")
+
+        # patch branch's I/O requirements based on the child component's requirements
+        self.inputs = self.runnable.inputs
+        self.multi_input = self.runnable.multi_input
+        self.outputs = self.runnable.outputs
+        self.multi_output = self.runnable.multi_output
+
     def __str__(self):
         return "Loop over {}".format(self.runnable)
 
@@ -400,24 +413,24 @@ class Loop(Runnable):
     def next(self, state):
         """Execute one blocking iteration of an instantiated :class:`Loop`."""
         last = state
-        last_key = self.key(last)
+        last_quality = self.key(last)
         cnt = self.convergence
 
         for iterno in range(self.max_iter):
             state = self.runnable.run(state).result()
-            state_key = self.key(state)
+            state_quality = self.key(state)
 
-            logger.info("{name} Iteration(iterno={iterno}, best_state_key={key})".format(
-                name=self.name, iterno=iterno, key=state_key))
+            logger.info("{name} Iteration(iterno={iterno}, best_state_quality={key})".format(
+                name=self.name, iterno=iterno, key=state_quality))
 
-            if state_key == last_key:
+            if state_quality == last_quality:
                 cnt -= 1
             else:
                 cnt = self.convergence
             if cnt <= 0:
                 break
 
-            last_key = state_key
+            last_quality = state_quality
 
         return state
 

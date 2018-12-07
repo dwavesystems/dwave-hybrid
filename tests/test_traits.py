@@ -17,7 +17,7 @@ import unittest
 import dimod
 
 from hybrid.core import State, States, Runnable
-from hybrid.flow import Branch, RacingBranches, Map
+from hybrid.flow import Branch, RacingBranches, Map, Loop
 from hybrid.utils import min_sample
 from hybrid import traits
 
@@ -274,3 +274,18 @@ class TestFlowComponentsTraits(unittest.TestCase):
         r = m.run(States(State(problem=1))).result()
         self.assertSetEqual(m.inputs, a.inputs)
         self.assertSetEqual(m.outputs, a.outputs)
+
+    def test_loop(self):
+        class Identity(Runnable, traits.MIMO):
+            def next(self, states):
+                return states
+
+        prog = Loop(Identity(), max_iter=10, convergence=10, key=lambda _: None)
+        ss = States(State(idx=0), State(idx=1))
+
+        res = prog.run(ss).result()
+        self.assertEqual(res[0].idx, 0)
+        self.assertEqual(res[1].idx, 1)
+
+        with self.assertRaises(traits.StateDimensionalityError):
+            prog.run(State()).result()
