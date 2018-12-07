@@ -104,3 +104,58 @@ decomposition and parallel running of branches.
 .. include:: ../../README.rst
   :start-after: example-start-marker
   :end-before: example-end-marker
+
+Additional Examples
+===================
+
+Tailoring State Selection
+-------------------------
+
+The next example tailors a state selector for a sampler that does some post-processing
+and can alert upon suspect samples. `states`, a :class:`~hybrid.core.States` output from
+the sampler is shown below with the first of three :class:`~hybrid.core.State` flagged as
+problematic using the `info` field::
+
+    [{'problem': BinaryQuadraticModel({'a': 0.0, 'b': 0.0, 'c': 0.0}, {('a', 'b'): 0.5, ('b', 'c'): 0.5, ('c', 'a'): 0.5},
+    0.0, Vartype.SPIN),'samples': SampleSet(rec.array([([0, 1, 0], 0., 1)],
+    dtype=[('sample', 'i1', (3,)), ('energy', '<f8'), ('num_occurrences', '<i4')]), ['a', 'b', 'c'], {'Postprocessor': 'Excessive chain breaks'}, 'SPIN')},
+    {'problem': BinaryQuadraticModel({'a': 0.0, 'b': 0.0, 'c': 0.0}, {('a', 'b'): 0.5, ('b', 'c'): 0.5, ('c', 'a'): 0.5},
+    0.0, Vartype.SPIN),'samples': SampleSet(rec.array([([1, 1, 1], 1.5, 1)],
+    dtype=[('sample', 'i1', (3,)), ('energy', '<f8'), ('num_occurrences', '<i4')]), ['a', 'b', 'c'], {}, 'SPIN')},
+    {'problem': BinaryQuadraticModel({'a': 0.0, 'b': 0.0, 'c': 0.0}, {('a', 'b'): 0.5, ('b', 'c'): 0.5, ('c', 'a'): 0.5},
+    0.0, Vartype.SPIN),'samples': SampleSet(rec.array([([0, 0, 0], 0., 1)],
+    dtype=[('sample', 'i1', (3,)), ('energy', '<f8'), ('num_occurrences', '<i4')]), ['a', 'b', 'c'], {}, 'SPIN')}]
+
+This code snippet defines a metric got the key argument in :class:`~hybrid.flow.ArgMin`::
+
+    def preempt(si):
+        if 'Postprocessor' in si.samples.info:
+            return(math.inf)
+        else:
+            return(si.samples.first.energy)
+
+Using the key in :class:`~hybrid.flow.ArgMin` on `states`, the :class:`~hybrid.core.States` above,
+finds the state with the lowest energy excluding the flagged state:
+
+>>> ArgMin(key=preempt).next(states)     # doctest: +SKIP
+{'problem': BinaryQuadraticModel({'a': 0.0, 'b': 0.0, 'c': 0.0}, {('a', 'b'): 0.5, ('b', 'c'): 0.5, ('c', 'a'): 0.5},
+0.0, Vartype.SPIN), 'samples': SampleSet(rec.array([([0, 0, 0], 0., 1)],
+dtype=[('sample', 'i1', (3,)), ('energy', '<f8'), ('num_occurrences', '<i4')]), ['a', 'b', 'c'], {}, 'SPIN')}
+
+Parallel Sampling
+-----------------
+
+The code snippet below uses :class:`~hybrid.flow.Map` to run a tabu search on two states in parallel.
+
+>>> Map(TabuProblemSampler()).run(States(                     # doctest: +SKIP
+        State.from_sample({'a': 0, 'b': 0, 'c': 1}, bqm1),
+        State.from_sample({'a': 1, 'b': 1, 'c': 0}, bqm2)))
+>>> _.result()                # doctest: +SKIP
+[{'samples': SampleSet(rec.array([([-1, -1,  1], -0.5, 1)], dtype=[('sample', 'i1', (3,)),
+ ('energy', '<f8'), ('num_occurrences', '<i4')]), ['a', 'b', 'c'], {}, 'SPIN'),
+ 'problem': BinaryQuadraticModel({'a': 0.0, 'b': 0.0, 'c': 0.0}, {('a', 'b'): 0.5, ('b', 'c'): 0.5,
+ ('c', 'a'): 0.5}, 0.0, Vartype.SPIN)},
+ {'samples': SampleSet(rec.array([([ 1,  1, -1], -1., 1)], dtype=[('sample', 'i1', (3,)),
+ ('energy', '<f8'), ('num_occurrences', '<i4')]), ['a', 'b', 'c'], {}, 'SPIN'),
+ 'problem': BinaryQuadraticModel({'a': 0.0, 'b': 0.0, 'c': 0.0}, {('a', 'b'): 1, ('b', 'c'): 1,
+ ('c', 'a'): 1}, 0.0, Vartype.SPIN)}]
