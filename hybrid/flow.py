@@ -23,7 +23,7 @@ import six
 from hybrid.core import Runnable, States, Present
 from hybrid import traits
 
-__all__ = ['Branch', 'RacingBranches', 'Map', 'Lambda', 'ArgMin', 'Loop']
+__all__ = ['Branch', 'RacingBranches', 'Race', 'Map', 'Lambda', 'ArgMin', 'Loop']
 
 logger = logging.getLogger(__name__)
 
