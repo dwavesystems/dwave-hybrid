@@ -20,7 +20,7 @@ import operator
 
 import dimod
 
-from hybrid.flow import Branch, RacingBranches, ArgMinFold, SimpleIterator, Map, Lambda
+from hybrid.flow import Branch, RacingBranches, ArgMin, SimpleIterator, Map, Lambda
 from hybrid.core import State, States, Runnable, Present
 from hybrid.utils import min_sample, max_sample
 
@@ -137,16 +137,16 @@ class TestRacingBranches(unittest.TestCase):
         self.assertEqual([s.x for s in res], [2, 1, 2])
 
 
-class TestArgMinFold(unittest.TestCase):
+class TestArgMin(unittest.TestCase):
 
     def test_look_and_feel(self):
-        fold = ArgMinFold(key=False)
-        self.assertEqual(fold.name, 'ArgMinFold')
+        fold = ArgMin(key=False)
+        self.assertEqual(fold.name, 'ArgMin')
         self.assertEqual(str(fold), '[]>')
-        self.assertEqual(repr(fold), "ArgMinFold(key=False)")
+        self.assertEqual(repr(fold), "ArgMin(key=False)")
 
-        fold = ArgMinFold(key=min)
-        self.assertEqual(repr(fold), "ArgMinFold(key=<built-in function min>)")
+        fold = ArgMin(key=min)
+        self.assertEqual(repr(fold), "ArgMin(key=<built-in function min>)")
 
     def test_default_fold(self):
         bqm = dimod.BinaryQuadraticModel({'a': 1}, {}, 0, dimod.SPIN)
@@ -154,7 +154,7 @@ class TestArgMinFold(unittest.TestCase):
             State.from_sample(min_sample(bqm), bqm),    # energy: -1
             State.from_sample(max_sample(bqm), bqm),    # energy: +1
         )
-        best = ArgMinFold().run(states).result()
+        best = ArgMin().run(states).result()
         self.assertEqual(best.samples.first.energy, -1)
 
     def test_custom_fold(self):
@@ -163,7 +163,7 @@ class TestArgMinFold(unittest.TestCase):
             State.from_sample(min_sample(bqm), bqm),    # energy: -1
             State.from_sample(max_sample(bqm), bqm),    # energy: +1
         )
-        fold = ArgMinFold(key=lambda s: -s.samples.first.energy)
+        fold = ArgMin(key=lambda s: -s.samples.first.energy)
         best = fold.run(states).result()
         self.assertEqual(best.samples.first.energy, 1)
 
@@ -200,7 +200,7 @@ class TestMap(unittest.TestCase):
                 return state.updated(cnt=state.cnt + 1)
 
         states = States(State(cnt=1), State(cnt=2))
-        branch = Map(Inc()) | ArgMinFold('cnt')
+        branch = Map(Inc()) | ArgMin('cnt')
         result = branch.run(states).result()
 
         self.assertEqual(result.cnt, states[0].cnt + 1)

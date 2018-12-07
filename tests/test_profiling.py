@@ -15,7 +15,7 @@
 import unittest
 
 from hybrid.core import Runnable, State
-from hybrid.flow import Branch, RacingBranches, ArgMinFold, SimpleIterator
+from hybrid.flow import Branch, RacingBranches, ArgMin, SimpleIterator
 from hybrid.profiling import tictoc, iter_inorder, walk_inorder
 from hybrid.testing import mock
 from hybrid.composers import *
@@ -45,8 +45,8 @@ class TestCoreRunnablesIterable(unittest.TestCase):
         rb = RacingBranches(self.RunnableA(), self.RunnableB())
         self.assertEqual(self.children(rb), ['RunnableA', 'RunnableB'])
 
-    def test_argminfold(self):
-        self.assertEqual(self.children(ArgMinFold()), [])
+    def test_argmin(self):
+        self.assertEqual(self.children(ArgMin()), [])
 
     def test_simpleiterator(self):
         r = SimpleIterator(self.RunnableA())
@@ -91,15 +91,15 @@ class TestTictoc(unittest.TestCase):
 class TestRunnableWalkers(unittest.TestCase):
 
     def test_iter_walk(self):
-        flow = SimpleIterator(RacingBranches(Runnable(), Runnable()) | ArgMinFold())
+        flow = SimpleIterator(RacingBranches(Runnable(), Runnable()) | ArgMin())
         names = [r.name for r in iter_inorder(flow)]
-        self.assertEqual(names, ['SimpleIterator', 'Branch', 'RacingBranches', 'Runnable', 'Runnable', 'ArgMinFold'])
+        self.assertEqual(names, ['SimpleIterator', 'Branch', 'RacingBranches', 'Runnable', 'Runnable', 'ArgMin'])
 
     def test_callback_walk(self):
-        flow = SimpleIterator(RacingBranches(Runnable(), Runnable()) | ArgMinFold())
+        flow = SimpleIterator(RacingBranches(Runnable(), Runnable()) | ArgMin())
         names = []
         walk_inorder(flow, visit=lambda r, _: names.append(r.name))
-        self.assertEqual(names, ['SimpleIterator', 'Branch', 'RacingBranches', 'Runnable', 'Runnable', 'ArgMinFold'])
+        self.assertEqual(names, ['SimpleIterator', 'Branch', 'RacingBranches', 'Runnable', 'Runnable', 'ArgMin'])
 
 
 class TestCounters(unittest.TestCase):

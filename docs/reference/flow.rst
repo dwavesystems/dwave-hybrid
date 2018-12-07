@@ -13,7 +13,7 @@ Classes
 
 .. autoclass:: Branch
 .. autoclass:: RacingBranches
-.. autoclass:: ArgMinFold
+.. autoclass:: ArgMin
 .. autoclass:: SimpleIterator
 
 Methods

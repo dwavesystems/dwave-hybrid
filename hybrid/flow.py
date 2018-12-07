@@ -23,7 +23,7 @@ import six
 from hybrid.core import Runnable, States, Present
 from hybrid import traits
 
-__all__ = ['Branch', 'RacingBranches', 'Map', 'Lambda', 'ArgMinFold', 'SimpleIterator']
+__all__ = ['Branch', 'RacingBranches', 'Map', 'Lambda', 'ArgMin', 'SimpleIterator']
 
 logger = logging.getLogger(__name__)
 
@@ -133,6 +133,9 @@ class RacingBranches(Runnable, traits.SIMO):
             is the domain; for example, if there might be a mix of subproblems
             and problems moving between components.
 
+    Note:
+        `RacingBranches` is also available as `Race`.
+
     Examples:
         This example runs two branches: a classical tabu search interrupted by
         samples of subproblems returned from a D-Wave system.
@@ -142,7 +145,7 @@ class RacingBranches(Runnable, traits.SIMO):
                 EnergyImpactDecomposer(max_size=2)
                 | QPUSubproblemAutoEmbeddingSampler()
                 | SplatComposer()
-            ) | ArgMinFold()
+            ) | ArgMin()
 
     """
 
@@ -203,6 +206,9 @@ class RacingBranches(Runnable, traits.SIMO):
         """Terminate an iteration of an instantiated :class:`RacingBranches`."""
         for branch in self.branches:
             branch.stop()
+
+
+Race = RacingBranches
 
 
 class Map(Runnable, traits.MIMO):
@@ -312,9 +318,8 @@ class Lambda(Runnable):
             self.name, self._next, self._error, self._init)
 
 
-class ArgMinFold(Runnable, traits.MISO):
-    """Selects the best state from the list of states (output of
-    :class:`RacingBranches`).
+class ArgMin(Runnable, traits.MISO):
+    """Selects the best state from a sequence of states (:class:`States`).
 
     Args:
         key (callable/str):
@@ -339,13 +344,13 @@ class ArgMinFold(Runnable, traits.MISO):
                 EnergyImpactDecomposer(max_size=2)
                 | QPUSubproblemAutoEmbeddingSampler()
                 | SplatComposer()
-            ) | ArgMinFold()
+            ) | ArgMin()
 
     """
 
     def __init__(self, key=None):
         """Return the state which minimizes the objective function `key`."""
-        super(ArgMinFold, self).__init__()
+        super(ArgMin, self).__init__()
         if key is None:
             key = 'samples.first.energy'
         if isinstance(key, six.string_types):
@@ -359,7 +364,7 @@ class ArgMinFold(Runnable, traits.MISO):
         return "{}(key={!r})".format(self.name, self.key)
 
     def next(self, states):
-        """Execute one blocking iteration of an instantiated :class:`ArgMinFold`."""
+        """Execute one blocking iteration of an instantiated :class:`ArgMin`."""
         # debug info
         for idx, state in enumerate(states):
             logger.debug("{name} State(idx={idx}, arg={arg})".format(
