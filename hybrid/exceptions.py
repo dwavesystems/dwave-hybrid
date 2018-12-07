@@ -23,8 +23,12 @@ class RunnableError(Exception):
 
 
 class InvalidStateError(Exception):
-    pass
+    """General state error."""
 
 
 class StateTraitMissingError(InvalidStateError):
-    pass
+    """State missing a trait."""
+
+
+class StateDimensionalityError(InvalidStateError):
+    """Single state expected instead of a state sequence, or vice versa."""

@@ -245,6 +245,10 @@ class TestRunnable(unittest.TestCase):
 
 class TestBranch(unittest.TestCase):
 
+    def test_empty(self):
+        with self.assertRaises(ValueError):
+            Branch()
+
     def test_composition(self):
         class A(Runnable):
             def next(self, state):

@@ -19,12 +19,13 @@ from functools import partial
 import six
 
 from hybrid.core import Runnable, States
+from hybrid import traits
 
 import logging
 logger = logging.getLogger(__name__)
 
 
-class RacingBranches(Runnable):
+class RacingBranches(Runnable, traits.SIMO):
     """Runs parallel :class:`Branch` classes.
 
     Args:
@@ -56,6 +57,14 @@ class RacingBranches(Runnable):
         super(RacingBranches, self).__init__()
         self.branches = branches
         self.endomorphic = kwargs.get('endomorphic', True)
+
+        if not self.branches:
+            raise ValueError("racing branches requires at least one branch")
+
+        # patch components's I/O requirements based on the subcomponents' requirements
+        # TODO: automate
+        self.inputs = set.union(*(branch.inputs for branch in self.branches))
+        self.outputs = set.intersection(*(branch.outputs for branch in self.branches))
 
     def __str__(self):
         return " !! ".join("({})".format(b) for b in self) or "(zero racing branches)"
@@ -99,7 +108,7 @@ class RacingBranches(Runnable):
             branch.stop()
 
 
-class Map(Runnable):
+class Map(Runnable, traits.MIMO):
     """Runs a specified runnable in parallel on all input states.
 
     Args:
@@ -122,6 +131,11 @@ class Map(Runnable):
         super(Map, self).__init__(*args, **kwargs)
         self.runnable = runnable
 
+        # patch components's I/O requirements based on the subcomponents' requirements
+        # TODO: automate
+        self.inputs = runnable.inputs
+        self.outputs = runnable.outputs
+
     def __str__(self):
         return "[]()"
 
@@ -129,7 +143,7 @@ class Map(Runnable):
         return "{}(runnable={!r})".format(self.name, self.runnable)
 
     def __iter__(self):
-        return iter(tuple())
+        return iter(tuple(self.runnable))
 
     def next(self, states):
         self._futures = [self.runnable.run(state) for state in states]
@@ -159,6 +173,8 @@ class Lambda(Runnable):
         init (callable):
             Implementation of runnable's `init` method. See :meth:`Runnable.init`.
 
+    Note: traits are not enforced, apart from the SISO requirement.
+
     Examples:
         This example creates and runs a simple runnable that multiplies state
         variables `a` and `b`, storing them in `c`.
@@ -181,18 +197,25 @@ class Lambda(Runnable):
             raise TypeError("'init' is not callable")
 
         super(Lambda, self).__init__(*args, **kwargs)
+
+        # bind to self
         self.next = partial(next, self)
         if error is not None:
             self.error = partial(error, self)
         if init is not None:
             self.init = partial(init, self)
 
+        # keep a copy for inspection (without cycles to `self`)
+        self._next = next
+        self._error = error
+        self._init = init
+
     def __repr__(self):
         return "{}(next={!r}, error={!r}, init={!r})".format(
-            self.name, self.next, self.error, self.init)
+            self.name, self._next, self._error, self._init)
 
 
-class ArgMinFold(Runnable):
+class ArgMinFold(Runnable, traits.MISO):
     """Selects the best state from the list of states (output of
     :class:`RacingBranches`).
 
