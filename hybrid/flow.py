@@ -143,7 +143,7 @@ class Map(Runnable, traits.MIMO):
         return "{}(runnable={!r})".format(self.name, self.runnable)
 
     def __iter__(self):
-        return iter(tuple())
+        return iter(tuple(self.runnable))
 
     def next(self, states):
         self._futures = [self.runnable.run(state) for state in states]
@@ -197,15 +197,22 @@ class Lambda(Runnable):
             raise TypeError("'init' is not callable")
 
         super(Lambda, self).__init__(*args, **kwargs)
+
+        # bind to self
         self.next = partial(next, self)
         if error is not None:
             self.error = partial(error, self)
         if init is not None:
             self.init = partial(init, self)
 
+        # keep a copy for inspection (without cycles to `self`)
+        self._next = next
+        self._error = error
+        self._init = init
+
     def __repr__(self):
         return "{}(next={!r}, error={!r}, init={!r})".format(
-            self.name, self.next, self.error, self.init)
+            self.name, self._next, self._error, self._init)
 
 
 class ArgMinFold(Runnable, traits.MISO):
