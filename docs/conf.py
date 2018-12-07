@@ -85,6 +85,7 @@ from hybrid.core import *
 from hybrid.utils import *
 from hybrid.decomposers import *
 from hybrid.composers import *
+from hybrid.flow import *
 """
 
 # -- Options for HTML output ----------------------------------------------

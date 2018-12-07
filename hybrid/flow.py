@@ -222,7 +222,7 @@ class Map(Runnable, traits.MIMO):
         This example runs `TabuProblemSampler` on two input states in parallel,
         returning when both are done.
 
-        >>> Map(TabuProblemSampler).run([State(problem=bqm1), State(problem=bqm2)])
+        >>> Map(TabuProblemSampler()).run([State(problem=bqm1), State(problem=bqm2)])    # doctest: +SKIP
         [<state_1_with_solution>, <state_2_with_solution>]
 
     """
@@ -282,13 +282,13 @@ class Lambda(Runnable):
         This example creates and runs a simple runnable that multiplies state
         variables `a` and `b`, storing them in `c`.
 
-        >>> Lambda(lambda _, s: s.updated(c=s.a * s.b)).run(State(a=2, b=3)).result()
+        >>> Lambda(lambda _, s: s.updated(c=s.a * s.b)).run(State(a=2, b=3)).result()     # doctest: +SKIP
         {'a': 2, 'b': 3, 'c': 6, ...}
 
         This example applies `x += 1` to a sequence of input states.
 
-        >>> Map(Lambda(lambda _, s: s.updated(x=s.x + 1))).run(States(State(x=0), State(x=1))).result()
-        [{'x': 1, ...}, {'x': 2, ...}]
+        >>> Map(Lambda(lambda _, s: s.updated(x=s.x + 1))).run(States(State(x=0), State(x=1))).result()   # doctest: +SKIP
+        [{'problem': None, 'x': 1, 'samples': None}, {'problem': None, 'x': 2, 'samples': None}]
     """
 
     def __init__(self, next, error=None, init=None, *args, **kwargs):

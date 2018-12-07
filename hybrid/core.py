@@ -206,6 +206,7 @@ class State(PliableDict):
 
 
 class States(list):
+    """List of states."""
     def __init__(self, *args):
         super(States, self).__init__(args)
 

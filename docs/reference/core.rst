@@ -14,6 +14,7 @@ Classes
 .. autoclass:: Present
 .. autoclass:: Runnable
 .. autoclass:: State
+.. autoclass:: States
 
 
 Properties
