@@ -23,7 +23,7 @@ import six
 from hybrid.core import Runnable, States, Present
 from hybrid import traits
 
-__all__ = ['Branch', 'RacingBranches', 'Race', 'Map', 'Lambda', 'ArgMin', 'Loop']
+__all__ = ['Branch', 'RacingBranches', 'Race', 'Map', 'Lambda', 'ArgMin', 'Loop', 'SimpleIterator']
 
 logger = logging.getLogger(__name__)
 
@@ -420,3 +420,6 @@ class Loop(Runnable):
             last_key = state_key
 
         return state
+
+
+SimpleIterator = Loop
