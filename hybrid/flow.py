@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import concurrent.futures
 from operator import attrgetter
 from functools import partial
@@ -21,7 +22,8 @@ import six
 from hybrid.core import Runnable, States
 from hybrid import traits
 
-import logging
+__all__ = ['RacingBranches', 'Map', 'Lambda', 'ArgMinFold', 'SimpleIterator']
+
 logger = logging.getLogger(__name__)
 
 
