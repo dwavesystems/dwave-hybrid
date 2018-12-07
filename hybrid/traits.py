@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from collections import abc
+from collections import Sequence, Mapping
 
 from hybrid.exceptions import StateTraitMissingError, StateDimensionalityError
 
@@ -33,7 +33,7 @@ class StateTraits(object):
 
     def validate_input_state_traits(self, inp):
         if self.multi_input:
-            if not isinstance(inp, abc.Sequence):
+            if not isinstance(inp, Sequence):
                 raise StateDimensionalityError("state sequence required on input")
 
             for state in inp:
@@ -41,7 +41,7 @@ class StateTraits(object):
                     self.validate_state_trait(state, trait, "input")
 
         else:
-            if not isinstance(inp, abc.Mapping):
+            if not isinstance(inp, Mapping):
                 raise StateDimensionalityError("single state required on input")
 
             for trait in self.inputs:
@@ -49,7 +49,7 @@ class StateTraits(object):
 
     def validate_output_state_traits(self, out):
         if self.multi_output:
-            if not isinstance(out, abc.Sequence):
+            if not isinstance(out, Sequence):
                 raise StateDimensionalityError("state sequence required on output")
 
             for state in out:
@@ -57,7 +57,7 @@ class StateTraits(object):
                     self.validate_state_trait(state, trait, "output")
 
         else:
-            if not isinstance(out, abc.Mapping):
+            if not isinstance(out, Mapping):
                 raise StateDimensionalityError("single state required on output")
 
             for trait in self.outputs:
