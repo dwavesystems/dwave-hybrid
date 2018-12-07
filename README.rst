@@ -70,7 +70,7 @@ Example
     from hybrid.decomposers import EnergyImpactDecomposer
     from hybrid.composers import SplatComposer
     from hybrid.core import State
-    from hybrid.flow import RacingBranches, ArgMin, SimpleIterator
+    from hybrid.flow import RacingBranches, ArgMin, Loop
     from hybrid.utils import min_sample
 
     # Construct a problem
@@ -83,7 +83,7 @@ Example
         | QPUSubproblemAutoEmbeddingSampler()
         | SplatComposer()
     ) | ArgMin()
-    main = SimpleIterator(iteration, max_iter=10, convergence=3)
+    main = Loop(iteration, max_iter=10, convergence=3)
 
     # Solve the problem
     init_state = State.from_sample(min_sample(bqm), bqm)

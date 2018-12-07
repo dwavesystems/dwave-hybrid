@@ -25,7 +25,7 @@ from hybrid.samplers import (
 from hybrid.decomposers import EnergyImpactDecomposer
 from hybrid.composers import SplatComposer
 from hybrid.core import State, SampleSet
-from hybrid.flow import RacingBranches, ArgMin, SimpleIterator
+from hybrid.flow import RacingBranches, ArgMin, Loop
 from hybrid.utils import min_sample, max_sample, random_sample
 
 
@@ -43,7 +43,7 @@ iteration = RacingBranches(
     | TabuProblemSampler(timeout=1)
 ) | ArgMin()
 
-main = SimpleIterator(iteration, max_iter=10, convergence=3)
+main = Loop(iteration, max_iter=10, convergence=3)
 
 init_state = State.from_sample(min_sample(bqm), bqm)
 

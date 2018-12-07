@@ -91,7 +91,7 @@ Response(rec.array([([-1,  1, -1,  1, -1,  1], -5., 1),
 
 Such :class:`.Branch` classes can be run in parallel using the :class:`.RacingBranches` class.
 From the outputs of these parallel branches, :class:`.ArgMin` selects a new current sample.
-And instead of a single iteration on the sample set, you can use the :class:`.SimpleIterator`
+And instead of a single iteration on the sample set, you can use the :class:`.Loop`
 to iterate a set number of times or until a convergence criteria is met.
 
 This next example solves a binary quadratic model by iteratively producing best samples.

@@ -20,7 +20,7 @@ import operator
 
 import dimod
 
-from hybrid.flow import Branch, RacingBranches, ArgMin, SimpleIterator, Map, Lambda
+from hybrid.flow import Branch, RacingBranches, ArgMin, Loop, Map, Lambda
 from hybrid.core import State, States, Runnable, Present
 from hybrid.utils import min_sample, max_sample
 
@@ -168,14 +168,14 @@ class TestArgMin(unittest.TestCase):
         self.assertEqual(best.samples.first.energy, 1)
 
 
-class TestSimpleIterator(unittest.TestCase):
+class TestLoop(unittest.TestCase):
 
     def test_basic(self):
         class Inc(Runnable):
             def next(self, state):
                 return state.updated(cnt=state.cnt + 1)
 
-        it = SimpleIterator(Inc(), max_iter=100, convergence=100, key=lambda _: None)
+        it = Loop(Inc(), max_iter=100, convergence=100, key=lambda _: None)
         s = it.run(State(cnt=0)).result()
 
         self.assertEqual(s.cnt, 100)

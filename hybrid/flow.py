@@ -23,7 +23,7 @@ import six
 from hybrid.core import Runnable, States, Present
 from hybrid import traits
 
-__all__ = ['Branch', 'RacingBranches', 'Map', 'Lambda', 'ArgMin', 'SimpleIterator']
+__all__ = ['Branch', 'RacingBranches', 'Map', 'Lambda', 'ArgMin', 'Loop']
 
 logger = logging.getLogger(__name__)
 
@@ -373,13 +373,13 @@ class ArgMin(Runnable, traits.MISO):
         return min(states, key=self.key)
 
 
-class SimpleIterator(Runnable):
+class Loop(Runnable):
     """Iterates `runnable` for up to `max_iter` times, or until a state quality
     metric, defined by the `key` function, shows no improvement for at least
     `convergence` time."""
 
     def __init__(self, runnable, max_iter=1000, convergence=10, key=None):
-        super(SimpleIterator, self).__init__()
+        super(Loop, self).__init__()
         self.runnable = runnable
         self.max_iter = max_iter
         self.convergence = convergence
@@ -398,7 +398,7 @@ class SimpleIterator(Runnable):
         return iter((self.runnable,))
 
     def next(self, state):
-        """Execute one blocking iteration of an instantiated :class:`SimpleIterator`."""
+        """Execute one blocking iteration of an instantiated :class:`Loop`."""
         last = state
         last_key = self.key(last)
         cnt = self.convergence

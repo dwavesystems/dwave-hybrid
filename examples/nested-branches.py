@@ -27,7 +27,7 @@ from hybrid.samplers import (
 from hybrid.decomposers import EnergyImpactDecomposer, IdentityDecomposer
 from hybrid.composers import SplatComposer
 from hybrid.core import State
-from hybrid.flow import RacingBranches, ArgMin, SimpleIterator
+from hybrid.flow import RacingBranches, ArgMin, Loop
 from hybrid.utils import min_sample
 
 
@@ -48,7 +48,7 @@ iteration = RacingBranches(
         | SplatComposer()
 ) | ArgMin()
 
-main = SimpleIterator(iteration, max_iter=10, convergence=3)
+main = Loop(iteration, max_iter=10, convergence=3)
 
 init_state = State.from_sample(min_sample(bqm), bqm)
 

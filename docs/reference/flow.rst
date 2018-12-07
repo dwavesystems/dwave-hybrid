@@ -14,7 +14,7 @@ Classes
 .. autoclass:: Branch
 .. autoclass:: RacingBranches
 .. autoclass:: ArgMin
-.. autoclass:: SimpleIterator
+.. autoclass:: Loop
 
 Methods
 =======
