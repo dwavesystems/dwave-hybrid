@@ -14,8 +14,8 @@
 
 import unittest
 
-from hybrid.core import Runnable, Branch, State
-from hybrid.flow import RacingBranches, ArgMinFold, SimpleIterator
+from hybrid.core import Runnable, State
+from hybrid.flow import Branch, RacingBranches, ArgMinFold, SimpleIterator
 from hybrid.profiling import tictoc, iter_inorder, walk_inorder
 from hybrid.testing import mock
 from hybrid.composers import *

@@ -11,7 +11,6 @@ Basic building-block classes and superclasses for hybrid workflows.
 Classes
 =======
 
-.. autoclass:: Branch
 .. autoclass:: Present
 .. autoclass:: Runnable
 .. autoclass:: State
@@ -33,9 +32,6 @@ Methods
 .. autosummary::
    :toctree: generated/
 
-   Branch.error
-   Branch.next
-   Branch.stop
    Runnable.dispatch
    Runnable.error
    Runnable.next

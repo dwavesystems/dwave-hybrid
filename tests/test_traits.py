@@ -16,8 +16,8 @@ import unittest
 
 import dimod
 
-from hybrid.core import State, States, Runnable, Branch
-from hybrid.flow import RacingBranches, Map
+from hybrid.core import State, States, Runnable
+from hybrid.flow import Branch, RacingBranches, Map
 from hybrid.utils import min_sample
 from hybrid import traits
 
