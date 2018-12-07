@@ -27,7 +27,7 @@ from hybrid.samplers import (
 from hybrid.decomposers import EnergyImpactDecomposer, IdentityDecomposer
 from hybrid.composers import SplatComposer
 from hybrid.core import State
-from hybrid.flow import RacingBranches, ArgMinFold, SimpleIterator
+from hybrid.flow import RacingBranches, ArgMin, Loop
 from hybrid.utils import min_sample
 
 
@@ -44,11 +44,11 @@ iteration = RacingBranches(
             TabuSubproblemSampler(tenure=20, timeout=10),
             endomorphic=False
         )
-        | ArgMinFold(operator.attrgetter('subsamples.first.energy'))
+        | ArgMin(operator.attrgetter('subsamples.first.energy'))
         | SplatComposer()
-) | ArgMinFold()
+) | ArgMin()
 
-main = SimpleIterator(iteration, max_iter=10, convergence=3)
+main = Loop(iteration, max_iter=10, convergence=3)
 
 init_state = State.from_sample(min_sample(bqm), bqm)
 

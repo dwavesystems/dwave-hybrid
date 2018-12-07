@@ -11,9 +11,10 @@ Classes that structure (hybrid) workflows.
 Classes
 =======
 
+.. autoclass:: Branch
 .. autoclass:: RacingBranches
-.. autoclass:: ArgMinFold
-.. autoclass:: SimpleIterator
+.. autoclass:: ArgMin
+.. autoclass:: Loop
 
 Methods
 =======

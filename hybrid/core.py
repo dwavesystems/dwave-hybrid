@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from collections import namedtuple
-from itertools import chain
 from copy import deepcopy
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, Future, Executor
 import operator
@@ -25,6 +24,11 @@ import dimod
 from hybrid.traits import StateTraits
 from hybrid.utils import min_sample, sample_as_dict
 from hybrid.profiling import make_count
+
+__all__ = [
+    'SampleSet', 'State', 'States', 'Runnable', 'HybridSampler',
+    'HybridRunnable', 'HybridProblemRunnable', 'HybridSubproblemRunnable'
+]
 
 logger = logging.getLogger(__name__)
 
@@ -384,100 +388,6 @@ class Runnable(StateTraits):
         return Branch(components=(self, other))
 
 
-class Branch(Runnable):
-    """Sequentially executed :class:`Runnable` components.
-
-    Args:
-        components (iterable of :class:`Runnable`): Complete processing sequence to
-            update a current set of samples, such as: :code:`decomposer | sampler | composer`.
-
-    Examples:
-        This example runs one iteration of a branch comprising a decomposer, local Tabu solver,
-        and a composer. A 10-variable binary quadratic model is decomposed by the energy
-        impact of its variables into a 6-variable subproblem to be sampled twice
-        with a manually set initial state of all -1 values.
-
-        >>> import dimod           # Create a binary quadratic model
-        >>> bqm = dimod.BinaryQuadraticModel({t: 0 for t in range(10)},
-        ...                                  {(t, (t+1) % 10): 1 for t in range(10)},
-        ...                                  0, 'SPIN')
-        >>> # Run one iteration on a branch
-        >>> branch = (EnergyImpactDecomposer(max_size=6, min_gain=-10) |
-        ...           TabuSubproblemSampler(num_reads=2) |
-        ...           SplatComposer())
-        >>> new_state = branch.next(State.from_sample(min_sample(bqm), bqm))
-        >>> print(new_state.subsamples)      # doctest: +SKIP
-        Response(rec.array([([-1,  1, -1,  1, -1,  1], -5., 1),
-           ([ 1, -1,  1, -1, -1,  1], -5., 1)],
-        >>> # Above response snipped for brevity
-
-    """
-
-    def __init__(self, components=(), *args, **kwargs):
-        super(Branch, self).__init__(*args, **kwargs)
-        self.components = tuple(components)
-
-        if not self.components:
-            raise ValueError("branch has to contain at least one component")
-
-        # patch branch's I/O requirements based on the first and last component
-        # TODO: automate
-        self.inputs = self.components[0].inputs
-        self.multi_input = self.components[0].multi_input
-        self.outputs = self.components[-1].outputs
-        self.multi_output = self.components[-1].multi_output
-
-    def __or__(self, other):
-        """Composition of Branch with runnable components (L-to-R) returns a new
-        runnable Branch.
-        """
-        if isinstance(other, Branch):
-            return Branch(components=chain(self.components, other.components))
-        elif isinstance(other, Runnable):
-            return Branch(components=chain(self.components, (other,)))
-        else:
-            raise TypeError("branch can be composed only with Branch or Runnable")
-
-    def __str__(self):
-        return " | ".join(map(str, self)) or "(empty branch)"
-
-    def __repr__(self):
-        return "{}(components={!r})".format(self.name, tuple(self))
-
-    def __iter__(self):
-        return iter(self.components)
-
-    def next(self, state):
-        """Start an iteration of an instantiated :class:`Branch`.
-
-        Accepts a state and returns a new state.
-
-        Args:
-            state (:class:`State`):
-                Computation state passed to the first component of the branch.
-
-        Examples:
-            This code snippet runs one iteration of a branch to produce a new state::
-
-                new_state = branch.next(core.State.from_sample(min_sample(bqm), bqm)
-
-        """
-        for component in self.components:
-            state = component.run(state, defer=False)
-        return state.result()
-
-    def error(self, exc):
-        """Pass on the exception from input to the error handler of the first
-        runnable in branch.
-        """
-        return self.next(Present(exception=exc))
-
-    def stop(self):
-        """Try terminating all components in an instantiated :class:`Branch`."""
-        for component in self.components:
-            component.stop()
-
-
 class HybridSampler(dimod.Sampler):
     """Produces a `dimod.Sampler` from a `hybrid.Runnable`-based sampler.
 
@@ -621,3 +531,7 @@ class HybridSubproblemRunnable(HybridRunnable):
     def __init__(self, sampler, **sample_kwargs):
         super(HybridSubproblemRunnable, self).__init__(
             sampler, fields=('subproblem', 'subsamples'), **sample_kwargs)
+
+
+# deferred import, due to flow.* deps on core.*
+from hybrid.flow import Branch

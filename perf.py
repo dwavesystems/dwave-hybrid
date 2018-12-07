@@ -35,7 +35,7 @@ from hybrid.decomposers import (
     TilingChimeraDecomposer, EnergyImpactDecomposer)
 from hybrid.composers import SplatComposer
 from hybrid.core import State, SampleSet, Runnable
-from hybrid.flow import RacingBranches, ArgMinFold, SimpleIterator
+from hybrid.flow import RacingBranches, ArgMin, Loop
 from hybrid.utils import min_sample
 from hybrid.profiling import tictoc
 
@@ -68,20 +68,20 @@ solver_factories = [
         lambda **kw: IdentityDecomposer() | SimulatedAnnealingSubproblemSampler(sweeps=10000) | SplatComposer()),
 
     ("qbsolv-like solver",
-        lambda qpu, **kw: SimpleIterator(RacingBranches(
+        lambda qpu, **kw: Loop(RacingBranches(
             InterruptableTabuSampler(quantum_timeout=200),
             EnergyImpactDecomposer(max_size=50, min_diff=30)
             | QPUSubproblemAutoEmbeddingSampler(qpu_sampler=qpu)
             | SplatComposer()
-        ) | ArgMinFold(), max_iter=100, convergence=10)),
+        ) | ArgMin(), max_iter=100, convergence=10)),
 
     ("tiling chimera solver",
-        lambda qpu, **kw: SimpleIterator(RacingBranches(
+        lambda qpu, **kw: Loop(RacingBranches(
             InterruptableTabuSampler(quantum_timeout=200),
             TilingChimeraDecomposer(size=(16,16,4))
             | QPUSubproblemExternalEmbeddingSampler(qpu_sampler=qpu)
             | SplatComposer(),
-        ) | ArgMinFold(), max_iter=100, convergence=10)),
+        ) | ArgMin(), max_iter=100, convergence=10)),
 
     ("qbsolv-classic",
         lambda **kw: QBSolvProblemSampler()),

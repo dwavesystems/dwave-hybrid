@@ -12,17 +12,114 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import concurrent.futures
 from operator import attrgetter
 from functools import partial
+from itertools import chain
 
 import six
 
-from hybrid.core import Runnable, States
+from hybrid.core import Runnable, States, Present
 from hybrid import traits
 
-import logging
+__all__ = ['Branch', 'RacingBranches', 'Race', 'Map', 'Lambda', 'ArgMin', 'Loop']
+
 logger = logging.getLogger(__name__)
+
+
+class Branch(Runnable):
+    """Sequentially executed :class:`Runnable` components.
+
+    Args:
+        components (iterable of :class:`Runnable`): Complete processing sequence to
+            update a current set of samples, such as: :code:`decomposer | sampler | composer`.
+
+    Examples:
+        This example runs one iteration of a branch comprising a decomposer, local Tabu solver,
+        and a composer. A 10-variable binary quadratic model is decomposed by the energy
+        impact of its variables into a 6-variable subproblem to be sampled twice
+        with a manually set initial state of all -1 values.
+
+        >>> import dimod           # Create a binary quadratic model
+        >>> bqm = dimod.BinaryQuadraticModel({t: 0 for t in range(10)},
+        ...                                  {(t, (t+1) % 10): 1 for t in range(10)},
+        ...                                  0, 'SPIN')
+        >>> # Run one iteration on a branch
+        >>> branch = (EnergyImpactDecomposer(max_size=6, min_gain=-10) |
+        ...           TabuSubproblemSampler(num_reads=2) |
+        ...           SplatComposer())
+        >>> new_state = branch.next(State.from_sample(min_sample(bqm), bqm))
+        >>> print(new_state.subsamples)      # doctest: +SKIP
+        Response(rec.array([([-1,  1, -1,  1, -1,  1], -5., 1),
+           ([ 1, -1,  1, -1, -1,  1], -5., 1)],
+        >>> # Above response snipped for brevity
+
+    """
+
+    def __init__(self, components=(), *args, **kwargs):
+        super(Branch, self).__init__(*args, **kwargs)
+        self.components = tuple(components)
+
+        if not self.components:
+            raise ValueError("branch has to contain at least one component")
+
+        # patch branch's I/O requirements based on the first and last component
+        # TODO: automate
+        self.inputs = self.components[0].inputs
+        self.multi_input = self.components[0].multi_input
+        self.outputs = self.components[-1].outputs
+        self.multi_output = self.components[-1].multi_output
+
+    def __or__(self, other):
+        """Composition of Branch with runnable components (L-to-R) returns a new
+        runnable Branch.
+        """
+        if isinstance(other, Branch):
+            return Branch(components=chain(self.components, other.components))
+        elif isinstance(other, Runnable):
+            return Branch(components=chain(self.components, (other,)))
+        else:
+            raise TypeError("branch can be composed only with Branch or Runnable")
+
+    def __str__(self):
+        return " | ".join(map(str, self)) or "(empty branch)"
+
+    def __repr__(self):
+        return "{}(components={!r})".format(self.name, tuple(self))
+
+    def __iter__(self):
+        return iter(self.components)
+
+    def next(self, state):
+        """Start an iteration of an instantiated :class:`Branch`.
+
+        Accepts a state and returns a new state.
+
+        Args:
+            state (:class:`State`):
+                Computation state passed to the first component of the branch.
+
+        Examples:
+            This code snippet runs one iteration of a branch to produce a new state::
+
+                new_state = branch.next(core.State.from_sample(min_sample(bqm), bqm)
+
+        """
+        for component in self.components:
+            state = component.run(state, defer=False)
+        return state.result()
+
+    def error(self, exc):
+        """Pass on the exception from input to the error handler of the first
+        runnable in branch.
+        """
+        return self.next(Present(exception=exc))
+
+    def stop(self):
+        """Try terminating all components in an instantiated :class:`Branch`."""
+        for component in self.components:
+            component.stop()
 
 
 class RacingBranches(Runnable, traits.SIMO):
@@ -36,6 +133,9 @@ class RacingBranches(Runnable, traits.SIMO):
             is the domain; for example, if there might be a mix of subproblems
             and problems moving between components.
 
+    Note:
+        `RacingBranches` is also available as `Race`.
+
     Examples:
         This example runs two branches: a classical tabu search interrupted by
         samples of subproblems returned from a D-Wave system.
@@ -45,7 +145,7 @@ class RacingBranches(Runnable, traits.SIMO):
                 EnergyImpactDecomposer(max_size=2)
                 | QPUSubproblemAutoEmbeddingSampler()
                 | SplatComposer()
-            ) | ArgMinFold()
+            ) | ArgMin()
 
     """
 
@@ -106,6 +206,9 @@ class RacingBranches(Runnable, traits.SIMO):
         """Terminate an iteration of an instantiated :class:`RacingBranches`."""
         for branch in self.branches:
             branch.stop()
+
+
+Race = RacingBranches
 
 
 class Map(Runnable, traits.MIMO):
@@ -215,9 +318,8 @@ class Lambda(Runnable):
             self.name, self._next, self._error, self._init)
 
 
-class ArgMinFold(Runnable, traits.MISO):
-    """Selects the best state from the list of states (output of
-    :class:`RacingBranches`).
+class ArgMin(Runnable, traits.MISO):
+    """Selects the best state from a sequence of states (:class:`States`).
 
     Args:
         key (callable/str):
@@ -242,13 +344,13 @@ class ArgMinFold(Runnable, traits.MISO):
                 EnergyImpactDecomposer(max_size=2)
                 | QPUSubproblemAutoEmbeddingSampler()
                 | SplatComposer()
-            ) | ArgMinFold()
+            ) | ArgMin()
 
     """
 
     def __init__(self, key=None):
         """Return the state which minimizes the objective function `key`."""
-        super(ArgMinFold, self).__init__()
+        super(ArgMin, self).__init__()
         if key is None:
             key = 'samples.first.energy'
         if isinstance(key, six.string_types):
@@ -262,7 +364,7 @@ class ArgMinFold(Runnable, traits.MISO):
         return "{}(key={!r})".format(self.name, self.key)
 
     def next(self, states):
-        """Execute one blocking iteration of an instantiated :class:`ArgMinFold`."""
+        """Execute one blocking iteration of an instantiated :class:`ArgMin`."""
         # debug info
         for idx, state in enumerate(states):
             logger.debug("{name} State(idx={idx}, arg={arg})".format(
@@ -271,13 +373,13 @@ class ArgMinFold(Runnable, traits.MISO):
         return min(states, key=self.key)
 
 
-class SimpleIterator(Runnable):
+class Loop(Runnable):
     """Iterates `runnable` for up to `max_iter` times, or until a state quality
     metric, defined by the `key` function, shows no improvement for at least
     `convergence` time."""
 
     def __init__(self, runnable, max_iter=1000, convergence=10, key=None):
-        super(SimpleIterator, self).__init__()
+        super(Loop, self).__init__()
         self.runnable = runnable
         self.max_iter = max_iter
         self.convergence = convergence
@@ -296,7 +398,7 @@ class SimpleIterator(Runnable):
         return iter((self.runnable,))
 
     def next(self, state):
-        """Execute one blocking iteration of an instantiated :class:`SimpleIterator`."""
+        """Execute one blocking iteration of an instantiated :class:`Loop`."""
         last = state
         last_key = self.key(last)
         cnt = self.convergence

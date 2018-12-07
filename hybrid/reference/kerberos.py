@@ -26,7 +26,7 @@ from hybrid.samplers import (
 from hybrid.decomposers import IdentityDecomposer, EnergyImpactDecomposer
 from hybrid.composers import SplatComposer
 from hybrid.core import State
-from hybrid.flow import RacingBranches, ArgMinFold, SimpleIterator
+from hybrid.flow import RacingBranches, ArgMin, Loop
 from hybrid.utils import random_sample
 
 
@@ -115,8 +115,8 @@ class KerberosSampler(dimod.Sampler):
             EnergyImpactDecomposer(max_size=subproblem_size, min_diff=subproblem_size//2)
                 | QPUSubproblemAutoEmbeddingSampler(num_reads=qpu_reads, qpu_sampler=qpu_sampler)
                 | SplatComposer(),
-        ) | ArgMinFold()
-        main = SimpleIterator(iteration, max_iter=max_iter, convergence=convergence)
+        ) | ArgMin()
+        main = Loop(iteration, max_iter=max_iter, convergence=convergence)
 
         samples = []
         energies = []

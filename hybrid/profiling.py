@@ -19,6 +19,8 @@ import logging
 import functools
 from contextlib import contextmanager
 
+__all__ = ['perf_counter', 'tictoc', 'print_structure', 'print_counters']
+
 logger = logging.getLogger(__name__)
 
 

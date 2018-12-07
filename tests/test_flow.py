@@ -20,9 +20,82 @@ import operator
 
 import dimod
 
-from hybrid.flow import RacingBranches, ArgMinFold, SimpleIterator, Map, Lambda
+from hybrid.flow import Branch, RacingBranches, ArgMin, Loop, Map, Lambda
 from hybrid.core import State, States, Runnable, Present
 from hybrid.utils import min_sample, max_sample
+
+
+class TestBranch(unittest.TestCase):
+
+    def test_empty(self):
+        with self.assertRaises(ValueError):
+            Branch()
+
+    def test_composition(self):
+        class A(Runnable):
+            def next(self, state):
+                return state.updated(x=state.x + 1)
+        class B(Runnable):
+            def next(self, state):
+                return state.updated(x=state.x * 7)
+
+        a, b = A(), B()
+        s = State(x=1)
+
+        b1 = Branch(components=(a, b))
+        self.assertEqual(b1.components, (a, b))
+        self.assertEqual(b1.run(s).result().x, (s.x + 1) * 7)
+
+        b2 = b1 | b | a
+        self.assertEqual(b2.components, (a, b, b, a))
+        self.assertEqual(b2.run(s).result().x, (s.x + 1) * 7 * 7 + 1)
+
+        with self.assertRaises(TypeError):
+            b1 | 1
+
+    def test_look_and_feel(self):
+        class A(Runnable): pass
+        class B(Runnable): pass
+
+        b = A() | B()
+        self.assertEqual(b.name, 'Branch')
+        self.assertEqual(str(b), 'A | B')
+        self.assertEqual(repr(b), 'Branch(components=(A(), B()))')
+        self.assertEqual(tuple(b), b.components)
+        self.assertIsInstance(b, Branch)
+        self.assertIsInstance(b | b, Branch)
+
+    def test_error_prop(self):
+        class ErrorSilencer(Runnable):
+            def next(self, state):
+                return state
+            def error(self, exc):
+                return State(error=True)
+
+        class Identity(Runnable):
+            def next(self, state):
+                return state
+
+        branch = ErrorSilencer() | Identity()
+        s1 = Present(exception=KeyError())
+        s2 = branch.run(s1).result()
+
+        self.assertEqual(s2.error, True)
+
+    def test_stop(self):
+        class Stoppable(Runnable):
+            def init(self, state):
+                self.stopped = False
+            def next(self, state):
+                return state
+            def stop(self):
+                self.stopped = True
+
+        branch = Branch([Stoppable()])
+        branch.run(State())
+        branch.stop()
+
+        self.assertTrue(next(iter(branch)).stopped)
 
 
 class TestRacingBranches(unittest.TestCase):
@@ -64,16 +137,16 @@ class TestRacingBranches(unittest.TestCase):
         self.assertEqual([s.x for s in res], [2, 1, 2])
 
 
-class TestArgMinFold(unittest.TestCase):
+class TestArgMin(unittest.TestCase):
 
     def test_look_and_feel(self):
-        fold = ArgMinFold(key=False)
-        self.assertEqual(fold.name, 'ArgMinFold')
+        fold = ArgMin(key=False)
+        self.assertEqual(fold.name, 'ArgMin')
         self.assertEqual(str(fold), '[]>')
-        self.assertEqual(repr(fold), "ArgMinFold(key=False)")
+        self.assertEqual(repr(fold), "ArgMin(key=False)")
 
-        fold = ArgMinFold(key=min)
-        self.assertEqual(repr(fold), "ArgMinFold(key=<built-in function min>)")
+        fold = ArgMin(key=min)
+        self.assertEqual(repr(fold), "ArgMin(key=<built-in function min>)")
 
     def test_default_fold(self):
         bqm = dimod.BinaryQuadraticModel({'a': 1}, {}, 0, dimod.SPIN)
@@ -81,7 +154,7 @@ class TestArgMinFold(unittest.TestCase):
             State.from_sample(min_sample(bqm), bqm),    # energy: -1
             State.from_sample(max_sample(bqm), bqm),    # energy: +1
         )
-        best = ArgMinFold().run(states).result()
+        best = ArgMin().run(states).result()
         self.assertEqual(best.samples.first.energy, -1)
 
     def test_custom_fold(self):
@@ -90,19 +163,19 @@ class TestArgMinFold(unittest.TestCase):
             State.from_sample(min_sample(bqm), bqm),    # energy: -1
             State.from_sample(max_sample(bqm), bqm),    # energy: +1
         )
-        fold = ArgMinFold(key=lambda s: -s.samples.first.energy)
+        fold = ArgMin(key=lambda s: -s.samples.first.energy)
         best = fold.run(states).result()
         self.assertEqual(best.samples.first.energy, 1)
 
 
-class TestSimpleIterator(unittest.TestCase):
+class TestLoop(unittest.TestCase):
 
     def test_basic(self):
         class Inc(Runnable):
             def next(self, state):
                 return state.updated(cnt=state.cnt + 1)
 
-        it = SimpleIterator(Inc(), max_iter=100, convergence=100, key=lambda _: None)
+        it = Loop(Inc(), max_iter=100, convergence=100, key=lambda _: None)
         s = it.run(State(cnt=0)).result()
 
         self.assertEqual(s.cnt, 100)
@@ -127,7 +200,7 @@ class TestMap(unittest.TestCase):
                 return state.updated(cnt=state.cnt + 1)
 
         states = States(State(cnt=1), State(cnt=2))
-        branch = Map(Inc()) | ArgMinFold('cnt')
+        branch = Map(Inc()) | ArgMin('cnt')
         result = branch.run(states).result()
 
         self.assertEqual(result.cnt, states[0].cnt + 1)
