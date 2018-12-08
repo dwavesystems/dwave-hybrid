@@ -65,11 +65,36 @@ class Branch(Runnable):
             raise ValueError("branch has to contain at least one component")
 
         # patch branch's I/O requirements based on the first and last component
-        # TODO: automate
-        self.inputs = self.components[0].inputs
-        self.multi_input = self.components[0].multi_input
+
+        # be conservative in output requirements, but liberal in input requirements
+        #
+        # i.e when calculating input requirements, assume the best case scenario,
+        # that state is accumulated along the branch; but don't assume that for
+        # output
+
+        minimal_inputs = self.components[0].inputs.copy()
+        state = self.components[0].inputs.copy()
+        # consider connections between all connected components (a, b)
+        for a, b in zip(self.components, self.components[1:]):
+            # update the "running" state traits, and minimally acceptable input traits
+            state |= a.outputs
+            missing = b.inputs - state
+            minimal_inputs |= missing
+
+            # btw, check dimensionality compatibility
+            if a.multi_output != b.multi_input:
+                raise TypeError(
+                    "mismatched output/input dimensions between {!r} and {!r}".format(a, b))
+
+        self.inputs = minimal_inputs
+
+        # this the minimum we can guarantee
         self.outputs = self.components[-1].outputs
+
+        # this must hold
+        self.multi_input = self.components[0].multi_input
         self.multi_output = self.components[-1].multi_output
+
 
     def __or__(self, other):
         """Composition of Branch with runnable components (L-to-R) returns a new
@@ -162,8 +187,12 @@ class RacingBranches(Runnable, traits.SIMO):
             raise ValueError("racing branches requires at least one branch")
 
         # patch components's I/O requirements based on the subcomponents' requirements
-        # TODO: automate
+
+        # RB's input has to satisfy all branches' input
         self.inputs = set.union(*(branch.inputs for branch in self.branches))
+
+        # RB's output will be one of the branches' output, but the only guarantee we
+        # can make upfront is the largest common subset of all outputs
         self.outputs = set.intersection(*(branch.outputs for branch in self.branches))
 
     def __str__(self):
