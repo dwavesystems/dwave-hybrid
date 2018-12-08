@@ -49,7 +49,7 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
     Args:
         max_size (int):
             Maximum number of variables in the subproblem.
-        min_gain (int, optional, default=0):
+        min_gain (int, optional, default=-inf):
             Minimum reduction required to BQM energy, given the current sample. A variable
             is included in the subproblem only if inverting its sample value reduces energy
             by at least this amount.
@@ -65,7 +65,7 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
         See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/decomposers.html#examples.
     """
 
-    def __init__(self, max_size, min_gain=0.0, min_diff=1, stride=1):
+    def __init__(self, max_size, min_gain=None, min_diff=1, stride=1):
         super(EnergyImpactDecomposer, self).__init__()
 
         if min_diff > max_size or min_diff < 0:
