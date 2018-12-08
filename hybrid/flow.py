@@ -23,7 +23,7 @@ import six
 from hybrid.core import Runnable, States, Present
 from hybrid import traits
 
-__all__ = ['Branch', 'RacingBranches', 'Race', 'Map', 'Lambda', 'ArgMin', 'Loop']
+__all__ = ['Branch', 'RacingBranches', 'Race', 'Map', 'Lambda', 'ArgMin', 'Loop', 'SimpleIterator']
 
 logger = logging.getLogger(__name__)
 
@@ -65,11 +65,36 @@ class Branch(Runnable):
             raise ValueError("branch has to contain at least one component")
 
         # patch branch's I/O requirements based on the first and last component
-        # TODO: automate
-        self.inputs = self.components[0].inputs
-        self.multi_input = self.components[0].multi_input
+
+        # be conservative in output requirements, but liberal in input requirements
+        #
+        # i.e when calculating input requirements, assume the best case scenario,
+        # that state is accumulated along the branch; but don't assume that for
+        # output
+
+        minimal_inputs = self.components[0].inputs.copy()
+        state = self.components[0].inputs.copy()
+        # consider connections between all connected components (a, b)
+        for a, b in zip(self.components, self.components[1:]):
+            # update the "running" state traits, and minimally acceptable input traits
+            state |= a.outputs
+            missing = b.inputs - state
+            minimal_inputs |= missing
+
+            # btw, check dimensionality compatibility
+            if a.multi_output != b.multi_input:
+                raise TypeError(
+                    "mismatched output/input dimensions between {!r} and {!r}".format(a, b))
+
+        self.inputs = minimal_inputs
+
+        # this the minimum we can guarantee
         self.outputs = self.components[-1].outputs
+
+        # this must hold
+        self.multi_input = self.components[0].multi_input
         self.multi_output = self.components[-1].multi_output
+
 
     def __or__(self, other):
         """Composition of Branch with runnable components (L-to-R) returns a new
@@ -162,8 +187,12 @@ class RacingBranches(Runnable, traits.SIMO):
             raise ValueError("racing branches requires at least one branch")
 
         # patch components's I/O requirements based on the subcomponents' requirements
-        # TODO: automate
+
+        # RB's input has to satisfy all branches' input
         self.inputs = set.union(*(branch.inputs for branch in self.branches))
+
+        # RB's output will be one of the branches' output, but the only guarantee we
+        # can make upfront is the largest common subset of all outputs
         self.outputs = set.intersection(*(branch.outputs for branch in self.branches))
 
     def __str__(self):
@@ -276,7 +305,9 @@ class Lambda(Runnable):
         init (callable):
             Implementation of runnable's `init` method. See :meth:`Runnable.init`.
 
-    Note: traits are not enforced, apart from the SISO requirement.
+    Note:
+        Traits are not enforced, apart from the SISO requirement. Also, note
+        `Lambda` runnables can only implement SISO systems.
 
     Examples:
         This example creates and runs a simple runnable that multiplies state
@@ -387,6 +418,17 @@ class Loop(Runnable):
             key = attrgetter('samples.first.energy')
         self.key = key
 
+        # preemptively check runnable's i/o dimensionality
+        if runnable.multi_input != runnable.multi_output:
+            raise TypeError("runnable's input dimensionality does not match "
+                            "the output dimensionality")
+
+        # patch branch's I/O requirements based on the child component's requirements
+        self.inputs = self.runnable.inputs
+        self.multi_input = self.runnable.multi_input
+        self.outputs = self.runnable.outputs
+        self.multi_output = self.runnable.multi_output
+
     def __str__(self):
         return "Loop over {}".format(self.runnable)
 
@@ -400,23 +442,26 @@ class Loop(Runnable):
     def next(self, state):
         """Execute one blocking iteration of an instantiated :class:`Loop`."""
         last = state
-        last_key = self.key(last)
+        last_quality = self.key(last)
         cnt = self.convergence
 
         for iterno in range(self.max_iter):
             state = self.runnable.run(state).result()
-            state_key = self.key(state)
+            state_quality = self.key(state)
 
-            logger.info("{name} Iteration(iterno={iterno}, best_state_key={key})".format(
-                name=self.name, iterno=iterno, key=state_key))
+            logger.info("{name} Iteration(iterno={iterno}, best_state_quality={key})".format(
+                name=self.name, iterno=iterno, key=state_quality))
 
-            if state_key == last_key:
+            if state_quality == last_quality:
                 cnt -= 1
             else:
                 cnt = self.convergence
             if cnt <= 0:
                 break
 
-            last_key = state_key
+            last_quality = state_quality
 
         return state
+
+
+SimpleIterator = Loop

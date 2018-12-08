@@ -23,6 +23,7 @@ import dimod
 from hybrid.flow import Branch, RacingBranches, ArgMin, Loop, Map, Lambda
 from hybrid.core import State, States, Runnable, Present
 from hybrid.utils import min_sample, max_sample
+from hybrid import traits
 
 
 class TestBranch(unittest.TestCase):
@@ -179,6 +180,14 @@ class TestLoop(unittest.TestCase):
         s = it.run(State(cnt=0)).result()
 
         self.assertEqual(s.cnt, 100)
+
+    def test_validation(self):
+        class simo(Runnable, traits.SIMO):
+            def next(self, state):
+                return States(state, state)
+
+        with self.assertRaises(TypeError):
+            Loop(simo())
 
 
 class TestMap(unittest.TestCase):
