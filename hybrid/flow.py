@@ -141,7 +141,7 @@ class Branch(Runnable):
         """
         return self.next(Present(exception=exc))
 
-    def stop(self):
+    def halt(self):
         """Try terminating all components in an instantiated :class:`Branch`."""
         for component in self.components:
             component.stop()
@@ -231,7 +231,7 @@ class RacingBranches(Runnable, traits.SIMO):
 
         return states
 
-    def stop(self):
+    def halt(self):
         """Terminate an iteration of an instantiated :class:`RacingBranches`."""
         for branch in self.branches:
             branch.stop()
@@ -285,7 +285,7 @@ class Map(Runnable, traits.MIMO):
 
         return States(*(f.result() for f in self._futures))
 
-    def stop(self):
+    def halt(self):
         for future in self._futures:
             future.cancel()
 

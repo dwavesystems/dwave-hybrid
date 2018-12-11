@@ -89,7 +89,7 @@ class TestBranch(unittest.TestCase):
                 self.stopped = False
             def next(self, state):
                 return state
-            def stop(self):
+            def halt(self):
                 self.stopped = True
 
         branch = Branch([Stoppable()])
@@ -123,7 +123,7 @@ class TestRacingBranches(unittest.TestCase):
                 self.time_to_stop.wait()
                 return state.updated(x=state.x + 2)
 
-            def stop(self):
+            def halt(self):
                 self.time_to_stop.set()
 
         # standard case
