@@ -159,3 +159,38 @@ The code snippet below uses :class:`~hybrid.flow.Map` to run a tabu search on tw
  ('energy', '<f8'), ('num_occurrences', '<i4')]), ['a', 'b', 'c'], {}, 'SPIN'),
  'problem': BinaryQuadraticModel({'a': 0.0, 'b': 0.0, 'c': 0.0}, {('a', 'b'): 1, ('b', 'c'): 1,
  ('c', 'a'): 1}, 0.0, Vartype.SPIN)}]
+
+
+Logging and Execution Information
+=================================
+
+You can see detailed execution information by setting the level of logging.
+
+The package supports logging levels TRACE, DEBUG, INFO, WARNING, ERROR, and CRITICAL
+in ascending order of severity. By default, logging level is set to ERROR. You can
+select the logging level with environment variable ``DWAVE_HYBRID_LOG_LEVEL``.
+
+For example, on a Windows operating system, set this environment variable to INFO level
+as:
+
+.. code-block:: bash
+
+    set DWAVE_HYBRID_LOG_LEVEL=INFO
+
+or on a Unix-based system as:
+
+.. code-block:: bash
+
+    DWAVE_HYBRID_LOG_LEVEL=INFO
+
+The previous example above might output something like the following:
+
+>>> print("Solution: sample={s.samples.first}".format(s=solution))   # doctest: +SKIP
+
+.. code-block:: bash
+
+    2018-12-10 15:18:30,634 hybrid.flow INFO Loop Iteration(iterno=0, best_state_quality=-3.0)
+    2018-12-10 15:18:31,511 hybrid.flow INFO Loop Iteration(iterno=1, best_state_quality=-3.0)
+    2018-12-10 15:18:35,889 hybrid.flow INFO Loop Iteration(iterno=2, best_state_quality=-3.0)
+    2018-12-10 15:18:37,377 hybrid.flow INFO Loop Iteration(iterno=3, best_state_quality=-3.0)
+    Solution: sample=Sample(sample={'a': 1, 'b': -1, 'c': -1}, energy=-3.0, num_occurrences=1)
