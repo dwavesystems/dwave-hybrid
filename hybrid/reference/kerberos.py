@@ -47,6 +47,7 @@ class KerberosSampler(dimod.Sampler):
 
     properties = None
     parameters = None
+    runnable = None
 
     def __init__(self):
         self.parameters = {
@@ -116,13 +117,13 @@ class KerberosSampler(dimod.Sampler):
                 | QPUSubproblemAutoEmbeddingSampler(num_reads=qpu_reads, qpu_sampler=qpu_sampler)
                 | SplatComposer(),
         ) | ArgMin()
-        main = Loop(iteration, max_iter=max_iter, convergence=convergence)
+        self.runnable = Loop(iteration, max_iter=max_iter, convergence=convergence)
 
         samples = []
         energies = []
         for _ in range(num_reads):
             init_state = init_state_gen()
-            final_state = main.run(init_state)
+            final_state = self.runnable.run(init_state)
             # the best sample from each run is one "read"
             ss = final_state.result().samples
             ss.change_vartype(bqm.vartype, inplace=True)

@@ -134,7 +134,7 @@ class SimulatedAnnealingSubproblemSampler(Runnable, traits.SubproblemSampler):
             interrupt_function=lambda: self._stop_event.is_set())
         return state.updated(subsamples=response)
 
-    def stop(self):
+    def halt(self):
         self._stop_event.set()
 
 
@@ -261,7 +261,7 @@ class InterruptableTabuSampler(TabuProblemSampler):
         # TODO: store iterno in local counter
         return state
 
-    def stop(self):
+    def halt(self):
         self._stop_event.set()
 
 

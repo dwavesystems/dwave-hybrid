@@ -35,6 +35,8 @@ Methods
 
    Runnable.dispatch
    Runnable.error
+   Runnable.init
+   Runnable.halt
    Runnable.next
    Runnable.run
    Runnable.stop

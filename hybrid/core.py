@@ -313,6 +313,12 @@ class Runnable(StateTraits):
         """
         raise exc
 
+    def halt(self):
+        """Called by `stop()`. Override this method (instead of `stop`) to handle
+        stopping of one blocking call of `next`. Defaults to NOP.
+        """
+        pass
+
     def dispatch(self, future):
         """Dispatch state from resolving `future` to either `next` or `error` methods.
 
@@ -382,7 +388,7 @@ class Runnable(StateTraits):
 
     def stop(self):
         """Terminate an iteration of an instantiated :class:`Runnable`."""
-        pass
+        return self.halt()
 
     def __or__(self, other):
         """Composition of runnable components (L-to-R) returns a new runnable Branch."""
