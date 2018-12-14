@@ -22,6 +22,7 @@ import logging
 import threading
 from collections import namedtuple
 
+import dimod
 from dwave.system.samplers import DWaveSampler
 from dwave.system.composites import EmbeddingComposite, FixedEmbeddingComposite
 
@@ -80,7 +81,8 @@ class QPUSubproblemAutoEmbeddingSampler(Runnable, traits.SubproblemSampler):
         num_reads (int, optional, default=100):
             Number of states (output solutions) to read from the sampler.
         qpu_sampler (:class:`dimod.Sampler`, optional, default=EmbeddingComposite(DWaveSampler())):
-            Quantum sampler such as a D-Wave system.
+            Quantum sampler such as a D-Wave system. If sampler is structured,
+            it will be converted to unstructured via :class:`~dwave.system.composited.EmbeddingComposite`.
 
     Examples:
         See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/samplers.html#examples.
@@ -90,9 +92,15 @@ class QPUSubproblemAutoEmbeddingSampler(Runnable, traits.SubproblemSampler):
         super(QPUSubproblemAutoEmbeddingSampler, self).__init__()
 
         self.num_reads = num_reads
+
         if qpu_sampler is None:
-            qpu_sampler = EmbeddingComposite(DWaveSampler())
-        self.sampler = qpu_sampler
+            qpu_sampler = DWaveSampler()
+
+        # convert the structured sampler to unstructured
+        if isinstance(qpu_sampler, dimod.Structured):
+            self.sampler = EmbeddingComposite(qpu_sampler)
+        else:
+            self.sampler = qpu_sampler
 
     def __repr__(self):
         return ("{self}(num_reads={self.num_reads!r}, "
