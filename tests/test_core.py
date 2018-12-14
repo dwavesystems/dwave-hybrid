@@ -128,6 +128,16 @@ class TestState(unittest.TestCase):
         self.assertEqual(State.from_samples([s2, s2], bqm).samples.first.energy, 1.0)
         self.assertEqual(State.from_samples([sample_as_dict(s1), s2], bqm).samples.first.energy, 1.0)
 
+    def test_from_subsamples(self):
+        s1 = [0, 1]
+        s2 = {0: 1, 1: 0}
+        bqm = dimod.BinaryQuadraticModel({0: 1, 1: 2}, {}, 0.0, 'BINARY')
+        self.assertEqual(State.from_subsample(s1, bqm).subsamples.first.energy, 2.0)
+        self.assertEqual(State.from_subsample(s2, bqm).subsamples.first.energy, 1.0)
+        self.assertEqual(State.from_subsamples([s1, s1], bqm).subsamples.first.energy, 2.0)
+        self.assertEqual(State.from_subsamples([s2, s2], bqm).subsamples.first.energy, 1.0)
+        self.assertEqual(State.from_subsamples([sample_as_dict(s1), s2], bqm).subsamples.first.energy, 1.0)
+
     def test_updated(self):
         a = SampleSet.from_samples([1,0,1], 'SPIN', 0)
         b = SampleSet.from_samples([0,1,0], 'SPIN', 0)
