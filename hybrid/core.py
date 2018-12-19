@@ -204,6 +204,16 @@ class State(PliableDict):
         """
         return cls(problem=bqm, samples=SampleSet.from_bqm_samples(bqm, samples))
 
+    @classmethod
+    def from_subsample(cls, subsample, bqm):
+        """Similar to :meth:`.from_sample`, but initializes `subproblem` and `subsamples`."""
+        return cls.from_subsamples([subsample], bqm)
+
+    @classmethod
+    def from_subsamples(cls, subsamples, bqm):
+        """Similar to :meth:`.from_samples`, but initializes `subproblem` and `subsamples`."""
+        return cls(subproblem=bqm, subsamples=SampleSet.from_bqm_samples(bqm, subsamples))
+
 
 class States(list):
     """List of states."""
