@@ -104,9 +104,9 @@ class TestSampleSet(unittest.TestCase):
         impliedempty = SampleSet()
         self.assertEqual(impliedempty, empty)
 
-    def test_from_bqm_sample(self):
+    def test_from_samples_bqm(self):
         bqm = dimod.BinaryQuadraticModel({}, {'ab': 1}, 0, dimod.SPIN)
-        ss = SampleSet.from_bqm_sample(bqm, {'a': 1, 'b': -1})
+        ss = SampleSet.from_samples_bqm({'a': 1, 'b': -1}, bqm)
         self.assertEqual(ss.first.energy, -1)
 
 

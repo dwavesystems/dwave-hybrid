@@ -79,7 +79,11 @@ class PliableDict(dict):
 
 
 class SampleSet(dimod.SampleSet):
-    """The `dimod.SampleSet` extended with a few helper methods."""
+    """The `dimod.SampleSet` extended with a few helper methods.
+
+    Note: this is basically a staging area for new `dimod.SampleSet` features
+    before we merge them upstream.
+    """
 
     def __init__(self, *args, **kwargs):
         if not args and not kwargs:
@@ -93,20 +97,6 @@ class SampleSet(dimod.SampleSet):
     @classmethod
     def empty(cls):
         return cls.from_samples([], vartype=dimod.SPIN, energy=0)
-
-    @classmethod
-    def from_bqm_sample(cls, bqm, sample):
-        return cls.from_bqm_samples(bqm, [sample])
-
-    @classmethod
-    def from_bqm_samples(cls, bqm, samples):
-        """Construct SampleSet from samples on BQM, filling in vartype and
-        energies.
-        """
-        return cls.from_samples(
-            samples,
-            vartype=bqm.vartype,
-            energy=[bqm.energy(sample) for sample in samples])
 
 
 class State(PliableDict):
@@ -202,7 +192,7 @@ class State(PliableDict):
             >>> state = State.from_samples([{'a': -1, 'b': -1, 'c': -1},
             ...                            {'a': -1, 'b': -1, 'c': 1}], bqm)
         """
-        return cls(problem=bqm, samples=SampleSet.from_bqm_samples(bqm, samples))
+        return cls(problem=bqm, samples=SampleSet.from_samples_bqm(samples, bqm))
 
     @classmethod
     def from_subsample(cls, subsample, bqm):
@@ -212,7 +202,7 @@ class State(PliableDict):
     @classmethod
     def from_subsamples(cls, subsamples, bqm):
         """Similar to :meth:`.from_samples`, but initializes `subproblem` and `subsamples`."""
-        return cls(subproblem=bqm, subsamples=SampleSet.from_bqm_samples(bqm, subsamples))
+        return cls(subproblem=bqm, subsamples=SampleSet.from_samples_bqm(subsamples, bqm))
 
 
 class States(list):
@@ -492,7 +482,7 @@ class HybridRunnable(Runnable):
         >>> import dimod
         >>> bqm = dimod.BinaryQuadraticModel.from_ising({}, {'ab': 0.5, 'bc': 0.5, 'ca': 0.5})
         >>> runnable = HybridRunnable(TabuSampler(), fields=('subproblem', 'subsamples'), timeout=100)
-        >>> state0 = State(subproblem=bqm, subsamples=SampleSet.from_bqm_sample(bqm, min_sample(bqm)))
+        >>> state0 = State(subproblem=bqm, subsamples=SampleSet.from_samples_bqm(min_sample(bqm), bqm))
         >>> state = runnable.run(state0)
         >>> state.result()['subsamples'].first.energy     # doctest: +SKIP
         -0.5
