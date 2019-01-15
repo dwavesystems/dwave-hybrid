@@ -466,7 +466,7 @@ class HybridSampler(dimod.Sampler):
         initial_state = State.from_sample(initial_sample, bqm)
         final_state = self._runnable_solver.run(initial_state)
 
-        return dimod.Response.from_future(final_state, result_hook=lambda f: f.result().samples)
+        return dimod.SampleSet.from_future(final_state, result_hook=lambda f: f.result().samples)
 
 
 class HybridRunnable(Runnable):

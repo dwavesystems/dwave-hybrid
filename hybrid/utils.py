@@ -104,7 +104,7 @@ def bqm_induced_by(bqm, variables, sample):
     variables = set(variables)
 
     # create empty BQM and copy in a subgraph induced by `variables`
-    subbqm = dimod.BinaryQuadraticModel({}, {}, 0.0, bqm.vartype)
+    subbqm = dimod.BinaryQuadraticModel.empty(bqm.vartype)
 
     for u in variables:
         bias = bqm.linear[u]
