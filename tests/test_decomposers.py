@@ -33,8 +33,8 @@ class TestEnergyImpactDecomposer(unittest.TestCase):
         state = State.from_sample({'a': 1, 'b': 1, 'c': -1}, self.notall)
         eid = EnergyImpactDecomposer(max_size=1, min_gain=0)
         nextstate = eid.next(state)
-        self.assertDictEqual(nextstate.subproblem.linear, {'c': 2})
-        self.assertDictEqual(nextstate.subproblem.quadratic, {})
+        self.assertDictEqual(dict(nextstate.subproblem.linear), {'c': 2})
+        self.assertDictEqual(dict(nextstate.subproblem.quadratic), {})
 
     def test_multi_vars(self):
         """Multiple variables subproblem selection works, without gain limit."""
@@ -42,7 +42,7 @@ class TestEnergyImpactDecomposer(unittest.TestCase):
         state = State.from_sample({'a': 1, 'b': 1, 'c': -1}, self.notall)
         eid = EnergyImpactDecomposer(max_size=3, min_gain=None)
         nextstate = eid.next(state)
-        self.assertDictEqual(nextstate.subproblem.adj, self.notall.adj)
+        self.assertDictEqual(dict(nextstate.subproblem.adj), dict(self.notall.adj))
 
     def test_adaptive_vars(self):
         """Multiple variables subproblem selection works, with gain limit."""
@@ -50,8 +50,8 @@ class TestEnergyImpactDecomposer(unittest.TestCase):
         state = State.from_sample({'a': 1, 'b': 1, 'c': -1}, self.notall)
         eid = EnergyImpactDecomposer(max_size=3, min_gain=2.0)
         nextstate = eid.next(state)
-        self.assertDictEqual(nextstate.subproblem.linear, {'c': 2})
-        self.assertDictEqual(nextstate.subproblem.quadratic, {})
+        self.assertDictEqual(dict(nextstate.subproblem.linear), {'c': 2})
+        self.assertDictEqual(dict(nextstate.subproblem.quadratic), {})
 
     def test_no_vars(self):
         """Failure due to no sub vars available."""

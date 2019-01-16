@@ -31,7 +31,7 @@ class TestIdentityComposer(unittest.TestCase):
 
         state = State(
             subproblem=None,
-            subsamples=SampleSet.from_bqm_samples(self.problem, self.samples))
+            subsamples=SampleSet.from_samples_bqm(self.samples, self.problem))
 
         nextstate = IdentityComposer().next(state)
         self.assertEqual(state.subsamples, nextstate.samples)
@@ -63,13 +63,13 @@ class TestSplatComposer(unittest.TestCase):
 
         state = State.from_samples(self.samples, self.problem).updated(
             subproblem=self.subproblem,
-            subsamples=SampleSet.from_bqm_samples(self.subproblem, self.subsamples))
+            subsamples=SampleSet.from_samples_bqm(self.subsamples, self.subproblem))
 
         nextstate = SplatComposer().next(state)
 
         sample = {'a': 1, 'b': -1, 'c': 1}
         self.assertEqual(nextstate.samples,
-                         SampleSet.from_bqm_sample(self.problem, sample))
+                         SampleSet.from_samples_bqm(sample, self.problem))
 
     def test_traits_enforced(self):
         """Sample composers require `problem`, `subproblem` and `subsamples`."""
@@ -86,5 +86,5 @@ class TestSplatComposer(unittest.TestCase):
             # problem and samples are included by default
             SplatComposer().run(State(
                 problem=self.problem, subproblem=self.subproblem,
-                samples=SampleSet.from_bqm_samples(self.problem, self.samples),
-                subsamples=SampleSet.from_bqm_samples(self.subproblem, self.subsamples))).result())
+                samples=SampleSet.from_samples_bqm(self.samples, self.problem),
+                subsamples=SampleSet.from_samples_bqm(self.subsamples, self.subproblem))).result())
