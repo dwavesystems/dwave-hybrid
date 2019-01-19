@@ -141,7 +141,6 @@ class RandomSubproblemDecomposer(Runnable, traits.ProblemDecomposer):
     def __init__(self, size):
         super(RandomSubproblemDecomposer, self).__init__()
 
-        # TODO: add min_diff support (like in EnergyImpactDecomposer)
         self.size = size
 
     def __repr__(self):

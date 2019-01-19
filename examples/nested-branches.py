@@ -38,7 +38,7 @@ with open(problem) as fp:
 
 iteration = RacingBranches(
     IdentityDecomposer() | SimulatedAnnealingSubproblemSampler() | SplatComposer(),
-    EnergyImpactDecomposer(max_size=50, min_diff=50)
+    EnergyImpactDecomposer(max_size=50)
         | RacingBranches(
             SimulatedAnnealingSubproblemSampler(sweeps=1000),
             TabuSubproblemSampler(tenure=20, timeout=10),

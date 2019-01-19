@@ -23,35 +23,34 @@ EnergyImpactDecomposer
 ----------------------
 
 This example iterates twice on a 10-variable binary quadratic model with a
-random initial sample set. `min_gain` configuration limits the subproblem
+random initial sample set. `max_size` configuration limits the subproblem
 in the first iteration to the first 4 variables shown in the output of
-`flip_energy_gains`; `min_diff` configuration should bring in new variables
-(this edge case worsens the second pick)
+`flip_energy_gains`.
 
 .. code-block:: python
 
     import dimod
     from hybrid.decomposers import EnergyImpactDecomposer
     from hybrid.core import State
-    from hybrid.utils import random_sample, flip_energy_gains
+    from hybrid.utils import min_sample, flip_energy_gains
 
     bqm = dimod.BinaryQuadraticModel({t: 0 for t in range(10)},
                                      {(t, (t+1) % 10): 1 for t in range(10)},
                                      0, 'BINARY')
 
-    decomposer = EnergyImpactDecomposer(max_size=8, min_gain=1, min_diff=2)
-    state0 = State.from_sample(random_sample(bqm), bqm)
+    decomposer = EnergyImpactDecomposer(max_size=4, rolling=True, rolling_history=1.0)
+    state0 = State.from_sample(min_sample(bqm), bqm)
 
 ::
 
     >>> flip_energy_gains(bqm, state0.samples.first.sample)
-    [(1, 8), (1, 6), (1, 2), (1, 1), (0, 7), (-1, 9), (-1, 5), (-1, 3), (-1, 0), (-2, 4)]
+    [(0, 9), (0, 8), (0, 7), (0, 6), (0, 5), (0, 4), (0, 3), (0, 2), (0, 1), (0, 0)]
     >>> state1 = decomposer.run(state0).result()
     >>> print(state1.subproblem)
-    BinaryQuadraticModel({9: 2, 3: 1, 5: 2, 1: 1}, {}, 0.0, Vartype.BINARY)
+    BinaryQuadraticModel({8: 0, 9: 0, 6: 0, 7: 0}, {(8, 9): 1.0, (6, 7): 1.0, (8, 7): 1.0}, 0.0, Vartype.BINARY)
     >>> state2 = decomposer.run(state1).result()
     >>> print(state2.subproblem)
-    BinaryQuadraticModel({1: 1, 3: 1}, {}, 0.0, Vartype.BINARY)
+    BinaryQuadraticModel({2: 0, 3: 0, 4: 0, 5: 0}, {(4, 5): 1.0, (3, 4): 1.0, (2, 3): 1.0}, 0.0, Vartype.BINARY)
 
 
 RandomSubproblemDecomposer
