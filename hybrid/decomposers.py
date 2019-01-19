@@ -53,62 +53,71 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
             Minimum reduction required to BQM energy, given the current sample. A variable
             is included in the subproblem only if inverting its sample value reduces energy
             by at least this amount.
-        min_diff (int, optional, default=1):
-            Minimum number of variables that did not partake in the previous iteration.
-        stride (int, optional, default=1):
-            Number of variables to shift each step of identifying subproblem variables that meet
-            the `min_diff` criteria. A shift of 3, for example, skips three high
-            contributors to the current and previous iteration in favor of selecting three
-            variables not in the previous iteration.
+        rolling (bool, optional, default=True):
+            Should successive calls for the same problem (but maybe different samples)
+            produce subproblems on different variables rolling down the list of all variables
+            sorted by decreasing impact?
+        rolling_history (float, optional, default=0.1):
+            Size of unrolled variables pool, as a fraction of the problem size (0.0 to 1.0).
+            Determines the reset condition for subproblem unrolling.
 
     Examples:
         See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/decomposers.html#examples.
     """
 
-    def __init__(self, max_size, min_gain=None, min_diff=1, stride=1):
+    def __init__(self, max_size, min_gain=None,
+                 rolling=True, rolling_history=0.1):
+
         super(EnergyImpactDecomposer, self).__init__()
 
-        if min_diff > max_size or min_diff < 0:
-            raise ValueError("min_diff must be nonnegative and less than max_size")
+        if rolling and rolling_history < 0.0 or rolling_history > 1.0:
+            raise ValueError("rolling_history must be a float in range [0.0, 1.0]")
 
         self.max_size = max_size
         self.min_gain = min_gain
-        self.min_diff = min_diff
-        self.stride = stride
+        self.rolling = rolling
+        self.rolling_history = rolling_history
 
-        # variables from previous iteration
-        self._prev_vars = set()
+        # variables unrolled so far
+        self._unrolled_vars = set()
+        self._rolling_bqm = None
 
     def __repr__(self):
-        return ("{self}(max_size={self.max_size!r}, min_gain={self.min_gain!r}, "
-                "min_diff={self.min_diff!r}, stride={self.stride!r})").format(self=self)
+        return (
+            "{self}(max_size={self.max_size!r}, min_gain={self.min_gain!r}, "
+            "rolling={self.rolling!r}, rolling_history={self.rolling_history!r})"
+        ).format(self=self)
+
+    def _reset_rolling(self, state):
+        self._unrolled_vars.clear()
+        self._rolling_bqm = state.problem
 
     def next(self, state):
         bqm = state.problem
 
+        if bqm != self._rolling_bqm:
+            self._reset_rolling(state)
+
         if self.max_size > len(bqm):
             raise ValueError("subproblem size cannot be greater than the problem size")
 
-        # select a new subset of `max_size` variables, making sure they differ
-        # from previous iteration by at least `min_diff` variables
         sample = state.samples.change_vartype(bqm.vartype).first.sample
         variables = select_localsearch_adversaries(
             bqm, sample, min_gain=self.min_gain)
 
-        # TODO: soft fail strategy? skip one iteration or relax vars selection?
-        if len(variables) < self.min_diff:
-            raise ValueError("less than min_diff variables identified as"
-                             " contributors to min_gain energy increase")
+        if self.rolling and len(self._unrolled_vars) + self.max_size > self.rolling_history * len(bqm):
+            logger.debug("rolling reset at unrolled history size = %d",
+                         len(self._unrolled_vars))
+            self._reset_rolling(state)
 
-        offset = 0
-        next_vars = set(variables[offset : offset+self.max_size])
-        while len(next_vars ^ self._prev_vars) < self.min_diff:
-            offset += self.stride
-            next_vars = set(variables[offset : offset+self.max_size])
+        novel_vars = [v for v in variables if v not in self._unrolled_vars]
+        next_vars = novel_vars[:self.max_size]
 
-        logger.debug("Select variables: %r (diff from prev = %r)",
-                     next_vars, next_vars ^ self._prev_vars)
-        self._prev_vars = next_vars
+        logger.debug("Selected %d subproblem variables: %r",
+                     len(next_vars), next_vars)
+
+        if self.rolling:
+            self._unrolled_vars.update(next_vars)
 
         # induce sub-bqm based on selected variables and global sample
         subbqm = bqm_induced_by(bqm, next_vars, sample)
