@@ -58,8 +58,8 @@ class TestEnergyImpactDecomposer(unittest.TestCase):
 
         state = State.from_sample({'a': 1, 'b': 1, 'c': -1}, self.notall)
         eid = EnergyImpactDecomposer(max_size=3, min_gain=5.0)
-        with self.assertRaises(ValueError):
-            nextstate = eid.next(state)
+        nextstate = eid.next(state)
+        self.assertEqual(len(nextstate.subproblem), 0)
 
 
 class TestRandomSubproblemDecomposer(unittest.TestCase):
