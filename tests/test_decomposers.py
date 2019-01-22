@@ -14,6 +14,7 @@
 
 import itertools
 import unittest
+from functools import partial
 
 import dimod
 
@@ -60,6 +61,22 @@ class TestEnergyImpactDecomposer(unittest.TestCase):
         eid = EnergyImpactDecomposer(max_size=3, min_gain=5.0)
         nextstate = eid.next(state)
         self.assertEqual(len(nextstate.subproblem), 0)
+
+    def test_rolling_subproblem(self):
+        """Selected number of (non-overlapping) subproblems are unrolled from the input problem."""
+
+        # 10 variables, 0 to 9 when ordered by energy increase on flip
+        bqm = dimod.BinaryQuadraticModel({i: i for i in range(10)}, {}, 0.0, 'SPIN')
+        sample = {i: 1 for i in range(10)}
+
+        # exactly 5 single-variable problems should be produced
+        state = State.from_sample(sample, bqm)
+        eid = EnergyImpactDecomposer(max_size=1, rolling=True, rolling_history=0.5, silent_reset=False)
+        states = list(iter(partial(eid.next, state=state), None))
+
+        self.assertEqual(len(states), 5)
+        for idx, state in enumerate(states):
+            self.assertEqual(state.subproblem.linear[idx], idx)
 
 
 class TestRandomSubproblemDecomposer(unittest.TestCase):
