@@ -79,7 +79,7 @@ Example
     # Define the solver
     iteration = RacingBranches(
         InterruptableTabuSampler(),
-        EnergyImpactDecomposer(max_size=2)
+        EnergyImpactDecomposer(size=2)
         | QPUSubproblemAutoEmbeddingSampler()
         | SplatComposer()
     ) | ArgMin()

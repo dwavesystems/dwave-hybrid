@@ -23,7 +23,7 @@ EnergyImpactDecomposer
 ----------------------
 
 This example iterates twice on a 10-variable binary quadratic model with a
-random initial sample set. `max_size` configuration limits the subproblem
+random initial sample set. `size` configuration limits the subproblem
 in the first iteration to the first 4 variables shown in the output of
 `flip_energy_gains`.
 
@@ -38,7 +38,7 @@ in the first iteration to the first 4 variables shown in the output of
                                      {(t, (t+1) % 10): 1 for t in range(10)},
                                      0, 'BINARY')
 
-    decomposer = EnergyImpactDecomposer(max_size=4, rolling=True, rolling_history=1.0)
+    decomposer = EnergyImpactDecomposer(size=4, rolling=True, rolling_history=1.0)
     state0 = State.from_sample(min_sample(bqm), bqm)
 
 ::

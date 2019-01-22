@@ -113,7 +113,7 @@ class KerberosSampler(dimod.Sampler):
             IdentityDecomposer()
                 | SimulatedAnnealingSubproblemSampler(num_reads=sa_reads, sweeps=sa_sweeps)
                 | SplatComposer(),
-            EnergyImpactDecomposer(max_size=subproblem_size, rolling=True, rolling_history=0.2)
+            EnergyImpactDecomposer(size=subproblem_size, rolling=True, rolling_history=0.2)
                 | QPUSubproblemAutoEmbeddingSampler(num_reads=qpu_reads, qpu_sampler=qpu_sampler)
                 | SplatComposer(),
         ) | ArgMin()

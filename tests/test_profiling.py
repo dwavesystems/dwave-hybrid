@@ -65,7 +65,7 @@ class TestCoreRunnablesIterable(unittest.TestCase):
         self.assertEqual(self.children(InterruptableTabuSampler()), [])
         # sample of decomposers
         self.assertEqual(self.children(IdentityDecomposer()), [])
-        self.assertEqual(self.children(EnergyImpactDecomposer(max_size=1)), [])
+        self.assertEqual(self.children(EnergyImpactDecomposer(size=1)), [])
         self.assertEqual(self.children(RandomSubproblemDecomposer(size=1)), [])
 
 
