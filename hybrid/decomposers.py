@@ -20,6 +20,7 @@ from itertools import cycle
 import networkx as nx
 
 from hybrid.core import Runnable, State
+from hybrid.exceptions import EndOfStream
 from hybrid import traits
 from hybrid.utils import (
     bqm_induced_by, select_localsearch_adversaries, select_random_subgraph,
@@ -49,24 +50,31 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
     Args:
         max_size (int):
             Maximum number of variables in the subproblem.
+
         min_gain (int, optional, default=-inf):
             Minimum reduction required to BQM energy, given the current sample. A variable
             is included in the subproblem only if inverting its sample value reduces energy
             by at least this amount.
+
         rolling (bool, optional, default=True):
             Should successive calls for the same problem (but maybe different samples)
             produce subproblems on different variables rolling down the list of all variables
             sorted by decreasing impact?
+
         rolling_history (float, optional, default=0.1):
             Size of unrolled variables pool, as a fraction of the problem size (0.0 to 1.0).
             Determines the reset condition for subproblem unrolling.
+
+        silent_reset (bool, optional, default=True):
+            On unrolling reset condition, should `StopIteration` be raised together
+            with resetting the subproblem generator?
 
     Examples:
         See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/decomposers.html#examples.
     """
 
     def __init__(self, max_size, min_gain=None,
-                 rolling=True, rolling_history=0.1):
+                 rolling=True, rolling_history=0.1, silent_reset=True):
 
         super(EnergyImpactDecomposer, self).__init__()
 
@@ -77,6 +85,7 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
         self.min_gain = min_gain
         self.rolling = rolling
         self.rolling_history = rolling_history
+        self.silent_reset = silent_reset
 
         # variables unrolled so far
         self._unrolled_vars = set()
@@ -108,7 +117,10 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
         if self.rolling and len(self._unrolled_vars) + self.max_size > self.rolling_history * len(bqm):
             logger.debug("rolling reset at unrolled history size = %d",
                          len(self._unrolled_vars))
+            # reset before exception, to be ready on a subsequent call
             self._reset_rolling(state)
+            if not self.silent_reset:
+                raise EndOfStream
 
         novel_vars = [v for v in variables if v not in self._unrolled_vars]
         next_vars = novel_vars[:self.max_size]

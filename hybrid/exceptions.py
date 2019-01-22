@@ -32,3 +32,7 @@ class StateTraitMissingError(InvalidStateError):
 
 class StateDimensionalityError(InvalidStateError):
     """Single state expected instead of a state sequence, or vice versa."""
+
+
+class EndOfStream(StopIteration):
+    """Signals end of stream for streaming runnables."""
