@@ -46,7 +46,7 @@ class Branch(Runnable):
         ...                                  {(t, (t+1) % 10): 1 for t in range(10)},
         ...                                  0, 'SPIN')
         >>> # Run one iteration on a branch
-        >>> branch = (EnergyImpactDecomposer(max_size=6, min_gain=-10) |
+        >>> branch = (EnergyImpactDecomposer(size=6, min_gain=-10) |
         ...           TabuSubproblemSampler(num_reads=2) |
         ...           SplatComposer())
         >>> new_state = branch.next(State.from_sample(min_sample(bqm), bqm))
@@ -167,7 +167,7 @@ class RacingBranches(Runnable, traits.SIMO):
 
         >>> RacingBranches(                     # doctest: +SKIP
                 InterruptableTabuSampler(),
-                EnergyImpactDecomposer(max_size=2)
+                EnergyImpactDecomposer(size=2)
                 | QPUSubproblemAutoEmbeddingSampler()
                 | SplatComposer()
             ) | ArgMin()
@@ -372,7 +372,7 @@ class ArgMin(Runnable, traits.MISO):
 
         >>> RacingBranches(                     # doctest: +SKIP
                 InterruptableTabuSampler(),
-                EnergyImpactDecomposer(max_size=2)
+                EnergyImpactDecomposer(size=2)
                 | QPUSubproblemAutoEmbeddingSampler()
                 | SplatComposer()
             ) | ArgMin()

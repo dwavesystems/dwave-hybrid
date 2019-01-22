@@ -80,7 +80,7 @@ is set using the utility function :meth:`~hybrid.utils.min_sample`.
 >>> bqm = dimod.BinaryQuadraticModel({t: 0 for t in range(10)},
 ...                                  {(t, (t+1) % 10): 1 for t in range(10)},
 ...                                  0, 'SPIN')
->>> branch = (EnergyImpactDecomposer(max_size=6, min_gain=-10) |
+>>> branch = (EnergyImpactDecomposer(size=6, min_gain=-10) |
 ...           TabuSubproblemSampler(num_reads=2) |
 ...           SplatComposer())
 >>> new_state = branch.next(State.from_sample(min_sample(bqm), bqm))

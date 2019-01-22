@@ -37,7 +37,7 @@ with open(problem) as fp:
 # define the solver
 iteration = RacingBranches(
     InterruptableTabuSampler(),
-    EnergyImpactDecomposer(max_size=50, rolling=True, rolling_history=0.15)
+    EnergyImpactDecomposer(size=50, rolling=True, rolling_history=0.15)
     | QPUSubproblemAutoEmbeddingSampler()
     | SplatComposer()
 ) | ArgMin()

@@ -48,8 +48,9 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
     in the problem graph.
 
     Args:
-        max_size (int):
-            Maximum number of variables in the subproblem.
+        size (int):
+            Nominal number of variables in the subproblem. Actual subproblem can
+            be smaller, depending on other parameters (e.g. `min_gain`).
 
         min_gain (int, optional, default=-inf):
             Minimum reduction required to BQM energy, given the current sample. A variable
@@ -73,7 +74,7 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
         See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/decomposers.html#examples.
     """
 
-    def __init__(self, max_size, min_gain=None,
+    def __init__(self, size, min_gain=None,
                  rolling=True, rolling_history=0.1, silent_reset=True):
 
         super(EnergyImpactDecomposer, self).__init__()
@@ -81,7 +82,7 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
         if rolling and rolling_history < 0.0 or rolling_history > 1.0:
             raise ValueError("rolling_history must be a float in range [0.0, 1.0]")
 
-        self.max_size = max_size
+        self.size = size
         self.min_gain = min_gain
         self.rolling = rolling
         self.rolling_history = rolling_history
@@ -93,7 +94,7 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
 
     def __repr__(self):
         return (
-            "{self}(max_size={self.max_size!r}, min_gain={self.min_gain!r}, "
+            "{self}(size={self.size!r}, min_gain={self.min_gain!r}, "
             "rolling={self.rolling!r}, rolling_history={self.rolling_history!r})"
         ).format(self=self)
 
@@ -107,14 +108,14 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
         if bqm != self._rolling_bqm:
             self._reset_rolling(state)
 
-        if self.max_size > len(bqm):
+        if self.size > len(bqm):
             raise ValueError("subproblem size cannot be greater than the problem size")
 
         sample = state.samples.change_vartype(bqm.vartype).first.sample
         variables = select_localsearch_adversaries(
             bqm, sample, min_gain=self.min_gain)
 
-        if self.rolling and len(self._unrolled_vars) + self.max_size > self.rolling_history * len(bqm):
+        if self.rolling and len(self._unrolled_vars) + self.size > self.rolling_history * len(bqm):
             logger.debug("rolling reset at unrolled history size = %d",
                          len(self._unrolled_vars))
             # reset before exception, to be ready on a subsequent call
@@ -123,7 +124,7 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
                 raise EndOfStream
 
         novel_vars = [v for v in variables if v not in self._unrolled_vars]
-        next_vars = novel_vars[:self.max_size]
+        next_vars = novel_vars[:self.size]
 
         logger.debug("Selected %d subproblem variables: %r",
                      len(next_vars), next_vars)
@@ -182,6 +183,7 @@ class TilingChimeraDecomposer(Runnable, traits.ProblemDecomposer, traits.Embeddi
         size (int, optional, default=(4,4,4)):
             Size of the Chimera lattice as (m, n, t), where m is the number of rows,
             n the columns, and t the size of shore in the Chimera lattice.
+
         loop (Bool, optional, default=True):
             Cycle continually through the tiles.
 
@@ -223,6 +225,7 @@ class RandomConstraintDecomposer(Runnable, traits.ProblemDecomposer):
     Args:
         size (int):
             Number of variables in the subproblem.
+
         constraints (list[set]):
             Groups of variables in the BQM, as a list of sets, where each set is associated
             with a constraint.

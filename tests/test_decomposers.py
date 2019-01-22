@@ -32,7 +32,7 @@ class TestEnergyImpactDecomposer(unittest.TestCase):
         """First-variable selection works."""
 
         state = State.from_sample({'a': 1, 'b': 1, 'c': -1}, self.notall)
-        eid = EnergyImpactDecomposer(max_size=1, min_gain=0)
+        eid = EnergyImpactDecomposer(size=1, min_gain=0)
         nextstate = eid.next(state)
         self.assertDictEqual(dict(nextstate.subproblem.linear), {'c': 2})
         self.assertDictEqual(dict(nextstate.subproblem.quadratic), {})
@@ -41,7 +41,7 @@ class TestEnergyImpactDecomposer(unittest.TestCase):
         """Multiple variables subproblem selection works, without gain limit."""
 
         state = State.from_sample({'a': 1, 'b': 1, 'c': -1}, self.notall)
-        eid = EnergyImpactDecomposer(max_size=3, min_gain=None)
+        eid = EnergyImpactDecomposer(size=3, min_gain=None)
         nextstate = eid.next(state)
         self.assertDictEqual(dict(nextstate.subproblem.adj), dict(self.notall.adj))
 
@@ -49,7 +49,7 @@ class TestEnergyImpactDecomposer(unittest.TestCase):
         """Multiple variables subproblem selection works, with gain limit."""
 
         state = State.from_sample({'a': 1, 'b': 1, 'c': -1}, self.notall)
-        eid = EnergyImpactDecomposer(max_size=3, min_gain=2.0)
+        eid = EnergyImpactDecomposer(size=3, min_gain=2.0)
         nextstate = eid.next(state)
         self.assertDictEqual(dict(nextstate.subproblem.linear), {'c': 2})
         self.assertDictEqual(dict(nextstate.subproblem.quadratic), {})
@@ -58,7 +58,7 @@ class TestEnergyImpactDecomposer(unittest.TestCase):
         """Failure due to no sub vars available."""
 
         state = State.from_sample({'a': 1, 'b': 1, 'c': -1}, self.notall)
-        eid = EnergyImpactDecomposer(max_size=3, min_gain=5.0)
+        eid = EnergyImpactDecomposer(size=3, min_gain=5.0)
         nextstate = eid.next(state)
         self.assertEqual(len(nextstate.subproblem), 0)
 
@@ -71,7 +71,7 @@ class TestEnergyImpactDecomposer(unittest.TestCase):
 
         # exactly 5 single-variable problems should be produced
         state = State.from_sample(sample, bqm)
-        eid = EnergyImpactDecomposer(max_size=1, rolling=True, rolling_history=0.5, silent_reset=False)
+        eid = EnergyImpactDecomposer(size=1, rolling=True, rolling_history=0.5, silent_reset=False)
         states = list(iter(partial(eid.next, state=state), None))
 
         self.assertEqual(len(states), 5)

@@ -70,7 +70,7 @@ solver_factories = [
     ("qbsolv-like solver",
         lambda qpu, **kw: Loop(RacingBranches(
             InterruptableTabuSampler(quantum_timeout=200),
-            EnergyImpactDecomposer(max_size=50, rolling=True, rolling_history=0.15)
+            EnergyImpactDecomposer(size=50, rolling=True, rolling_history=0.15)
             | QPUSubproblemAutoEmbeddingSampler(qpu_sampler=qpu)
             | SplatComposer()
         ) | ArgMin(), max_iter=100, convergence=10)),
