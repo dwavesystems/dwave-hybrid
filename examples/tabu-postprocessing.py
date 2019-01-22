@@ -37,7 +37,7 @@ with open(problem) as fp:
 # Run Tabu in parallel with QPU, but post-process QPU samples with very short Tabu
 iteration = RacingBranches(
     InterruptableTabuSampler(),
-    EnergyImpactDecomposer(max_size=50, min_diff=50)
+    EnergyImpactDecomposer(max_size=50)
     | QPUSubproblemAutoEmbeddingSampler(num_reads=100)
     | SplatComposer()
     | TabuProblemSampler(timeout=1)
