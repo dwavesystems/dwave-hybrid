@@ -71,7 +71,7 @@ class TestEnergyImpactDecomposer(unittest.TestCase):
 
         # exactly 5 single-variable problems should be produced
         state = State.from_sample(sample, bqm)
-        eid = EnergyImpactDecomposer(size=1, rolling=True, rolling_history=0.5, silent_reset=False)
+        eid = EnergyImpactDecomposer(size=1, rolling=True, rolling_history=0.5, silent_rewind=False)
         states = list(iter(partial(eid.next, state=state), None))
 
         self.assertEqual(len(states), 5)

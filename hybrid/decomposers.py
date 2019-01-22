@@ -66,16 +66,16 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
             Size of unrolled variables pool, as a fraction of the problem size (0.0 to 1.0).
             Determines the reset condition for subproblem unrolling.
 
-        silent_reset (bool, optional, default=True):
-            On unrolling reset condition, should `StopIteration` be raised together
-            with resetting the subproblem generator?
+        silent_rewind (bool, optional, default=True):
+            On unrolling reset condition, should :exc:`EndOfStream` be raised together
+            with resetting/rewinding the subproblem generator?
 
     Examples:
         See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/decomposers.html#examples.
     """
 
     def __init__(self, size, min_gain=None,
-                 rolling=True, rolling_history=0.1, silent_reset=True):
+                 rolling=True, rolling_history=0.1, silent_rewind=True):
 
         super(EnergyImpactDecomposer, self).__init__()
 
@@ -86,7 +86,7 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
         self.min_gain = min_gain
         self.rolling = rolling
         self.rolling_history = rolling_history
-        self.silent_reset = silent_reset
+        self.silent_rewind = silent_rewind
 
         # variables unrolled so far
         self._unrolled_vars = set()
@@ -98,7 +98,7 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
             "rolling={self.rolling!r}, rolling_history={self.rolling_history!r})"
         ).format(self=self)
 
-    def _reset_rolling(self, state):
+    def _rewind_rolling(self, state):
         self._unrolled_vars.clear()
         self._rolling_bqm = state.problem
 
@@ -106,7 +106,7 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
         bqm = state.problem
 
         if bqm != self._rolling_bqm:
-            self._reset_rolling(state)
+            self._rewind_rolling(state)
 
         if self.size > len(bqm):
             raise ValueError("subproblem size cannot be greater than the problem size")
@@ -119,8 +119,8 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
             logger.debug("rolling reset at unrolled history size = %d",
                          len(self._unrolled_vars))
             # reset before exception, to be ready on a subsequent call
-            self._reset_rolling(state)
-            if not self.silent_reset:
+            self._rewind_rolling(state)
+            if not self.silent_rewind:
                 raise EndOfStream
 
         novel_vars = [v for v in variables if v not in self._unrolled_vars]
