@@ -23,14 +23,14 @@ __all__ = ['IdentityComposer', 'SplatComposer']
 logger = logging.getLogger(__name__)
 
 
-class IdentityComposer(Runnable, traits.SubproblemComposer):
+class IdentityComposer(Runnable, traits.SubsamplesComposer):
     """Copy `subsamples` to `samples` verbatim."""
 
     def next(self, state):
         return state.updated(samples=state.subsamples)
 
 
-class SplatComposer(Runnable, traits.SubproblemComposer):
+class SplatComposer(Runnable, traits.SubsamplesComposer):
     """A composer that overwrites current samples with subproblem samples.
 
     Examples:

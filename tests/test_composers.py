@@ -37,19 +37,15 @@ class TestIdentityComposer(unittest.TestCase):
         self.assertEqual(state.subsamples, nextstate.samples)
 
     def test_traits_enforced(self):
-        """Sample composers require `problem`, `subproblem` and `subsamples`."""
+        """Sample composers require `problem`, `samples` and `subsamples`."""
 
         with self.assertRaises(traits.StateTraitMissingError):
             IdentityComposer().run(State()).result()
         with self.assertRaises(traits.StateTraitMissingError):
             IdentityComposer().run(State(problem=True)).result()
-        with self.assertRaises(traits.StateTraitMissingError):
-            IdentityComposer().run(State(subproblem=True)).result()
-        with self.assertRaises(traits.StateTraitMissingError):
-            IdentityComposer().run(State(subsamples=True)).result()
         self.assertTrue(
             # problem and samples are included by default
-            IdentityComposer().run(State(subproblem=True, subsamples=True)).result())
+            IdentityComposer().run(State(subsamples=True)).result())
 
 
 class TestSplatComposer(unittest.TestCase):
@@ -72,16 +68,12 @@ class TestSplatComposer(unittest.TestCase):
                          SampleSet.from_samples_bqm(sample, self.problem))
 
     def test_traits_enforced(self):
-        """Sample composers require `problem`, `subproblem` and `subsamples`."""
+        """Sample composers require `problem`, `samples` and `subsamples`."""
 
         with self.assertRaises(traits.StateTraitMissingError):
             SplatComposer().run(State()).result()
         with self.assertRaises(traits.StateTraitMissingError):
             SplatComposer().run(State(problem=True)).result()
-        with self.assertRaises(traits.StateTraitMissingError):
-            SplatComposer().run(State(subproblem=True)).result()
-        with self.assertRaises(traits.StateTraitMissingError):
-            SplatComposer().run(State(subsamples=True)).result()
         self.assertTrue(
             # problem and samples are included by default
             SplatComposer().run(State(

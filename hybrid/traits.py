@@ -155,7 +155,7 @@ class EmbeddingProducing(StateTraits):
 class ProblemDecomposer(ProblemIntaking, SamplesIntaking, SubproblemProducing):
     pass
 
-class SubproblemComposer(SubproblemIntaking, SubsamplesIntaking, ProblemIntaking, SamplesProducing):
+class SubsamplesComposer(SamplesIntaking, SubsamplesIntaking, ProblemIntaking, SamplesProducing):
     pass
 
 class ProblemSampler(ProblemIntaking, SamplesProducing):
