@@ -25,7 +25,7 @@ from hybrid.exceptions import EndOfStream
 from hybrid import traits
 
 __all__ = [
-    'Branch', 'RacingBranches', 'Race', 'Map', 'Lambda', 'ArgMin',
+    'Branch', 'RacingBranches', 'Race', 'Map', 'Reduce', 'Lambda', 'ArgMin',
     'Loop', 'SimpleIterator', 'Unwind'
 ]
 
@@ -279,7 +279,7 @@ class Map(Runnable, traits.MIMO):
         return "{}(runnable={!r})".format(self.name, self.runnable)
 
     def __iter__(self):
-        return iter(tuple(self.runnable))
+        return iter((self.runnable,))
 
     def next(self, states):
         self._futures = [self.runnable.run(state) for state in states]
@@ -292,6 +292,68 @@ class Map(Runnable, traits.MIMO):
     def halt(self):
         for future in self._futures:
             future.cancel()
+
+
+class Reduce(Runnable, traits.MISO):
+    """Fold-left using the specified runnable on a sequence of input states,
+    producing a single output state.
+
+    Args:
+        runnable (:class:`Runnable`):
+            A runnable used as the fold-left operator. It should accept a
+            2-State input and produce a single State on output.
+
+        initial_state (:class:`State`, optional, default=None):
+            Optional starting state into which input states will be folded in.
+            If undefined, the first input state is used as the `initial_state`.
+
+    """
+
+    def __init__(self, runnable, initial_state=None, *args, **kwargs):
+        if not isinstance(runnable, Runnable):
+            raise TypeError("'runnable' is not instance of Runnable")
+
+        if initial_state is not None and not isinstance(initial_state, State):
+            raise TypeError("'initial_state' is not instance of State")
+
+        super(Reduce, self).__init__(*args, **kwargs)
+        self.runnable = runnable
+        self.initial_state = initial_state
+
+        # preemptively check runnable's i/o dimensionality
+        if not runnable.multi_input or runnable.multi_output:
+            raise TypeError("runnable's must be of multi-input, single-output type")
+
+        # patch components's I/O requirements based on the subcomponents' requirements
+        self.multi_input = True
+        self.inputs = runnable.inputs
+        self.multi_output = False
+        self.outputs = runnable.outputs
+
+    def __str__(self):
+        return "Reduce {}".format(self.runnable)
+
+    def __repr__(self):
+        return ("{self.name}(runnable={self.runnable!r}, "
+                "initial_state={self.initial_state!r}").format(self=self)
+
+    def __iter__(self):
+        return iter((self.runnable,))
+
+    def next(self, states):
+        """Collapse all `states` to a single output state using the `self.runnable`."""
+
+        states = iter(states)
+
+        if self.initial_state is None:
+            result = next(states)
+        else:
+            result = self.initial_state
+
+        for state in states:
+            result = self.runnable.run(States(result, state)).result()
+
+        return result
 
 
 class Lambda(Runnable):
@@ -501,8 +563,6 @@ class Unwind(Runnable, traits.SIMO):
         return iter((self.runnable,))
 
     def next(self, state):
-        """Execute one blocking iteration of an instantiated :class:`Unwind`."""
-
         output = States()
 
         while True:
