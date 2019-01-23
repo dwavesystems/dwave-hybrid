@@ -507,7 +507,8 @@ class Unwind(Runnable, traits.SIMO):
 
         while True:
             try:
-                output.append(self.runnable.run(state).result())
+                state = self.runnable.run(state).result()
+                output.append(state)
             except EndOfStream:
                 break
 
