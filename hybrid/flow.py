@@ -21,9 +21,13 @@ from itertools import chain
 import six
 
 from hybrid.core import Runnable, States, Present
+from hybrid.exceptions import EndOfStream
 from hybrid import traits
 
-__all__ = ['Branch', 'RacingBranches', 'Race', 'Map', 'Lambda', 'ArgMin', 'Loop', 'SimpleIterator']
+__all__ = [
+    'Branch', 'RacingBranches', 'Race', 'Map', 'Lambda', 'ArgMin',
+    'Loop', 'SimpleIterator', 'Unwind'
+]
 
 logger = logging.getLogger(__name__)
 
@@ -465,3 +469,46 @@ class Loop(Runnable):
 
 
 SimpleIterator = Loop
+
+
+class Unwind(Runnable, traits.SIMO):
+    """Iterates `runnable` until :exc:`EndOfStream` is raised, collecting all
+    output states along the way.
+    """
+
+    def __init__(self, runnable):
+        if not isinstance(runnable, Runnable):
+            raise TypeError("'runnable' is not instance of Runnable")
+
+        super(Unwind, self).__init__()
+        self.runnable = runnable
+
+        # preemptively check runnable's i/o dimensionality
+        if runnable.multi_input or runnable.multi_output:
+            raise TypeError("single input, single output runnable required")
+
+        # patch branch's I/O requirements based on the child component's requirements
+        self.inputs = self.runnable.inputs
+        self.outputs = self.runnable.outputs
+
+    def __str__(self):
+        return "Unwind {}".format(self.runnable)
+
+    def __repr__(self):
+        return ("{self.name}(runnable={self.runnable!r}").format(self=self)
+
+    def __iter__(self):
+        return iter((self.runnable,))
+
+    def next(self, state):
+        """Execute one blocking iteration of an instantiated :class:`Unwind`."""
+
+        output = States()
+
+        while True:
+            try:
+                output.append(self.runnable.run(state).result())
+            except EndOfStream:
+                break
+
+        return output
