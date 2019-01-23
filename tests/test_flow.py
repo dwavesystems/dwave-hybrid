@@ -20,9 +20,10 @@ import operator
 
 import dimod
 
-from hybrid.flow import Branch, RacingBranches, ArgMin, Loop, Map, Lambda
+from hybrid.flow import Branch, RacingBranches, ArgMin, Loop, Map, Lambda, Unwind
 from hybrid.core import State, States, Runnable, Present
 from hybrid.utils import min_sample, max_sample
+from hybrid.exceptions import EndOfStream
 from hybrid import traits
 
 
@@ -268,3 +269,29 @@ class TestLambda(unittest.TestCase):
         with self.assertRaises(TypeError):
             Lambda(lambda: None, lambda: None, False)
         self.assertIsInstance(Lambda(lambda: None, lambda: None, lambda: None), Runnable)
+
+
+class TestUnwind(unittest.TestCase):
+
+    def test_basic(self):
+        class Streamer(Runnable):
+            def next(self, state):
+                if state.cnt <= 0:
+                    raise EndOfStream
+                return state.updated(cnt=state.cnt - 1)
+
+        r = Unwind(Streamer())
+        states = r.run(State(cnt=3)).result()
+
+        # states should contain 3 states with cnt=3..0
+        self.assertEqual(len(states), 3)
+        for idx, state in enumerate(states):
+            self.assertEqual(state.cnt, 2-idx)
+
+    def test_validation(self):
+        class simo(Runnable, traits.SIMO):
+            def next(self, state):
+                return States(state, state)
+
+        with self.assertRaises(TypeError):
+            Unwind(simo())
