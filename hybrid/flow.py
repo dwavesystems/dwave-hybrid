@@ -321,8 +321,9 @@ class Reduce(Runnable, traits.MISO):
         self.initial_state = initial_state
 
         # preemptively check runnable's i/o dimensionality
-        if not runnable.multi_input or runnable.multi_output:
-            raise TypeError("runnable's must be of multi-input, single-output type")
+        if runnable.validate_input and runnable.validate_output:
+            if not runnable.multi_input or runnable.multi_output:
+                raise TypeError("runnable's must be of multi-input, single-output type")
 
         # patch components's I/O requirements based on the subcomponents' requirements
         self.multi_input = True
@@ -356,7 +357,7 @@ class Reduce(Runnable, traits.MISO):
         return result
 
 
-class Lambda(Runnable):
+class Lambda(Runnable, traits.NotValidated):
     """Creates a runnable on fly, given just its `next` function (optionally
     `init` and `error` functions can be specified too).
 
@@ -485,9 +486,10 @@ class Loop(Runnable):
         self.key = key
 
         # preemptively check runnable's i/o dimensionality
-        if runnable.multi_input != runnable.multi_output:
-            raise TypeError("runnable's input dimensionality does not match "
-                            "the output dimensionality")
+        if runnable.validate_input and runnable.validate_output:
+            if runnable.multi_input != runnable.multi_output:
+                raise TypeError("runnable's input dimensionality does not match "
+                                "the output dimensionality")
 
         # patch branch's I/O requirements based on the child component's requirements
         self.inputs = self.runnable.inputs
@@ -546,8 +548,9 @@ class Unwind(Runnable, traits.SIMO):
         self.runnable = runnable
 
         # preemptively check runnable's i/o dimensionality
-        if runnable.multi_input or runnable.multi_output:
-            raise TypeError("single input, single output runnable required")
+        if runnable.validate_input and runnable.validate_output:
+            if runnable.multi_input or runnable.multi_output:
+                raise TypeError("single input, single output runnable required")
 
         # patch branch's I/O requirements based on the child component's requirements
         self.inputs = self.runnable.inputs

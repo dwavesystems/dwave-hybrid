@@ -196,6 +196,26 @@ class TestMultipleStateTraits(unittest.TestCase):
         self.assertEqual(len(B().run(State(subproblem=1)).result()), 2)
 
 
+class TestTraitsValidationOnOff(unittest.TestCase):
+
+    def test_validated(self):
+        class Validated(Runnable, traits.SISO, traits.Validated):
+            def next(self, state):
+                return state
+
+        with self.assertRaises(traits.StateDimensionalityError):
+            Validated().run(States()).result()
+        self.assertEqual(Validated().run(State(x=1)).result().x, 1)
+
+    def test_not_validated(self):
+        class NotValidated(Runnable, traits.NotValidated):
+            def next(self, state):
+                return state
+
+        self.assertEqual(NotValidated().run(State(x=1)).result().x, 1)
+        self.assertEqual(NotValidated().run(States(State(x=1))).result()[0].x, 1)
+
+
 class TestFlowComponentsTraits(unittest.TestCase):
 
     def test_branch_with_single_component(self):
