@@ -78,6 +78,22 @@ class TestEnergyImpactDecomposer(unittest.TestCase):
         for idx, state in enumerate(states):
             self.assertEqual(state.subproblem.linear[idx], idx)
 
+    def test_rolling_subproblem_larger_than_rolling_history(self):
+        """In case rolling history too small, just one problem is unrolled."""
+
+        # 10 variables, 0 to 9 when ordered by energy increase on flip
+        bqm = dimod.BinaryQuadraticModel({i: i for i in range(10)}, {}, 0.0, 'SPIN')
+        sample = {i: 1 for i in range(10)}
+
+        # exactly 1 five-variable problems should be produced
+        state = State.from_sample(sample, bqm)
+        eid = EnergyImpactDecomposer(size=5, rolling=True, rolling_history=0.3, silent_rewind=False)
+        states = list(iter(partial(eid.next, state=state), None))
+
+        self.assertEqual(len(states), 1)
+        self.assertEqual(len(states[0].subproblem), 5)
+        self.assertEqual(list(dict(states[0].subproblem.linear).values()), list(range(0,5)))
+
 
 class TestRandomSubproblemDecomposer(unittest.TestCase):
     bqm = dimod.BinaryQuadraticModel({}, {'ab': 1, 'bc': 1}, 0, dimod.SPIN)

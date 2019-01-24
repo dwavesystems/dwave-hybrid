@@ -116,13 +116,18 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
         variables = select_localsearch_adversaries(
             bqm, sample, min_gain=self.min_gain)
 
-        if self.rolling and len(self._unrolled_vars) + self.size > self.rolling_history * len(bqm):
-            logger.debug("rolling reset at unrolled history size = %d",
-                         len(self._unrolled_vars))
-            # reset before exception, to be ready on a subsequent call
-            self._rewind_rolling(state)
-            if not self.silent_rewind:
-                raise EndOfStream
+        if self.rolling:
+            unroll_size = self.rolling_history * len(bqm)
+            if not self._unrolled_vars and self.size > unroll_size:
+                logger.debug("Subproblem larger that total rolling history "\
+                             "(%d > %d), unrolling only one", self.size, unroll_size)
+            elif len(self._unrolled_vars) + self.size > unroll_size:
+                logger.debug("Rolling reset at unrolled history size = %d",
+                            len(self._unrolled_vars))
+                self._rewind_rolling(state)
+                # reset before exception, to be ready on a subsequent call
+                if not self.silent_rewind:
+                    raise EndOfStream
 
         novel_vars = [v for v in variables if v not in self._unrolled_vars]
         next_vars = novel_vars[:self.size]
