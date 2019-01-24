@@ -98,6 +98,16 @@ class SampleSet(dimod.SampleSet):
     def empty(cls):
         return cls.from_samples([], vartype=dimod.SPIN, energy=0)
 
+    def melded(self, *others):
+        """Combine the first sample in this SampleSet with first samples in all
+        other SampleSets. Energy is reset to zero, and vartype are cast to the
+        local vartype.
+        """
+        sample = dict(self.first.sample)
+        for sampleset in others:
+            sample.update(sampleset.change_vartype(self.vartype).first.sample)
+        return SampleSet.from_samples(sample, vartype=self.vartype, energy=0)
+
 
 class State(PliableDict):
     """Computation state passed along a branch between connected components.

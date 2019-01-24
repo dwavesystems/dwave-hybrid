@@ -109,6 +109,19 @@ class TestSampleSet(unittest.TestCase):
         ss = SampleSet.from_samples_bqm({'a': 1, 'b': -1}, bqm)
         self.assertEqual(ss.first.energy, -1)
 
+    def test_melded(self):
+        a = SampleSet.from_samples(
+            [{'a': 0, 'b': 1, 'c': 0}, {'a': 1, 'b': 0, 'c': 1}], vartype='BINARY', energy=[0, 1])
+        b = SampleSet.from_samples(
+            [{'d': 1, 'e': 0, 'f': 1}, {'d': 0, 'e': 1, 'f': 0}], vartype='BINARY', energy=[1, 0])
+        c = SampleSet.from_samples(
+            [{'d': -1, 'e': 1, 'f': 1}], vartype='SPIN', energy=0)
+
+        m = a.melded(b, c)
+
+        self.assertEqual(len(m), 1)
+        self.assertDictEqual(dict(m.first.sample), {'a': 0, 'b': 1, 'c': 0, 'd': 0, 'e': 1, 'f': 1})
+
 
 class TestState(unittest.TestCase):
 
