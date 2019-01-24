@@ -250,8 +250,6 @@ class TestReduce(unittest.TestCase):
         with self.assertRaises(TypeError):
             Reduce(False)
         with self.assertRaises(TypeError):
-            Reduce(Lambda(lambda: None))
-        with self.assertRaises(TypeError):
             Reduce(Runnable)
         self.assertIsInstance(Reduce(self.Sum()), Runnable)
 
