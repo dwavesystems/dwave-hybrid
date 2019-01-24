@@ -20,7 +20,7 @@ from itertools import chain
 
 import six
 
-from hybrid.core import Runnable, States, Present
+from hybrid.core import Runnable, State, States, Present
 from hybrid.exceptions import EndOfStream
 from hybrid import traits
 
