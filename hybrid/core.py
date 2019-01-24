@@ -22,7 +22,7 @@ from plucky import merge
 import dimod
 
 from hybrid import traits
-from hybrid.utils import min_sample, sample_as_dict
+from hybrid.utils import min_sample, sample_as_dict, meld_samplesets
 from hybrid.profiling import make_count
 
 __all__ = [
@@ -97,6 +97,13 @@ class SampleSet(dimod.SampleSet):
     @classmethod
     def empty(cls):
         return cls.from_samples([], vartype=dimod.SPIN, energy=0)
+
+    def melded(self, *others):
+        """Combine the first sample in this SampleSet with first samples in all
+        other SampleSets. Energy is reset to zero, and vartype are cast to the
+        local vartype.
+        """
+        return meld_samplesets(self, *others)
 
 
 class State(PliableDict):
