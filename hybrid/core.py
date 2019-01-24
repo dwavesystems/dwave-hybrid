@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 from collections import namedtuple
 from copy import deepcopy
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, Future, Executor
@@ -46,7 +47,7 @@ class ImmediateExecutor(Executor):
 
 
 # TODO: abstract and make customizable to support other types of executors
-async_executor = ThreadPoolExecutor(max_workers=4)
+async_executor = ThreadPoolExecutor(max_workers=(os.cpu_count() or 1) * 5)
 immediate_executor = ImmediateExecutor()
 
 
