@@ -21,7 +21,7 @@ import logging
 from plucky import merge
 import dimod
 
-from hybrid.traits import StateTraits
+from hybrid import traits
 from hybrid.utils import min_sample, sample_as_dict
 from hybrid.profiling import make_count
 
@@ -234,7 +234,7 @@ class Present(Future):
             raise ValueError("can't provide both 'result' and 'exception'")
 
 
-class Runnable(StateTraits):
+class Runnable(traits.StateTraits):
     """Component such as samplers and branches that can be run for an iteration.
 
     Examples:

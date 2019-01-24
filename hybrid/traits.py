@@ -25,6 +25,8 @@ class StateTraits(object):
         self.outputs = set()
         self.multi_input = False
         self.multi_output = False
+        self.validate_input = True
+        self.validate_output = True
 
     def validate_state_trait(self, state, trait, io):
         """Validate single input/output (`io`) `state` `trait`."""
@@ -32,6 +34,9 @@ class StateTraits(object):
             raise StateTraitMissingError("{} state is missing {!r}".format(io, trait))
 
     def validate_input_state_traits(self, inp):
+        if not self.validate_input:
+            return
+
         if self.multi_input:
             if not isinstance(inp, Sequence):
                 raise StateDimensionalityError("state sequence required on input")
@@ -48,6 +53,9 @@ class StateTraits(object):
                 self.validate_state_trait(inp, trait, "input")
 
     def validate_output_state_traits(self, out):
+        if not self.validate_output:
+            return
+
         if self.multi_output:
             if not isinstance(out, Sequence):
                 raise StateDimensionalityError("state sequence required on output")
@@ -84,17 +92,46 @@ class MultiOutputStates(StateTraits):
         super(MultiOutputStates, self).__init__()
         self.multi_output = True
 
+
 class SISO(SingleInputState, SingleOutputState):
-    pass
+    """Single Input, Single Output."""
 
 class SIMO(SingleInputState, MultiOutputStates):
-    pass
+    """Single Input, Multiple Outputs."""
 
 class MIMO(MultiInputStates, MultiOutputStates):
-    pass
+    """Multiple Inputs, Multiple Outputs."""
 
 class MISO(MultiInputStates, SingleOutputState):
-    pass
+    """Multiple Inputs, Single Output."""
+
+
+class InputValidated(StateTraits):
+    def __init__(self):
+        super(InputValidated, self).__init__()
+        self.validate_input = True
+
+class OutputValidated(StateTraits):
+    def __init__(self):
+        super(OutputValidated, self).__init__()
+        self.validate_output = True
+
+class InputNotValidated(StateTraits):
+    def __init__(self):
+        super(InputNotValidated, self).__init__()
+        self.validate_input = False
+
+class OutputNotValidated(StateTraits):
+    def __init__(self):
+        super(OutputNotValidated, self).__init__()
+        self.validate_output = False
+
+
+class Validated(InputValidated, OutputValidated):
+    """Validated input state(s) and output state(s)."""
+
+class NotValidated(InputNotValidated, OutputNotValidated):
+    """Input state(s) and output state(s) are not validated."""
 
 
 class ProblemIntaking(StateTraits):
