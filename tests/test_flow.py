@@ -237,14 +237,23 @@ class TestReduce(unittest.TestCase):
         result = Reduce(self.Sum()).run(states).result()
 
         self.assertIsInstance(result, State)
-        self.assertEqual(result.val, 6)
+        self.assertEqual(result.val, 1+2+3)
 
     def test_initial_state(self):
         initial = State(val=10)
         states = States(State(val=1), State(val=2))
         result = Reduce(self.Sum(), initial_state=initial).run(states).result()
 
-        self.assertEqual(result.val, 13)
+        self.assertEqual(result.val, 10+1+2)
+
+    def test_unstructured_runnable(self):
+        initial = State(val=10)
+        states = States(State(val=2), State(val=3))
+
+        multiply = Lambda(next=lambda self, s: s[0].updated(val=s[0].val * s[1].val))
+        result = Reduce(multiply, initial_state=initial).run(states).result()
+
+        self.assertEqual(result.val, 10*2*3)
 
     def test_input_validation(self):
         with self.assertRaises(TypeError):
