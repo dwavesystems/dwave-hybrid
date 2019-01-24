@@ -485,3 +485,16 @@ def max_sample(bqm):
     """
     value = max(bqm.vartype.value)
     return {i: value for i in bqm.variables}
+
+
+def meld_samplesets(base, *others):
+    """Combine the first sample in this SampleSet with first samples in all
+    other SampleSets. Energy is reset to zero, and vartype are cast to the
+    local vartype.
+    """
+
+    sample = dict(base.first.sample)
+    for sampleset in others:
+        sample.update(sampleset.change_vartype(base.vartype).first.sample)
+
+    return dimod.SampleSet.from_samples(sample, vartype=base.vartype, energy=0)

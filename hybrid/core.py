@@ -22,7 +22,7 @@ from plucky import merge
 import dimod
 
 from hybrid import traits
-from hybrid.utils import min_sample, sample_as_dict
+from hybrid.utils import min_sample, sample_as_dict, meld_samplesets
 from hybrid.profiling import make_count
 
 __all__ = [
@@ -103,10 +103,7 @@ class SampleSet(dimod.SampleSet):
         other SampleSets. Energy is reset to zero, and vartype are cast to the
         local vartype.
         """
-        sample = dict(self.first.sample)
-        for sampleset in others:
-            sample.update(sampleset.change_vartype(self.vartype).first.sample)
-        return SampleSet.from_samples(sample, vartype=self.vartype, energy=0)
+        return meld_samplesets(self, *others)
 
 
 class State(PliableDict):
