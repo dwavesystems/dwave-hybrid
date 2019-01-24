@@ -20,9 +20,10 @@ import operator
 
 import dimod
 
-from hybrid.flow import Branch, RacingBranches, ArgMin, Loop, Map, Lambda
+from hybrid.flow import Branch, RacingBranches, ArgMin, Loop, Map, Reduce, Lambda, Unwind
 from hybrid.core import State, States, Runnable, Present
 from hybrid.utils import min_sample, max_sample
+from hybrid.exceptions import EndOfStream
 from hybrid import traits
 
 
@@ -224,6 +225,37 @@ class TestMap(unittest.TestCase):
         self.assertIsInstance(Map(Runnable()), Runnable)
 
 
+class TestReduce(unittest.TestCase):
+
+    class Sum(Runnable, traits.MISO):
+        def next(self, states):
+            a, b = states
+            return a.updated(val=a.val + b.val)
+
+    def test_basic(self):
+        states = States(State(val=1), State(val=2), State(val=3))
+        result = Reduce(self.Sum()).run(states).result()
+
+        self.assertIsInstance(result, State)
+        self.assertEqual(result.val, 6)
+
+    def test_initial_state(self):
+        initial = State(val=10)
+        states = States(State(val=1), State(val=2))
+        result = Reduce(self.Sum(), initial_state=initial).run(states).result()
+
+        self.assertEqual(result.val, 13)
+
+    def test_input_validation(self):
+        with self.assertRaises(TypeError):
+            Reduce(False)
+        with self.assertRaises(TypeError):
+            Reduce(Lambda(lambda: None))
+        with self.assertRaises(TypeError):
+            Reduce(Runnable)
+        self.assertIsInstance(Reduce(self.Sum()), Runnable)
+
+
 class TestLambda(unittest.TestCase):
 
     def test_basic_runnable(self):
@@ -268,3 +300,29 @@ class TestLambda(unittest.TestCase):
         with self.assertRaises(TypeError):
             Lambda(lambda: None, lambda: None, False)
         self.assertIsInstance(Lambda(lambda: None, lambda: None, lambda: None), Runnable)
+
+
+class TestUnwind(unittest.TestCase):
+
+    def test_basic(self):
+        class Streamer(Runnable):
+            def next(self, state):
+                if state.cnt <= 0:
+                    raise EndOfStream
+                return state.updated(cnt=state.cnt - 1)
+
+        r = Unwind(Streamer())
+        states = r.run(State(cnt=3)).result()
+
+        # states should contain 3 states with cnt=3..0
+        self.assertEqual(len(states), 3)
+        for idx, state in enumerate(states):
+            self.assertEqual(state.cnt, 2-idx)
+
+    def test_validation(self):
+        class simo(Runnable, traits.SIMO):
+            def next(self, state):
+                return States(state, state)
+
+        with self.assertRaises(TypeError):
+            Unwind(simo())

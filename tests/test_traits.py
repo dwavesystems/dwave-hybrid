@@ -114,22 +114,18 @@ class TestMultipleTraits(unittest.TestCase):
             # problem and samples are included by default
             Component().run(State(subproblem=True)).result())
 
-    def test_subproblem_composer_traits(self):
-        # SubproblemComposer ~ SubproblemIntaking, SubsamplesIntaking, ProblemIntaking, SamplesProducing
+    def test_subsamples_composer_traits(self):
+        # SubsamplesComposer ~ SamplesIntaking, SubsamplesIntaking, ProblemIntaking, SamplesProducing
 
-        class Component(Runnable, traits.SubproblemComposer):
+        class Component(Runnable, traits.SubsamplesComposer):
             def next(self, state):
                 return state
 
         with self.assertRaises(traits.StateTraitMissingError):
             Component().run(State()).result()
-        with self.assertRaises(traits.StateTraitMissingError):
-            Component().run(State(subproblem=True)).result()
-        with self.assertRaises(traits.StateTraitMissingError):
-            Component().run(State(subsamples=True)).result()
         self.assertTrue(
             # problem and samples are included by default
-            Component().run(State(subproblem=True, subsamples=True)).result())
+            Component().run(State(subsamples=True)).result())
 
 
 class TestMultipleStateTraits(unittest.TestCase):

@@ -17,7 +17,6 @@ from __future__ import print_function
 import time
 import logging
 import functools
-from contextlib import contextmanager
 
 __all__ = ['perf_counter', 'tictoc', 'print_structure', 'print_counters']
 
@@ -113,15 +112,20 @@ def make_count(counters, prefix=None, loglevel=None):
         # counters['f'] is now a list holding 10 runtimes of `f`
     """
 
-    @contextmanager
-    def _counted_mgr(counter_name):
-        name = '.'.join([prefix or '', counter_name])
-        with tictoc(name=name, loglevel=loglevel) as timer:
-            try:
-                yield None
-            finally:
-                pass
-        counters.setdefault(counter_name, []).append(timer.dt)
+    class _counted_mgr(object):
+
+        def __init__(self, counter_name):
+            prefixed_name = '.'.join([prefix or '', counter_name])
+            self.counter_name = counter_name
+            self.timer = tictoc(name=prefixed_name, loglevel=loglevel)
+
+        def __enter__(self):
+            self.timer.start()
+            return self.timer
+
+        def __exit__(self, exc_type, exc_value, traceback):
+            self.timer.stop()
+            counters.setdefault(self.counter_name, []).append(self.timer.dt)
 
     return _counted_mgr
 
