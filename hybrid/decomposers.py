@@ -92,6 +92,10 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
         self._unrolled_vars = set()
         self._rolling_bqm = None
 
+        # variable caching
+        self._variables = []
+        self._prev_sample = None
+
     def __repr__(self):
         return (
             "{self}(size={self.size!r}, min_gain={self.min_gain!r}, "
@@ -102,29 +106,38 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
     def _rewind_rolling(self, state):
         self._unrolled_vars.clear()
         self._rolling_bqm = state.problem
+        self._rolling_sample = state.sample
 
     def next(self, state):
         bqm = state.problem
-
-        if bqm != self._rolling_bqm:
-            self._rewind_rolling(state)
+        sample = state.samples.change_vartype(bqm.vartype).first.sample
 
         if self.size > len(bqm):
             raise ValueError("subproblem size cannot be greater than the problem size")
 
-        sample = state.samples.change_vartype(bqm.vartype).first.sample
-        variables = select_localsearch_adversaries(
-            bqm, sample, min_gain=self.min_gain)
+        bqm_changed = bqm != self._rolling_bqm
+        sample_changed = sample != self._prev_sample
 
-        if self.rolling and len(self._unrolled_vars) + self.size > self.rolling_history * len(bqm):
-            logger.debug("rolling reset at unrolled history size = %d",
-                         len(self._unrolled_vars))
-            # reset before exception, to be ready on a subsequent call
+        if bqm_changed:
             self._rewind_rolling(state)
-            if not self.silent_rewind:
-                raise EndOfStream
 
-        novel_vars = [v for v in variables if v not in self._unrolled_vars]
+        if sample_changed:
+            self._prev_sample = sample
+
+        if bqm_changed or sample_changed or not self._variables:
+            self._variables = select_localsearch_adversaries(
+                bqm, sample, min_gain=self.min_gain)
+
+        if self.rolling:
+            if len(self._unrolled_vars) >= self.rolling_history * len(bqm):
+                logger.debug("Rolling reset at unrolled history size = %d",
+                            len(self._unrolled_vars))
+                self._rewind_rolling(state)
+                # reset before exception, to be ready on a subsequent call
+                if not self.silent_rewind:
+                    raise EndOfStream
+
+        novel_vars = [v for v in self._variables if v not in self._unrolled_vars]
         next_vars = novel_vars[:self.size]
 
         logger.debug("Selected %d subproblem variables: %r",

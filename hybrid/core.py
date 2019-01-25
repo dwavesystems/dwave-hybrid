@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 from collections import namedtuple
 from copy import deepcopy
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, Future, Executor
@@ -22,7 +23,7 @@ from plucky import merge
 import dimod
 
 from hybrid import traits
-from hybrid.utils import min_sample, sample_as_dict, meld_samplesets
+from hybrid.utils import min_sample, sample_as_dict, meld_samplesets, cpu_count
 from hybrid.profiling import make_count
 
 __all__ = [
@@ -46,7 +47,7 @@ class ImmediateExecutor(Executor):
 
 
 # TODO: abstract and make customizable to support other types of executors
-async_executor = ThreadPoolExecutor(max_workers=4)
+async_executor = ThreadPoolExecutor(max_workers=cpu_count() * 5)
 immediate_executor = ImmediateExecutor()
 
 

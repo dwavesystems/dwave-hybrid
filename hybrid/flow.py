@@ -352,7 +352,7 @@ class Reduce(Runnable, traits.MISO):
             result = self.initial_state
 
         for state in states:
-            result = self.runnable.run(States(result, state)).result()
+            result = self.runnable.run(States(result, state), defer=False).result()
 
         return result
 
@@ -514,7 +514,7 @@ class Loop(Runnable):
         cnt = self.convergence
 
         for iterno in range(self.max_iter):
-            state = self.runnable.run(state).result()
+            state = self.runnable.run(state, defer=False).result()
             state_quality = self.key(state)
 
             logger.info("{name} Iteration(iterno={iterno}, best_state_quality={key})".format(
