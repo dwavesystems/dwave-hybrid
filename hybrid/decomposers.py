@@ -129,11 +129,7 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
                 bqm, sample, min_gain=self.min_gain)
 
         if self.rolling:
-            unroll_size = self.rolling_history * len(bqm)
-            if not self._unrolled_vars and self.size > unroll_size:
-                logger.debug("Subproblem larger that total rolling history "\
-                             "(%d > %d), unrolling only one", self.size, unroll_size)
-            elif len(self._unrolled_vars) + self.size > unroll_size:
+            if len(self._unrolled_vars) >= self.rolling_history * len(bqm):
                 logger.debug("Rolling reset at unrolled history size = %d",
                             len(self._unrolled_vars))
                 self._rewind_rolling(state)
