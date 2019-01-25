@@ -23,7 +23,7 @@ from plucky import merge
 import dimod
 
 from hybrid import traits
-from hybrid.utils import min_sample, sample_as_dict, meld_samplesets
+from hybrid.utils import min_sample, sample_as_dict, meld_samplesets, cpu_count
 from hybrid.profiling import make_count
 
 __all__ = [
@@ -47,7 +47,7 @@ class ImmediateExecutor(Executor):
 
 
 # TODO: abstract and make customizable to support other types of executors
-async_executor = ThreadPoolExecutor(max_workers=(os.cpu_count() or 1) * 5)
+async_executor = ThreadPoolExecutor(max_workers=cpu_count() * 5)
 immediate_executor = ImmediateExecutor()
 
 

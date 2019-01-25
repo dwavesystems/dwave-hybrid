@@ -23,6 +23,24 @@ import numpy
 from dwave_networkx.algorithms import canonical_chimera_labeling
 
 
+def cpu_count():
+    try:
+        import os
+        # doesn't exist in python2, and can return None
+        return os.cpu_count() or 1
+    except AttributeError:
+        pass
+
+    try:
+        import multiprocessing
+        # doesn't have to be implemented
+        return multiprocessing.cpu_count()
+    except NotImplementedError:
+        pass
+
+    return 1
+
+
 def bqm_reduced_to(bqm, variables, sample, keep_offset=True):
     """Reduce a binary quadratic model by fixing values of some variables.
 
