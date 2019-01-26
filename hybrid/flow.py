@@ -374,6 +374,9 @@ class Map(Runnable, traits.MIMO):
         self.inputs = runnable.inputs
         self.outputs = runnable.outputs
 
+        # track running computations, so we can stop them on request
+        self._futures = []
+
     def __str__(self):
         return "[]()"
 
