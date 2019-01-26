@@ -152,7 +152,9 @@ class Branch(Runnable):
 
 
 class RacingBranches(Runnable, traits.SIMO):
-    """Runs parallel :class:`Branch` classes.
+    """Runs (races) multiple :class:`Branch`es in parallel, but stops all others
+    after the first one finishes. Returns the results of all branches, in order
+    specified.
 
     Args:
         *branches ([:class:`Runnable`]):
@@ -242,6 +244,88 @@ class RacingBranches(Runnable, traits.SIMO):
 
 
 Race = RacingBranches
+
+
+class ParallelBranches(Runnable, traits.SIMO):
+    """Runs multiple :class:`Branch`es in parallel, blocking until all finish.
+
+    Args:
+        *branches ([:class:`Runnable`]):
+            Comma-separated branches.
+        endomorphic (bool):
+            Set to ``False`` if you are not sure that the codomain of all branches
+            is the domain; for example, if there might be a mix of subproblems
+            and problems moving between components.
+
+    Note:
+        `ParallelBranches` is also available as `Parallel`.
+
+    Examples:
+        This example runs two branches: a classical tabu search interrupted by
+        samples of subproblems returned from a D-Wave system.
+
+        >>> Parallel(                     # doctest: +SKIP
+                TabuSubproblemSampler(),
+                RandomSubproblemSampler()
+            ) | ArgMin()
+
+    """
+
+    def __init__(self, *branches, **kwargs):
+        """If known upfront codomain for all branches equals domain, state
+        can safely be mixed in with branches' results. Otherwise set
+        `endomorphic=False`.
+        """
+        super(ParallelBranches, self).__init__()
+        self.branches = branches
+        self.endomorphic = kwargs.get('endomorphic', True)
+
+        if not self.branches:
+            raise ValueError("parallel branches require at least one branch")
+
+        # patch components's I/O requirements based on the subcomponents' requirements
+
+        # RB's input has to satisfy all branches' input
+        self.inputs = set.union(*(branch.inputs for branch in self.branches))
+
+        # RB's output will be one of the branches' output, but the only guarantee we
+        # can make upfront is the largest common subset of all outputs
+        self.outputs = set.intersection(*(branch.outputs for branch in self.branches))
+
+    def __str__(self):
+        return " & ".join("({})".format(b) for b in self) or "(zero branches)"
+
+    def __repr__(self):
+        return "{}{!r}".format(self.name, tuple(self))
+
+    def __iter__(self):
+        return iter(self.branches)
+
+    def next(self, state):
+        futures = [branch.run(state.updated()) for branch in self.branches]
+
+        states = States()
+        if self.endomorphic:
+            states.append(state)
+
+        # wait for all branches to finish
+        concurrent.futures.wait(
+            futures,
+            return_when=concurrent.futures.ALL_COMPLETED)
+
+        # collect resolved states (in original order, not completion order)
+        for f in futures:
+            states.append(f.result())
+
+        return states
+
+    def halt(self):
+        """Terminate an iteration of an instantiated :class:`RacingBranches`."""
+        for branch in self.branches:
+            branch.stop()
+
+
+Parallel = ParallelBranches
 
 
 class Map(Runnable, traits.MIMO):
