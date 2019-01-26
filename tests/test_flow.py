@@ -20,7 +20,10 @@ import operator
 
 import dimod
 
-from hybrid.flow import Branch, RacingBranches, ArgMin, Loop, Map, Reduce, Lambda, Unwind
+from hybrid.flow import (
+    Branch, RacingBranches, ParallelBranches,
+    ArgMin, Loop, Map, Reduce, Lambda, Unwind
+)
 from hybrid.core import State, States, Runnable, Present
 from hybrid.utils import min_sample, max_sample
 from hybrid.exceptions import EndOfStream
@@ -136,6 +139,39 @@ class TestRacingBranches(unittest.TestCase):
         # (i.e. non-endomorphic racing branches)
         rb = RacingBranches(Slow(), Fast(), Slow(), endomorphic=False)
         res = rb.run(State(x=0)).result()
+        self.assertEqual([s.x for s in res], [2, 1, 2])
+
+
+class TestParallelBranches(unittest.TestCase):
+
+    def test_look_and_feel(self):
+        br = Runnable(), Runnable()
+        pb = ParallelBranches(*br)
+        self.assertEqual(pb.name, 'ParallelBranches')
+        self.assertEqual(str(pb), '(Runnable) & (Runnable)')
+        self.assertEqual(repr(pb), 'ParallelBranches(Runnable(), Runnable())')
+        self.assertEqual(tuple(pb), br)
+
+    def test_basic(self):
+        class Fast(Runnable):
+            def next(self, state):
+                time.sleep(0.1)
+                return state.updated(x=state.x + 1)
+
+        class Slow(Runnable):
+            def next(self, state):
+                time.sleep(0.2)
+                return state.updated(x=state.x + 2)
+
+        # standard case (endomorphic; first output state is the input state)
+        pb = ParallelBranches(Slow(), Fast(), Slow())
+        res = pb.run(State(x=0)).result()
+        self.assertEqual([s.x for s in res], [0, 2, 1, 2])
+
+        # branches' outputs are of a different type that the inputs
+        # (i.e. non-endomorphic branches)
+        pb = ParallelBranches(Slow(), Fast(), Slow(), endomorphic=False)
+        res = pb.run(State(x=0)).result()
         self.assertEqual([s.x for s in res], [2, 1, 2])
 
 
