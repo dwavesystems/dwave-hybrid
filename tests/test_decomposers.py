@@ -102,10 +102,13 @@ class TestEnergyImpactDecomposer(unittest.TestCase):
         self.assertEqual(len(states[0].subproblem), 10)
         self.assertEqual(list(dict(states[0].subproblem.linear).values()), list(range(0,10)))
 
-        # but fail if subproblem larger than problem
+        # but adapt to problem size if subproblem larger than problem
         eid = EnergyImpactDecomposer(size=11, rolling=True, rolling_history=0.3, silent_rewind=False)
-        with self.assertRaises(ValueError):
-            eid.run(state).result()
+        states = list(iter(partial(eid.next, state=state), None))
+
+        self.assertEqual(len(states), 1)
+        self.assertEqual(len(states[0].subproblem), 10)
+        self.assertEqual(list(dict(states[0].subproblem.linear).values()), list(range(0,10)))
 
 
 class TestRandomSubproblemDecomposer(unittest.TestCase):
