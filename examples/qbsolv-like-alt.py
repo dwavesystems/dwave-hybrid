@@ -34,17 +34,27 @@ def merge_substates(component, substates):
         subsamples=hybrid.utils.meld_samplesets(a.subsamples, b.subsamples)
     )
 
-subsampler = hybrid.Unwind(
+subproblems = hybrid.Unwind(
     hybrid.EnergyImpactDecomposer(size=50, silent_rewind=False, rolling_history=0.15)
-) | hybrid.Map(
+)
+
+qpu = hybrid.Map(
     hybrid.QPUSubproblemAutoEmbeddingSampler()
 ) | hybrid.Reduce(
     hybrid.Lambda(merge_substates)
 ) | hybrid.SplatComposer()
 
+random = hybrid.Map(
+    hybrid.RandomSubproblemSampler()
+) | hybrid.Reduce(
+    hybrid.Lambda(merge_substates)
+) | hybrid.SplatComposer()
+
+subsampler = hybrid.Parallel(qpu, random, endomorphic=False) | hybrid.ArgMin()
+
 iteration = hybrid.Race(
     hybrid.InterruptableTabuSampler(),
-    subsampler 
+    subproblems | subsampler
 ) | hybrid.ArgMin()
 
 main = hybrid.Loop(iteration, max_iter=10, convergence=3)
