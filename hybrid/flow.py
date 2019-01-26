@@ -25,8 +25,8 @@ from hybrid.exceptions import EndOfStream
 from hybrid import traits
 
 __all__ = [
-    'Branch', 'RacingBranches', 'Race', 'Map', 'Reduce', 'Lambda', 'ArgMin',
-    'Loop', 'SimpleIterator', 'Unwind'
+    'Branch', 'RacingBranches', 'Race', 'ParallelBranches', 'Parallel',
+    'Map', 'Reduce', 'Lambda', 'ArgMin', 'Loop', 'SimpleIterator', 'Unwind'
 ]
 
 logger = logging.getLogger(__name__)

@@ -26,6 +26,7 @@ from hybrid.flow import (
 )
 from hybrid.core import State, States, Runnable, Present
 from hybrid.utils import min_sample, max_sample
+from hybrid.profiling import tictoc
 from hybrid.exceptions import EndOfStream
 from hybrid import traits
 
@@ -173,6 +174,24 @@ class TestParallelBranches(unittest.TestCase):
         pb = ParallelBranches(Slow(), Fast(), Slow(), endomorphic=False)
         res = pb.run(State(x=0)).result()
         self.assertEqual([s.x for s in res], [2, 1, 2])
+
+    def test_parallel_independent_execution(self):
+        class Component(Runnable):
+            def __init__(self, runtime):
+                super(Component, self).__init__()
+                self.runtime = runtime
+            def next(self, state):
+                time.sleep(self.runtime)
+                return state
+
+        # make sure all branches really run in parallel
+        pb = ParallelBranches(
+            Component(1), Component(1), Component(1), Component(1), Component(1))
+        with tictoc() as tt:
+            pb.run(State()).result()
+
+        # total runtime has to be smaller that the sum of individual runtimes
+        self.assertTrue(1 <= tt.dt <= 2)
 
 
 class TestArgMin(unittest.TestCase):
