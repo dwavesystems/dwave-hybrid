@@ -112,8 +112,10 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
         bqm = state.problem
         sample = state.samples.change_vartype(bqm.vartype).first.sample
 
+        size = self.size
         if self.size > len(bqm):
-            raise ValueError("subproblem size cannot be greater than the problem size")
+            logger.debug("subproblem size greater than the problem size, adapting to problem size")
+            size = len(bqm)
 
         bqm_changed = bqm != self._rolling_bqm
         sample_changed = sample != self._prev_sample
@@ -138,7 +140,7 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
                     raise EndOfStream
 
         novel_vars = [v for v in self._variables if v not in self._unrolled_vars]
-        next_vars = novel_vars[:self.size]
+        next_vars = novel_vars[:size]
 
         logger.debug("Selected %d subproblem variables: %r",
                      len(next_vars), next_vars)
