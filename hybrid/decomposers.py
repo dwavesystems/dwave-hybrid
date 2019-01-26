@@ -99,8 +99,8 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
     def __repr__(self):
         return (
             "{self}(size={self.size!r}, min_gain={self.min_gain!r}, "
-            "rolling={self.rolling!r}, rolling_history={self.rolling_history!r}), "
-            "silent_rewind={self.silent_rewind!r}"
+            "rolling={self.rolling!r}, rolling_history={self.rolling_history!r}, "
+            "silent_rewind={self.silent_rewind!r})"
         ).format(self=self)
 
     def _rewind_rolling(self, state):

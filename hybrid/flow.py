@@ -194,12 +194,21 @@ class RacingBranches(Runnable, traits.SIMO):
 
         # patch components's I/O requirements based on the subcomponents' requirements
 
+        # ensure i/o dimensionality for all branches is the same
+        first = branches[0]
+        if not all(b.multi_input == first.multi_input for b in branches[1:]):
+            raise TypeError("not all branches have the same input dimensionality")
+        if not all(b.multi_output == first.multi_output for b in branches[1:]):
+            raise TypeError("not all branches have the same output dimensionality")
+
         # RB's input has to satisfy all branches' input
         self.inputs = set.union(*(branch.inputs for branch in self.branches))
+        self.multi_input = first.multi_input
 
         # RB's output will be one of the branches' output, but the only guarantee we
         # can make upfront is the largest common subset of all outputs
         self.outputs = set.intersection(*(branch.outputs for branch in self.branches))
+        self.multi_output = True
 
     def __str__(self):
         return " !! ".join("({})".format(b) for b in self) or "(zero racing branches)"
@@ -285,12 +294,21 @@ class ParallelBranches(Runnable, traits.SIMO):
 
         # patch components's I/O requirements based on the subcomponents' requirements
 
-        # RB's input has to satisfy all branches' input
-        self.inputs = set.union(*(branch.inputs for branch in self.branches))
+        # ensure i/o dimensionality for all branches is the same
+        first = branches[0]
+        if not all(b.multi_input == first.multi_input for b in branches[1:]):
+            raise TypeError("not all branches have the same input dimensionality")
+        if not all(b.multi_output == first.multi_output for b in branches[1:]):
+            raise TypeError("not all branches have the same output dimensionality")
 
-        # RB's output will be one of the branches' output, but the only guarantee we
+        # PB's input has to satisfy all branches' input
+        self.inputs = set.union(*(branch.inputs for branch in self.branches))
+        self.multi_input = first.multi_input
+
+        # PB's output will be one of the branches' output, but the only guarantee we
         # can make upfront is the largest common subset of all outputs
         self.outputs = set.intersection(*(branch.outputs for branch in self.branches))
+        self.multi_output = True
 
     def __str__(self):
         return " & ".join("({})".format(b) for b in self) or "(zero branches)"
