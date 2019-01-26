@@ -223,7 +223,7 @@ class States(list):
 
     def updated(self, **kwargs):
         """Return a (deep) copy of the states, updated from `kwargs`."""
-        return States(state.updated(**kwargs) for state in self)
+        return States(*(state.updated(**kwargs) for state in self))
 
 
 class Present(Future):
