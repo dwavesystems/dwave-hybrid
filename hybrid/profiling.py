@@ -111,7 +111,7 @@ class make_count(object):
         # counters['f'] == 10
     """
 
-    def __init__(self, counters, prefix=None, loglevel=None):
+    def __init__(self, counters, prefix=None, loglevel=logging.NOTSET):
         self.counters = counters
         self.prefix = prefix
         self.loglevel = loglevel

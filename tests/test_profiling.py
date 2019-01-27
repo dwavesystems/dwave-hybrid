@@ -18,7 +18,7 @@ from dwave.system.testing import MockDWaveSampler
 
 from hybrid.core import Runnable, State
 from hybrid.flow import Branch, RacingBranches, ArgMin, Loop
-from hybrid.profiling import tictoc, iter_inorder, walk_inorder
+from hybrid.profiling import tictoc, iter_inorder, walk_inorder, make_timeit, make_count
 from hybrid.testing import mock
 from hybrid.composers import *
 from hybrid.samplers import *
@@ -106,7 +106,30 @@ class TestRunnableWalkers(unittest.TestCase):
 
 class TestTimers(unittest.TestCase):
 
-    def test_timer_called(self):
+    def test_basic(self):
+        timers = {}
+        time = make_timeit(timers)
+        with time('a'):
+            _ = 1
+
+        self.assertSetEqual(set(timers.keys()), {'a'})
+        self.assertEqual(len(timers['a']), 1)
+
+    def test_nested_timers(self):
+        timers = {}
+        time = make_timeit(timers)
+        with time('a'):
+            with time('b'):
+                with time('c'):
+                    with time('b'):
+                        _ = 2 ** 50
+
+        self.assertSetEqual(set(timers.keys()), {'a', 'b', 'c'})
+        self.assertEqual(len(timers['a']), 1)
+        self.assertEqual(len(timers['b']), 2)
+        self.assertEqual(len(timers['c']), 1)
+
+    def test_runnable_timer_called(self):
         class Ident(Runnable):
             def next(self, state):
                 with self.timeit('my-timer'):
@@ -120,7 +143,23 @@ class TestTimers(unittest.TestCase):
 
 class TestCounters(unittest.TestCase):
 
-    def test_counter_called(self):
+    def test_basic(self):
+        counters = {}
+        count = make_count(counters)
+
+        count('a')
+        try:
+            raise ZeroDivisionError
+        except:
+            count('b')
+        finally:
+            count('a', inc=3)
+
+        self.assertSetEqual(set(counters.keys()), {'a', 'b'})
+        self.assertEqual(counters['a'], 4)
+        self.assertEqual(counters['b'], 1)
+
+    def test_runnable_counter_called(self):
         class Ident(Runnable):
             def next(self, state):
                 self.count('my-counter', 3)
