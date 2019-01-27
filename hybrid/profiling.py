@@ -94,8 +94,8 @@ class trace(tictoc):
         super(trace, self).__init__(name, loglevel)
 
 
-def make_count(counters, prefix=None, loglevel=None):
-    """Generate counter increment function specialized for handling
+class make_count(object):
+    """Generate counter increment callable object specialized for handling (bound to)
     counters in the provided `counters` dictionary.
 
     Args:
@@ -111,19 +111,22 @@ def make_count(counters, prefix=None, loglevel=None):
         # counters['f'] == 10
     """
 
-    def _count(counter_name, inc=1):
-        counters[counter_name] = counters.get(counter_name, 0) + inc
-        val = counters[counter_name]
+    def __init__(self, counters, prefix=None, loglevel=None):
+        self.counters = counters
+        self.prefix = prefix
+        self.loglevel = loglevel
 
-        prefixed_name = '.'.join([prefix or '', counter_name])
-        logger.log(loglevel, "counter(%r) -> %r", prefixed_name, val,
+    def __call__(self, counter_name, inc=1):
+        self.counters[counter_name] = self.counters.get(counter_name, 0) + inc
+        val = self.counters[counter_name]
+
+        prefixed_name = '.'.join([self.prefix or '', counter_name])
+        logger.log(self.loglevel, "counter(%r) -> %r", prefixed_name, val,
                    extra={"counter": prefixed_name, "value": val})
 
-    return _count
 
-
-def make_timeit(timers, prefix=None, loglevel=None):
-    """Generate timer increment context manager specialized for handling
+class make_timeit(object):
+    """Generate timer increment context manager specialized for handling (bound to)
     timers in the provided `timers` dictionary.
 
     Args:
@@ -134,17 +137,17 @@ def make_timeit(timers, prefix=None, loglevel=None):
         timeit = make_timeit(timers)
 
         for _ in range(10):
-            with count('f'):
+            with timeit('f'):
                 f()
 
         # timers['f'] is now a list holding 10 runtimes of `f`
     """
 
-    class _timeit_mgr(object):
-
-        def __init__(self, timer_name):
-            prefixed_name = '.'.join([prefix or '', timer_name])
+    class _local_timer_mgr(object):
+        def __init__(self, timers, timer_name, prefix=None, loglevel=None):
+            self.timers = timers
             self.timer_name = timer_name
+            prefixed_name = '.'.join([prefix or '', timer_name])
             self.timer = tictoc(name=prefixed_name, loglevel=loglevel)
 
         def __enter__(self):
@@ -153,9 +156,15 @@ def make_timeit(timers, prefix=None, loglevel=None):
 
         def __exit__(self, exc_type, exc_value, traceback):
             self.timer.stop()
-            timers.setdefault(self.timer_name, []).append(self.timer.dt)
+            self.timers.setdefault(self.timer_name, []).append(self.timer.dt)
 
-    return _timeit_mgr
+    def __init__(self, timers, prefix=None, loglevel=None):
+        self.timers = timers
+        self.prefix = prefix
+        self.loglevel = loglevel
+
+    def __call__(self, timer_name):
+        return make_timeit._local_timer_mgr(self.timers, timer_name, self.prefix, self.loglevel)
 
 
 def iter_inorder(runnable):
