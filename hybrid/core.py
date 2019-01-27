@@ -23,7 +23,7 @@ import dimod
 
 from hybrid import traits
 from hybrid.utils import min_sample, sample_as_dict, meld_samplesets, cpu_count
-from hybrid.profiling import make_timeit
+from hybrid.profiling import make_timeit, make_count
 from hybrid.concurrency import Future, Present, Executor, immediate_executor, thread_executor
 
 __all__ = [
@@ -238,6 +238,9 @@ class Runnable(traits.StateTraits):
 
         self.timers = {}
         self.timeit = make_timeit(self.timers, prefix=self.name, loglevel=logging.TRACE)
+
+        self.counters = {}
+        self.count = make_count(self.counters, prefix=self.name, loglevel=logging.TRACE)
 
     def __str__(self):
         return self.name

@@ -116,3 +116,19 @@ class TestTimers(unittest.TestCase):
         r.run(State()).result()
 
         self.assertEqual(len(r.timers['my-timer']), 1)
+
+
+class TestCounters(unittest.TestCase):
+
+    def test_counter_called(self):
+        class Ident(Runnable):
+            def next(self, state):
+                self.count('my-counter', 3)
+                self.count('your-counter')
+                return state
+
+        r = Ident()
+        r.run(State()).result()
+
+        self.assertEqual(r.counters['my-counter'], 3)
+        self.assertEqual(r.counters['your-counter'], 1)

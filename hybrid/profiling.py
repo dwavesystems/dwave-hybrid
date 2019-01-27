@@ -94,6 +94,34 @@ class trace(tictoc):
         super(trace, self).__init__(name, loglevel)
 
 
+def make_count(counters, prefix=None, loglevel=None):
+    """Generate counter increment function specialized for handling
+    counters in the provided `counters` dictionary.
+
+    Args:
+        counters (dict): Counters storage.
+
+    Example:
+        counters = {}
+        count = make_count(counters)
+
+        for _ in range(10):
+            count('f')
+
+        # counters['f'] == 10
+    """
+
+    def _count(counter_name, inc=1):
+        counters[counter_name] = counters.get(counter_name, 0) + inc
+        val = counters[counter_name]
+
+        prefixed_name = '.'.join([prefix or '', counter_name])
+        logger.log(loglevel, "counter(%r) -> %r", prefixed_name, val,
+                   extra={"counter": prefixed_name, "value": val})
+
+    return _count
+
+
 def make_timeit(timers, prefix=None, loglevel=None):
     """Generate timer increment context manager specialized for handling
     timers in the provided `timers` dictionary.
