@@ -104,15 +104,15 @@ class TestRunnableWalkers(unittest.TestCase):
         self.assertEqual(names, ['Loop', 'Branch', 'RacingBranches', 'Runnable', 'Runnable', 'ArgMin'])
 
 
-class TestCounters(unittest.TestCase):
+class TestTimers(unittest.TestCase):
 
-    def test_counter_called(self):
+    def test_timer_called(self):
         class Ident(Runnable):
             def next(self, state):
-                with self.count('my-counter'):
+                with self.timeit('my-timer'):
                     return state
 
         r = Ident()
         r.run(State()).result()
 
-        self.assertEqual(len(r.counters['my-counter']), 1)
+        self.assertEqual(len(r.timers['my-timer']), 1)

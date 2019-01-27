@@ -18,7 +18,7 @@ import time
 import logging
 import functools
 
-__all__ = ['perf_counter', 'tictoc', 'print_structure', 'print_counters']
+__all__ = ['perf_counter', 'tictoc', 'print_structure', 'print_timers']
 
 logger = logging.getLogger(__name__)
 
@@ -94,29 +94,29 @@ class trace(tictoc):
         super(trace, self).__init__(name, loglevel)
 
 
-def make_count(counters, prefix=None, loglevel=None):
-    """Generate counter increment context manager specialized for handling
-    counters in the provided `counters` dictionary.
+def make_timeit(timers, prefix=None, loglevel=None):
+    """Generate timer increment context manager specialized for handling
+    timers in the provided `timers` dictionary.
 
     Args:
-        counters (dict): Counters storage.
+        timers (dict): Timers storage.
 
     Example:
-        counters = {}
-        count = make_count(counters)
+        timers = {}
+        timeit = make_timeit(timers)
 
         for _ in range(10):
             with count('f'):
                 f()
 
-        # counters['f'] is now a list holding 10 runtimes of `f`
+        # timers['f'] is now a list holding 10 runtimes of `f`
     """
 
-    class _counted_mgr(object):
+    class _timeit_mgr(object):
 
-        def __init__(self, counter_name):
-            prefixed_name = '.'.join([prefix or '', counter_name])
-            self.counter_name = counter_name
+        def __init__(self, timer_name):
+            prefixed_name = '.'.join([prefix or '', timer_name])
+            self.timer_name = timer_name
             self.timer = tictoc(name=prefixed_name, loglevel=loglevel)
 
         def __enter__(self):
@@ -125,9 +125,9 @@ def make_count(counters, prefix=None, loglevel=None):
 
         def __exit__(self, exc_type, exc_value, traceback):
             self.timer.stop()
-            counters.setdefault(self.counter_name, []).append(self.timer.dt)
+            timers.setdefault(self.timer_name, []).append(self.timer.dt)
 
-    return _counted_mgr
+    return _timeit_mgr
 
 
 def iter_inorder(runnable):
@@ -150,13 +150,13 @@ def print_structure(runnable, indent=2):
     walk_inorder(runnable, lambda r, d: print(" "*indent*d, r.name, sep=''))
 
 
-def print_counters(runnable, indent=4):
+def print_timers(runnable, indent=4):
     def visit(runnable, level):
         tab = " " * indent * level
         print(tab, "* ", runnable.name, sep='')
-        for counter, val in runnable.counters.items():
-            line = "{tab}  - {counter!r}: cnt = {cnt}, time = {time:.3f} s".format(
-                tab=tab, counter=counter, cnt=len(val), time=sum(val))
+        for timer, val in runnable.timers.items():
+            line = "{tab}  - {timer!r}: cnt = {cnt}, time = {time:.3f} s".format(
+                tab=tab, timer=timer, cnt=len(val), time=sum(val))
             print(line, sep='')
         print()
 

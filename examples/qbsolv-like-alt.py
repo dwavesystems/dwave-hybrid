@@ -64,7 +64,7 @@ init_state = hybrid.State.from_sample(hybrid.min_sample(bqm), bqm)
 solution = main.run(init_state).result()
 
 # show execution profile
-hybrid.profiling.print_counters(main)
+hybrid.profiling.print_timers(main)
 
 # show results
 print("Solution: sample={s.samples.first}".format(s=solution))
