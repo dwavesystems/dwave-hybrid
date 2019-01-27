@@ -94,8 +94,8 @@ class trace(tictoc):
         super(trace, self).__init__(name, loglevel)
 
 
-def make_count(counters, prefix=None, loglevel=None):
-    """Generate counter increment context manager specialized for handling
+class make_count(object):
+    """Generate counter increment callable object specialized for handling (bound to)
     counters in the provided `counters` dictionary.
 
     Args:
@@ -106,17 +106,48 @@ def make_count(counters, prefix=None, loglevel=None):
         count = make_count(counters)
 
         for _ in range(10):
-            with count('f'):
-                f()
+            count('f')
 
-        # counters['f'] is now a list holding 10 runtimes of `f`
+        # counters['f'] == 10
     """
 
-    class _counted_mgr(object):
+    def __init__(self, counters, prefix=None, loglevel=logging.NOTSET):
+        self.counters = counters
+        self.prefix = prefix
+        self.loglevel = loglevel
 
-        def __init__(self, counter_name):
-            prefixed_name = '.'.join([prefix or '', counter_name])
-            self.counter_name = counter_name
+    def __call__(self, counter_name, inc=1):
+        self.counters[counter_name] = self.counters.get(counter_name, 0) + inc
+        val = self.counters[counter_name]
+
+        prefixed_name = '.'.join([self.prefix or '', counter_name])
+        logger.log(self.loglevel, "counter(%r) -> %r", prefixed_name, val,
+                   extra={"counter": prefixed_name, "value": val})
+
+
+class make_timeit(object):
+    """Generate timer increment context manager specialized for handling (bound to)
+    timers in the provided `timers` dictionary.
+
+    Args:
+        timers (dict): Timers storage.
+
+    Example:
+        timers = {}
+        timeit = make_timeit(timers)
+
+        for _ in range(10):
+            with timeit('f'):
+                f()
+
+        # timers['f'] is now a list holding 10 runtimes of `f`
+    """
+
+    class _local_timer_mgr(object):
+        def __init__(self, timers, timer_name, prefix=None, loglevel=None):
+            self.timers = timers
+            self.timer_name = timer_name
+            prefixed_name = '.'.join([prefix or '', timer_name])
             self.timer = tictoc(name=prefixed_name, loglevel=loglevel)
 
         def __enter__(self):
@@ -125,9 +156,15 @@ def make_count(counters, prefix=None, loglevel=None):
 
         def __exit__(self, exc_type, exc_value, traceback):
             self.timer.stop()
-            counters.setdefault(self.counter_name, []).append(self.timer.dt)
+            self.timers.setdefault(self.timer_name, []).append(self.timer.dt)
 
-    return _counted_mgr
+    def __init__(self, timers, prefix=None, loglevel=None):
+        self.timers = timers
+        self.prefix = prefix
+        self.loglevel = loglevel
+
+    def __call__(self, timer_name):
+        return make_timeit._local_timer_mgr(self.timers, timer_name, self.prefix, self.loglevel)
 
 
 def iter_inorder(runnable):
@@ -151,13 +188,28 @@ def print_structure(runnable, indent=2):
 
 
 def print_counters(runnable, indent=4):
+    """Pretty print timers and counters, recursively starting with `runnable`."""
+
     def visit(runnable, level):
         tab = " " * indent * level
         print(tab, "* ", runnable.name, sep='')
-        for counter, val in runnable.counters.items():
-            line = "{tab}  - {counter!r}: cnt = {cnt}, time = {time:.3f} s".format(
-                tab=tab, counter=counter, cnt=len(val), time=sum(val))
-            print(line, sep='')
+
+        if runnable.timers:
+            print(tab, "  (timers)", sep='')
+            for timer, val in sorted(runnable.timers.items()):
+                line = ("{tab}  - {timer!r}: cnt = {cnt}, cumtime = {cumtime:.3f} s, "
+                        "avgtime = {avgtime:.3f} s").format(
+                            tab=tab, timer=timer, cnt=len(val), cumtime=sum(val),
+                            avgtime=sum(val)/len(val))
+                print(line, sep='')
+
+        if runnable.counters:
+            print(tab, "  (counters)", sep='')
+            for counter, val in sorted(runnable.counters.items()):
+                line = "{tab}  - {counter!r}: {val}".format(
+                    tab=tab, counter=counter, val=val)
+                print(line, sep='')
+
         print()
 
     walk_inorder(runnable, visit)

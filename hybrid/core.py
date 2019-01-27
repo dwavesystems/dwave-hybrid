@@ -23,7 +23,7 @@ import dimod
 
 from hybrid import traits
 from hybrid.utils import min_sample, sample_as_dict, meld_samplesets, cpu_count
-from hybrid.profiling import make_count
+from hybrid.profiling import make_timeit, make_count
 from hybrid.concurrency import Future, Present, Executor, immediate_executor, thread_executor
 
 __all__ = [
@@ -236,6 +236,9 @@ class Runnable(traits.StateTraits):
     def __init__(self, *args, **kwargs):
         super(Runnable, self).__init__(*args, **kwargs)
 
+        self.timers = {}
+        self.timeit = make_timeit(self.timers, prefix=self.name, loglevel=logging.TRACE)
+
         self.counters = {}
         self.count = make_count(self.counters, prefix=self.name, loglevel=logging.TRACE)
 
@@ -306,21 +309,21 @@ class Runnable(traits.StateTraits):
         Blocks on state resolution and execution of :meth:`next` or :meth:`error`.
         """
 
-        with self.count('dispatch.resolve'):
+        with self.timeit('dispatch.resolve'):
             try:
                 state = future.result()
             except Exception as exc:
-                with self.count('dispatch.resolve.error'):
+                with self.timeit('dispatch.resolve.error'):
                     return self.error(exc)
 
         if not getattr(self, '_initialized', False):
-            with self.count('dispatch.init'):
+            with self.timeit('dispatch.init'):
                 self.init(state)
             setattr(self, '_initialized', True)
 
         self.validate_input_state_traits(state)
 
-        with self.count('dispatch.next'):
+        with self.timeit('dispatch.next'):
             new_state = self.next(state)
 
         self.validate_output_state_traits(new_state)
@@ -358,7 +361,7 @@ class Runnable(traits.StateTraits):
         if not isinstance(executor, Executor):
             raise TypeError("expecting 'concurrent.futures.Executor' subclass instance for 'executor'")
 
-        with self.count('dispatch'):
+        with self.timeit('dispatch'):
             return executor.submit(self.dispatch, state)
 
     def stop(self):
