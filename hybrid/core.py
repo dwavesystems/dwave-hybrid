@@ -15,7 +15,6 @@
 import os
 from collections import namedtuple
 from copy import deepcopy
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, Future, Executor
 import operator
 import logging
 
@@ -25,6 +24,7 @@ import dimod
 from hybrid import traits
 from hybrid.utils import min_sample, sample_as_dict, meld_samplesets, cpu_count
 from hybrid.profiling import make_count
+from hybrid.executors import Future, Present, Executor, immediate_executor, thread_executor
 
 __all__ = [
     'SampleSet', 'State', 'States', 'Runnable', 'HybridSampler',
@@ -32,23 +32,6 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
-
-
-class ImmediateExecutor(Executor):
-
-    def submit(self, fn, *args, **kwargs):
-        """Blocking version of `Executor.submit()`. Returns resolved `Future`."""
-        # TODO: (re)combine with our global async_executor object, probably introduce
-        # customizable underlying executor (e.g. thread/process/celery/network)
-        try:
-            return Present(result=fn(*args, **kwargs))
-        except Exception as exc:
-            return Present(exception=exc)
-
-
-# TODO: abstract and make customizable to support other types of executors
-async_executor = ThreadPoolExecutor(max_workers=cpu_count() * 5)
-immediate_executor = ImmediateExecutor()
 
 
 class PliableDict(dict):
@@ -226,26 +209,6 @@ class States(list):
         return States(*(state.updated(**kwargs) for state in self))
 
 
-class Present(Future):
-    """Already resolved :class:`~concurrent.futures.Future` object.
-
-    Users should treat this class as just another :class:`~concurrent.futures.Future`,
-    the difference being an implementation detail: :class:`Present` is "resolved" at
-    construction time.
-
-    See the example of the :meth:`Runnable.run` method.
-    """
-
-    def __init__(self, result=None, exception=None):
-        super(Present, self).__init__()
-        if result is not None:
-            self.set_result(result)
-        elif exception is not None:
-            self.set_exception(exception)
-        else:
-            raise ValueError("can't provide both 'result' and 'exception'")
-
-
 class Runnable(traits.StateTraits):
     """Component such as samplers and branches that can be run for an iteration.
 
@@ -364,7 +327,7 @@ class Runnable(traits.StateTraits):
 
         return new_state
 
-    def run(self, state, defer=True):
+    def run(self, state, executor=None):
         """Execute the next step/iteration of an instantiated :class:`Runnable`.
 
         Accepts a state in a :class:`~concurrent.futures.Future`-like object and
@@ -374,26 +337,26 @@ class Runnable(traits.StateTraits):
             state (:class:`State`):
                 Computation state future-like object passed between connected components.
 
-            defer (bool, optional, default=True):
-                If True, returns a future immediately and runs the computation
-                asynchronously. If False, blocks on computation until the resolved
-                future is returned.
+            executor (:class:`~concurrent.futures.Executor`, optional, default=None):
+                The Executor to which the execution of this block is scheduled.
+                By default `hybrid.executors.thread_executor` is used.
 
         Examples:
             These two code snippets run one iteration of a sampler to produce a new state.
-            The second sets the 'defer' argument to False.
+            The first is thread async call, and the second is a blocking call.
 
             >>> sampler.run(State.from_sample(min_sample(bqm), bqm))   # doctest: +SKIP
             <Future at 0x20cbe22ea20 state=running>
 
-            >>> sampler.run(State.from_sample(min_sample(bqm), bqm), defer=False)   # doctest: +SKIP
+            >>> sampler.run(State.from_sample(min_sample(bqm), bqm), executor=hybrid.immediate_executor)   # doctest: +SKIP
             <Present at 0x20ca68cd2b0 state=finished returned State>
         """
 
-        if defer:
-            executor = async_executor
-        else:
-            executor = immediate_executor
+        if executor is None:
+            executor = thread_executor
+
+        if not isinstance(executor, Executor):
+            raise TypeError("expecting 'concurrent.futures.Executor' subclass instance for 'executor'")
 
         with self.count('dispatch'):
             return executor.submit(self.dispatch, state)

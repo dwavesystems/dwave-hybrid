@@ -21,6 +21,7 @@ from itertools import chain
 import six
 
 from hybrid.core import Runnable, State, States, Present
+from hybrid.executors import immediate_executor
 from hybrid.exceptions import EndOfStream
 from hybrid import traits
 
@@ -136,7 +137,7 @@ class Branch(Runnable):
 
         """
         for component in self.components:
-            state = component.run(state, defer=False)
+            state = component.run(state, executor=immediate_executor)
         return state.result()
 
     def error(self, exc):
@@ -457,7 +458,7 @@ class Reduce(Runnable, traits.MISO):
             result = self.initial_state
 
         for state in states:
-            result = self.runnable.run(States(result, state), defer=False).result()
+            result = self.runnable.run(States(result, state), executor=immediate_executor).result()
 
         return result
 
@@ -619,7 +620,7 @@ class Loop(Runnable):
         cnt = self.convergence
 
         for iterno in range(self.max_iter):
-            state = self.runnable.run(state, defer=False).result()
+            state = self.runnable.run(state, executor=immediate_executor).result()
             state_quality = self.key(state)
 
             logger.info("{name} Iteration(iterno={iterno}, best_state_quality={key})".format(

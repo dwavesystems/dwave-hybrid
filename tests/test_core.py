@@ -24,9 +24,11 @@ from tabu import TabuSampler
 
 import hybrid
 from hybrid.core import (
-    PliableDict, State, SampleSet, ImmediateExecutor, Present, Future,
+    PliableDict, State, SampleSet, Present, Future,
     Runnable, Branch,
-    HybridSampler,HybridRunnable, HybridProblemRunnable, HybridSubproblemRunnable)
+    HybridSampler,HybridRunnable, HybridProblemRunnable, HybridSubproblemRunnable
+)
+from hybrid.executors import ImmediateExecutor, immediate_executor
 from hybrid.decomposers import IdentityDecomposer
 from hybrid.composers import IdentityComposer
 from hybrid.samplers import TabuProblemSampler
@@ -211,7 +213,7 @@ class TestRunnable(unittest.TestCase):
         self.assertRaises(NotImplementedError, f.result)
 
         # sync run with valid state
-        f = r.run(State(), defer=False)
+        f = r.run(State(), executor=immediate_executor)
         self.assertIsInstance(f, Present)
         self.assertRaises(NotImplementedError, f.result)
 

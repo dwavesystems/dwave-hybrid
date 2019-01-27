@@ -80,3 +80,5 @@ from hybrid.composers import *
 
 from hybrid.utils import *
 from hybrid.profiling import *
+
+from hybrid.executors import immediate_executor, thread_executor
