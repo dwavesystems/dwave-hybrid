@@ -60,6 +60,7 @@ import hybrid.core
 import hybrid.flow
 import hybrid.traits
 import hybrid.exceptions
+import hybrid.concurrency
 
 import hybrid.samplers
 import hybrid.decomposers
@@ -73,6 +74,7 @@ from hybrid.core import *
 from hybrid.flow import *
 from hybrid import traits
 from hybrid.exceptions import *
+from hybrid.concurrency import *
 
 from hybrid.samplers import *
 from hybrid.decomposers import *

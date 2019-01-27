@@ -29,7 +29,7 @@ from dwave.system.composites import EmbeddingComposite, FixedEmbeddingComposite
 from tabu import TabuSampler
 from neal import SimulatedAnnealingSampler
 
-from hybrid.core import async_executor, Runnable, SampleSet
+from hybrid.core import Runnable, SampleSet
 from hybrid.utils import random_sample
 from hybrid import traits
 
