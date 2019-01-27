@@ -24,7 +24,7 @@ import dimod
 from hybrid import traits
 from hybrid.utils import min_sample, sample_as_dict, meld_samplesets, cpu_count
 from hybrid.profiling import make_count
-from hybrid.executors import Future, Present, Executor, immediate_executor, thread_executor
+from hybrid.concurrency import Future, Present, Executor, immediate_executor, thread_executor
 
 __all__ = [
     'SampleSet', 'State', 'States', 'Runnable', 'HybridSampler',
@@ -339,7 +339,7 @@ class Runnable(traits.StateTraits):
 
             executor (:class:`~concurrent.futures.Executor`, optional, default=None):
                 The Executor to which the execution of this block is scheduled.
-                By default `hybrid.executors.thread_executor` is used.
+                By default `hybrid.concurrency.thread_executor` is used.
 
         Examples:
             These two code snippets run one iteration of a sampler to produce a new state.

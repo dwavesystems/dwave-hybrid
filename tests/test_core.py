@@ -24,54 +24,16 @@ from tabu import TabuSampler
 
 import hybrid
 from hybrid.core import (
-    PliableDict, State, SampleSet, Present, Future,
-    Runnable, Branch,
-    HybridSampler,HybridRunnable, HybridProblemRunnable, HybridSubproblemRunnable
+    PliableDict, State, SampleSet, Runnable, Branch,
+    HybridSampler, HybridRunnable, HybridProblemRunnable, HybridSubproblemRunnable
 )
-from hybrid.executors import ImmediateExecutor, immediate_executor
+from hybrid.concurrency import Present, Future, immediate_executor
 from hybrid.decomposers import IdentityDecomposer
 from hybrid.composers import IdentityComposer
 from hybrid.samplers import TabuProblemSampler
 from hybrid.utils import min_sample, sample_as_dict
 from hybrid.testing import isolated_environ
 from hybrid.exceptions import RunnableError
-
-
-class TestPresent(unittest.TestCase):
-
-    def test_res(self):
-        for val in 1, 'x', True, False, State(problem=1), lambda: None:
-            f = Present(result=val)
-            self.assertIsInstance(f, Future)
-            self.assertTrue(f.done())
-            self.assertEqual(f.result(), val)
-
-    def test_exc(self):
-        for exc in ValueError, KeyError, ZeroDivisionError:
-            f = Present(exception=exc())
-            self.assertIsInstance(f, Future)
-            self.assertTrue(f.done())
-            self.assertRaises(exc, f.result)
-
-    def test_invalid_init(self):
-        self.assertRaises(ValueError, Present)
-
-
-class TestImmediateExecutor(unittest.TestCase):
-
-    def test_submit_res(self):
-        ie = ImmediateExecutor()
-        f = ie.submit(lambda x: not x, True)
-        self.assertIsInstance(f, Present)
-        self.assertIsInstance(f, Future)
-        self.assertEqual(f.result(), False)
-
-    def test_submit_exc(self):
-        ie = ImmediateExecutor()
-        f = ie.submit(lambda: 1/0)
-        self.assertIsInstance(f, Present)
-        self.assertIsInstance(f, Future)
-        self.assertRaises(ZeroDivisionError, f.result)
 
 
 class TestPliableDict(unittest.TestCase):

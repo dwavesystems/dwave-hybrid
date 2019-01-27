@@ -20,8 +20,8 @@ from itertools import chain
 
 import six
 
-from hybrid.core import Runnable, State, States, Present
-from hybrid.executors import immediate_executor
+from hybrid.core import Runnable, State, States
+from hybrid.concurrency import Present, immediate_executor
 from hybrid.exceptions import EndOfStream
 from hybrid import traits
 

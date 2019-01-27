@@ -12,9 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, Future, Executor
 
 from hybrid.utils import cpu_count
+
+__all__ = [
+    'immediate_executor', 'thread_executor'
+]
+
+logger = logging.getLogger(__name__)
 
 
 class Present(Future):
@@ -24,7 +31,7 @@ class Present(Future):
     the difference being an implementation detail: :class:`Present` is "resolved" at
     construction time.
 
-    See the example of the :meth:`Runnable.run` method.
+    See the example of the :meth:`~hybrid.core.Runnable.run` method.
     """
 
     def __init__(self, result=None, exception=None):
