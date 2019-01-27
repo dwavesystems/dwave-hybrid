@@ -187,7 +187,7 @@ def print_counters(runnable, indent=4):
 
         if runnable.timers:
             print(tab, "  (timers)", sep='')
-            for timer, val in runnable.timers.items():
+            for timer, val in sorted(runnable.timers.items()):
                 line = ("{tab}  - {timer!r}: cnt = {cnt}, cumtime = {cumtime:.3f} s, "
                         "avgtime = {avgtime:.3f} s").format(
                             tab=tab, timer=timer, cnt=len(val), cumtime=sum(val),
@@ -196,7 +196,7 @@ def print_counters(runnable, indent=4):
 
         if runnable.counters:
             print(tab, "  (counters)", sep='')
-            for counter, val in runnable.counters.items():
+            for counter, val in sorted(runnable.counters.items()):
                 line = "{tab}  - {counter!r}: {val}".format(
                     tab=tab, counter=counter, val=val)
                 print(line, sep='')

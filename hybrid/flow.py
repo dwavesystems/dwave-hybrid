@@ -569,12 +569,22 @@ class ArgMin(Runnable, traits.MISO):
 
     def next(self, states):
         """Execute one blocking iteration of an instantiated :class:`ArgMin`."""
-        # debug info
-        for idx, state in enumerate(states):
-            logger.debug("{name} State(idx={idx}, arg={arg})".format(
-                name=self.name, idx=idx, arg=self.key(state)))
 
-        return min(states, key=self.key)
+        # expand `return min(states, key=self.key)` for logging/tracking
+        values = [self.key(state) for state in states]
+        min_idx = values.index(min(values))
+
+        # debug info
+        for idx, val in enumerate(values):
+            logger.debug("{name} State(idx={idx}, val={val})".format(
+                name=self.name, idx=idx, val=val))
+
+        logger.debug("{name} min_idx={min_idx}".format(
+            name=self.name, min_idx=min_idx))
+
+        self.count('branch-%d' % min_idx)
+
+        return states[min_idx]
 
 
 class Loop(Runnable):
