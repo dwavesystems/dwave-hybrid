@@ -36,6 +36,7 @@ from hybrid import traits
 __all__ = [
     'QPUSubproblemExternalEmbeddingSampler', 'QPUSubproblemAutoEmbeddingSampler',
     'SimulatedAnnealingSubproblemSampler', 'InterruptableSimulatedAnnealingSubproblemSampler',
+    'SimulatedAnnealingProblemSampler', 'InterruptableSimulatedAnnealingProblemSampler',
     'TabuSubproblemSampler', 'TabuProblemSampler', 'InterruptableTabuSampler',
     'RandomSubproblemSampler',
 ]
@@ -148,6 +149,44 @@ class SimulatedAnnealingSubproblemSampler(Runnable, traits.SubproblemSampler):
 
 class InterruptableSimulatedAnnealingSubproblemSampler(SimulatedAnnealingSubproblemSampler):
     """SimulatedAnnealingSubproblemSampler is already interruptable."""
+    pass
+
+
+class SimulatedAnnealingProblemSampler(Runnable, traits.ProblemSampler):
+    """A simulated annealing sampler for a complete problem.
+
+    Args:
+        num_reads (int, optional, default=1):
+            Number of states (output solutions) to read from the sampler.
+        sweeps (int, optional, default=1000):
+            Number of sweeps or steps.
+
+    """
+
+    def __init__(self, num_reads=1, sweeps=1000):
+        super(SimulatedAnnealingProblemSampler, self).__init__()
+        self.num_reads = num_reads
+        self.sweeps = sweeps
+        self.sampler = SimulatedAnnealingSampler()
+        self._stop_event = threading.Event()
+
+    def __repr__(self):
+        return ("{self}(num_reads={self.num_reads!r}, "
+                       "sweeps={self.sweeps!r})").format(self=self)
+
+    def next(self, state):
+        bqm = state.problem
+        response = self.sampler.sample(
+            bqm, num_reads=self.num_reads, sweeps=self.sweeps,
+            interrupt_function=lambda: self._stop_event.is_set())
+        return state.updated(samples=response)
+
+    def halt(self):
+        self._stop_event.set()
+
+
+class InterruptableSimulatedAnnealingProblemSampler(SimulatedAnnealingProblemSampler):
+    """SimulatedAnnealingProblemSampler is already interruptable."""
     pass
 
 
