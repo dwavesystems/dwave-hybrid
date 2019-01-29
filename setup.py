@@ -28,6 +28,19 @@ extras_require = {
     ':python_version == "2.7"': ['futures']
 }
 
+classifiers = [
+    'License :: OSI Approved :: Apache Software License',
+    'Operating System :: OS Independent',
+    'Development Status :: 3 - Alpha',
+    'Programming Language :: Python :: 2',
+    'Programming Language :: Python :: 2.7',
+    'Programming Language :: Python :: 3',
+    'Programming Language :: Python :: 3.4',
+    'Programming Language :: Python :: 3.5',
+    'Programming Language :: Python :: 3.6',
+    'Programming Language :: Python :: 3.7',
+]
+
 setup(
     name=package_info['__packagename__'],
     version=package_info['__version__'],
@@ -40,4 +53,5 @@ setup(
     packages=find_packages(),
     install_requires=install_requires,
     extras_require=extras_require,
+    classifiers=classifiers,
 )
