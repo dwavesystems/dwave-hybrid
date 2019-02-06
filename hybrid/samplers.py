@@ -114,6 +114,26 @@ class QPUSubproblemAutoEmbeddingSampler(Runnable, traits.SubproblemSampler):
 
 
 class ReverseAnnealingAutoEmbeddingSampler(Runnable, traits.SubproblemSampler):
+    """A quantum reverse annealing sampler for a subproblem with automated
+    heuristic minor-embedding.
+
+    Args:
+        num_reads (int, optional, default=100):
+            Number of states (output solutions) to read from the sampler.
+
+        qpu_sampler (:class:`dimod.Sampler`, optional, default=EmbeddingComposite(DWaveSampler())):
+            Quantum sampler such as a D-Wave system. If sampler is structured,
+            it will be converted to unstructured via :class:`~dwave.system.composited.EmbeddingComposite`.
+
+        anneal_schedule (list(list), optional, default=[[0, 1], [0.5, 0.5], [1, 1]]):
+            An anneal schedule defined by a series of pairs of floating-point numbers
+            identifying points in the schedule at which to change slope. The first
+            element in the pair is time t in microseconds; the second, normalized
+            persistent current s in the range [0,1]. The resulting schedule is the
+            piecewise-linear curve that connects the provided points. For more
+            details, see :meth:`~dwave.system.DWaveSampler.validate_anneal_schedule`.
+    """
+
     def __init__(self, num_reads=100, qpu_sampler=None, anneal_schedule=None):
         super(ReverseAnnealingAutoEmbeddingSampler, self).__init__()
 
