@@ -22,6 +22,21 @@ from hybrid.samplers import *
 from hybrid.core import State
 
 
+class MockDWaveReverseAnnealingSampler(MockDWaveSampler):
+    """Extend the `dwave.system.testing.MockDWaveSampler` with mock support for
+    reverse annealing.
+    """
+    # TODO: move to dwave-system
+
+    def validate_anneal_schedule(self, anneal_schedule):
+        return True
+
+    def sample(self, *args, **kwargs):
+        self.anneal_schedule = kwargs.pop('anneal_schedule', None)
+        self.initial_state = kwargs.pop('initial_state', None)
+        return super(MockDWaveReverseAnnealingSampler, self).sample(*args, **kwargs)
+
+
 class TestQPUSamplers(unittest.TestCase):
 
     def test_unstructured_child_sampler(self):
@@ -47,3 +62,16 @@ class TestQPUSamplers(unittest.TestCase):
         init = State.from_subsample({'a': 1}, bqm)
         res = q.run(init).result()
         self.assertEqual(res.subsamples.first.energy, -1)
+
+    def test_reverse_annealing_sampler(self):
+        sampler = MockDWaveReverseAnnealingSampler()
+        ra = ReverseAnnealingAutoEmbeddingSampler(qpu_sampler=sampler)
+
+        # test sampling works
+        bqm = dimod.BinaryQuadraticModel({'a': 1}, {}, 0, 'SPIN')
+        state = State.from_subsample({'a': 1}, bqm)
+        res = ra.run(state).result()
+
+        self.assertEqual(res.subsamples.first.energy, -1)
+        self.assertEqual(sampler.initial_state.popitem()[1], 1)
+        self.assertEqual(sampler.anneal_schedule, ra.anneal_schedule)
