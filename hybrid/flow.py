@@ -625,27 +625,28 @@ class Loop(Runnable):
 
     def next(self, state):
         """Execute one blocking iteration of an instantiated :class:`Loop`."""
-        last = state
-        last_quality = self.key(last)
+        input_state = state
+        input_quality = self.key(input_state)
         cnt = self.convergence
 
         for iterno in range(self.max_iter):
-            state = self.runnable.run(state, executor=immediate_executor).result()
-            state_quality = self.key(state)
+            output_state = self.runnable.run(input_state, executor=immediate_executor).result()
+            output_quality = self.key(output_state)
 
-            logger.info("{name} Iteration(iterno={iterno}, best_state_quality={key})".format(
-                name=self.name, iterno=iterno, key=state_quality))
+            logger.info("{name} Iteration(iterno={iterno}, output_state_quality={key})".format(
+                name=self.name, iterno=iterno, key=output_quality))
 
-            if state_quality == last_quality:
+            if output_quality == input_quality:
                 cnt -= 1
             else:
                 cnt = self.convergence
             if cnt <= 0:
                 break
 
-            last_quality = state_quality
+            input_state = output_state
+            input_quality = output_quality
 
-        return state
+        return output_state
 
 
 SimpleIterator = Loop
