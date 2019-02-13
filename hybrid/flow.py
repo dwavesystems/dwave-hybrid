@@ -591,7 +591,34 @@ class ArgMin(Runnable, traits.MISO):
 class Loop(Runnable):
     """Iterates `runnable` for up to `max_iter` times, or until a state quality
     metric, defined by the `key` function, shows no improvement for at least
-    `convergence` time."""
+    `convergence` number of iterations.
+
+    Args:
+        runnable (:class:`Runnable`):
+            A runnable that's looped over.
+
+        max_iter (int/None, optional, default=1000):
+            Maximum number of times the `runnable` is run, regardless of other
+            termination criteria. This is the upper bound. Can be set to `None`.
+
+        convergence (int, optional, default=10):
+            Terminating condition based on no-output-change count. If the output
+            state of `runnable` doesn't change for a `convergence` number of
+            sequential runs, looping is terminated.
+
+        key (callable/str):
+            Best state is judged according to a metric defined with a `key`.
+            `key` can be a `callable` with a signature::
+
+                key :: (State s, Ord k) => s -> k
+
+            or a string holding a key name/path to be extracted from the input
+            state with `operator.attrgetter` method.
+
+            By default, `key == operator.attrgetter('samples.first.energy')`,
+            thus favoring states containing a sample with the minimal energy.
+
+    """
 
     def __init__(self, runnable, max_iter=1000, convergence=10, key=None):
         super(Loop, self).__init__()
@@ -627,8 +654,8 @@ class Loop(Runnable):
     def iteration_update(self, iterno, cnt, input_state, output_state):
         """Implement "converge on non-changing output" behavior:
 
-          - loop max_iter times, but bail-out earlier if output doesn't change
-            (over input) for convergence number of iterations
+          - loop `max_iter` times, but bail-out earlier if output doesn't change
+            (over input) for `convergence` number of iterations
 
           - each iteration starts with the previous result state
 
@@ -671,17 +698,44 @@ SimpleIterator = Loop
 
 
 class LoopWhileNoImprovement(Loop):
-    """Iterates `runnable` for up to `max_iter` times, or until a state quality
-    metric, defined by the `key` function, shows no improvement for at least
-    `convergence` time."""
+    """Iterates `runnable` until a state quality metric, defined by the `key`
+    function, shows no improvement for at least `max_tries` number of
+    iterations.
+
+    Args:
+        runnable (:class:`Runnable`):
+            A runnable that's looped over.
+
+        max_tries (int, optional, default=10):
+            Maximum number of times the `runnable` is run for the **same** input
+            state. On each improvement, the better state is used for the next
+            input state, and tries counter is reset.
+
+        key (callable/str):
+            Best state is judged according to a metric defined with a `key`.
+            `key` can be a `callable` with a signature::
+
+                key :: (State s, Ord k) => s -> k
+
+            or a string holding a key name/path to be extracted from the input
+            state with `operator.attrgetter` method.
+
+            By default, `key == operator.attrgetter('samples.first.energy')`,
+            thus favoring states containing a sample with the minimal energy.
+
+    """
+
+    def __init__(self, runnable, max_tries=10, key=None):
+        super(LoopWhileNoImprovement, self).__init__(
+            runnable=runnable, max_iter=None, convergence=max_tries, key=key)
 
     def iteration_update(self, iterno, cnt, input_state, output_state):
         """Implement "no-improvement count-down" behavior:
 
           - loop indefinitely, but bail-out if there's no improvement of output
-            over input for convergence number of iterations
+            over input for `max_tries` number of iterations
 
-          - each iteration uses the same input state, unless there was no improvement
+          - each iteration uses the same input state, unless there was an improvement
             in this iteration, in which case, use the current output as next input
 
         Input: relevant counters and I/O states.
