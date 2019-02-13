@@ -659,7 +659,7 @@ class Loop(Runnable):
 
             iterno, cnt, input_state = self.iteration_update(iterno, cnt, input_state, output_state)
 
-            if iterno >= self.max_iter:
+            if self.max_iter is not None and iterno >= self.max_iter:
                 break
             if cnt <= 0:
                 break
