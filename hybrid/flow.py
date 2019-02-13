@@ -27,7 +27,8 @@ from hybrid import traits
 
 __all__ = [
     'Branch', 'RacingBranches', 'Race', 'ParallelBranches', 'Parallel',
-    'Map', 'Reduce', 'Lambda', 'ArgMin', 'Loop', 'SimpleIterator', 'Unwind'
+    'Map', 'Reduce', 'Lambda', 'ArgMin', 'Loop', 'SimpleIterator',
+    'LoopWhileNoImprovement', 'Unwind'
 ]
 
 logger = logging.getLogger(__name__)
@@ -262,7 +263,11 @@ class ParallelBranches(Runnable, traits.SIMO):
     Args:
         *branches ([:class:`Runnable`]):
             Comma-separated branches.
-        endomorphic (bool):
+
+        endomorphic (bool, optional, default=True):
+            Include an implicit "identity branch", resulting in the input state
+            being copied (prepended) to the output States list.
+
             Set to ``False`` if you are not sure that the codomain of all branches
             is the domain; for example, if there might be a mix of subproblems
             and problems moving between components.
@@ -282,10 +287,6 @@ class ParallelBranches(Runnable, traits.SIMO):
     """
 
     def __init__(self, *branches, **kwargs):
-        """If known upfront codomain for all branches equals domain, state
-        can safely be mixed in with branches' results. Otherwise set
-        `endomorphic=False`.
-        """
         super(ParallelBranches, self).__init__()
         self.branches = branches
         self.endomorphic = kwargs.get('endomorphic', True)
@@ -623,33 +624,86 @@ class Loop(Runnable):
     def __iter__(self):
         return iter((self.runnable,))
 
+    def iteration_update(self, iterno, cnt, input_state, output_state):
+        """Implement "converge on non-changing output" behavior:
+
+          - loop max_iter times, but bail-out earlier if output doesn't change
+            (over input) for convergence number of iterations
+
+          - each iteration starts with the previous result state
+
+        Input: relevant counters and I/O states.
+        Output: next input state and next counter values
+        """
+
+        input_energy = self.key(input_state)
+        output_energy = self.key(output_state)
+
+        logger.info("{name} Iteration(iterno={iterno}, output_state_energy={key})".format(
+            name=self.name, iterno=iterno, key=output_energy))
+
+        if output_energy == input_energy:
+            cnt -= 1
+        else:
+            cnt = self.convergence
+
+        return iterno + 1, cnt, output_state
+
     def next(self, state):
-        """Execute one blocking iteration of an instantiated :class:`Loop`."""
-        input_state = state
-        input_quality = self.key(input_state)
+        iterno = 0
         cnt = self.convergence
+        input_state = state
 
-        for iterno in range(self.max_iter):
+        while True:
             output_state = self.runnable.run(input_state, executor=immediate_executor).result()
-            output_quality = self.key(output_state)
 
-            logger.info("{name} Iteration(iterno={iterno}, output_state_quality={key})".format(
-                name=self.name, iterno=iterno, key=output_quality))
+            iterno, cnt, input_state = self.iteration_update(iterno, cnt, input_state, output_state)
 
-            if output_quality == input_quality:
-                cnt -= 1
-            else:
-                cnt = self.convergence
+            if iterno >= self.max_iter:
+                break
             if cnt <= 0:
                 break
-
-            input_state = output_state
-            input_quality = output_quality
 
         return output_state
 
 
 SimpleIterator = Loop
+
+
+class LoopWhileNoImprovement(Loop):
+    """Iterates `runnable` for up to `max_iter` times, or until a state quality
+    metric, defined by the `key` function, shows no improvement for at least
+    `convergence` time."""
+
+    def iteration_update(self, iterno, cnt, input_state, output_state):
+        """Implement "no-improvement count-down" behavior:
+
+          - loop indefinitely, but bail-out if there's no improvement of output
+            over input for convergence number of iterations
+
+          - each iteration uses the same input state, unless there was no improvement
+            in this iteration, in which case, use the current output as next input
+
+        Input: relevant counters and I/O states.
+        Output: next input state and next counter values
+        """
+
+        input_energy = self.key(input_state)
+        output_energy = self.key(output_state)
+
+        logger.info("{name} Iteration(iterno={iterno}, output_state_energy={key})".format(
+            name=self.name, iterno=iterno, key=output_energy))
+
+        if output_energy >= input_energy:
+            # no improvement, re-use the same input
+            cnt -= 1
+            next_input_state = input_state
+        else:
+            # improvement, use the better output for next input, restart local counter
+            cnt = self.convergence
+            next_input_state = output_state
+
+        return iterno + 1, cnt, next_input_state
 
 
 class Unwind(Runnable, traits.SIMO):
