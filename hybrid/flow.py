@@ -27,8 +27,8 @@ from hybrid import traits
 
 __all__ = [
     'Branch', 'RacingBranches', 'Race', 'ParallelBranches', 'Parallel',
-    'Map', 'Reduce', 'Lambda', 'ArgMin', 'Loop', 'SimpleIterator',
-    'LoopWhileNoImprovement', 'Unwind'
+    'Map', 'Reduce', 'Lambda', 'ArgMin', 'Loop', 'SimpleIterator', 'LoopN',
+    'LoopUntilNoImprovement', 'LoopWhileNoImprovement', 'Unwind'
 ]
 
 logger = logging.getLogger(__name__)
@@ -588,7 +588,7 @@ class ArgMin(Runnable, traits.MISO):
         return states[min_idx]
 
 
-class Loop(Runnable):
+class LoopUntilNoImprovement(Runnable):
     """Iterates `runnable` for up to `max_iter` times, or until a state quality
     metric, defined by the `key` function, shows no improvement for at least
     `convergence` number of iterations.
@@ -621,7 +621,7 @@ class Loop(Runnable):
     """
 
     def __init__(self, runnable, max_iter=1000, convergence=10, key=None):
-        super(Loop, self).__init__()
+        super(LoopUntilNoImprovement, self).__init__()
         self.runnable = runnable
         self.max_iter = max_iter
         self.convergence = convergence
@@ -694,10 +694,23 @@ class Loop(Runnable):
         return output_state
 
 
+class LoopN(LoopUntilNoImprovement):
+    """Iterate `runnable` exactly `n` times, using each output as input in the
+    next iteration.
+    """
+
+    def __init__(self, runnable, n):
+        super(LoopN, self).__init__(
+            runnable=runnable, max_iter=n, convergence=n, key=lambda _: 0)
+
+
+class Loop(LoopUntilNoImprovement):
+    pass
+
 SimpleIterator = Loop
 
 
-class LoopWhileNoImprovement(Loop):
+class LoopWhileNoImprovement(LoopUntilNoImprovement):
     """Iterates `runnable` until a state quality metric, defined by the `key`
     function, shows no improvement for at least `max_tries` number of
     iterations.

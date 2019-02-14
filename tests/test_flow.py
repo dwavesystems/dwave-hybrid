@@ -23,7 +23,7 @@ import dimod
 from hybrid.flow import (
     Branch, RacingBranches, ParallelBranches,
     ArgMin, Loop, Map, Reduce, Lambda, Unwind,
-    LoopWhileNoImprovement
+    LoopWhileNoImprovement, LoopN
 )
 from hybrid.core import State, States, Runnable, Present
 from hybrid.utils import min_sample, max_sample
@@ -255,6 +255,19 @@ class TestLoop(unittest.TestCase):
 
         with self.assertRaises(TypeError):
             Loop(simo())
+
+
+class TestLoopN(unittest.TestCase):
+
+    def test_basic(self):
+        class Inc(Runnable):
+            def next(self, state):
+                return state.updated(cnt=state.cnt + 1)
+
+        it = LoopN(Inc(), 10)
+        s = it.run(State(cnt=0)).result()
+
+        self.assertEqual(s.cnt, 10)
 
 
 class TestLoopWhileNoImprovement(unittest.TestCase):
