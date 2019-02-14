@@ -22,7 +22,8 @@ import dimod
 
 from hybrid.flow import (
     Branch, RacingBranches, ParallelBranches,
-    ArgMin, Loop, Map, Reduce, Lambda, Unwind
+    ArgMin, Loop, Map, Reduce, Lambda, Unwind,
+    LoopWhileNoImprovement
 )
 from hybrid.core import State, States, Runnable, Present
 from hybrid.utils import min_sample, max_sample
@@ -254,6 +255,39 @@ class TestLoop(unittest.TestCase):
 
         with self.assertRaises(TypeError):
             Loop(simo())
+
+
+class TestLoopWhileNoImprovement(unittest.TestCase):
+
+    def test_no_improvement_tries(self):
+        class Inc(Runnable):
+            def next(self, state):
+                return state.updated(cnt=state.cnt + 1)
+
+        loop = LoopWhileNoImprovement(Inc(), max_tries=10, key=lambda _: 0)
+        state = loop.run(State(cnt=0)).result()
+
+        self.assertEqual(len(loop.runnable.timers['dispatch.next']), 10)
+        self.assertEqual(state.cnt, 1)
+
+    def test_runs_with_improvement(self):
+        class Inc(Runnable):
+            def next(self, state):
+                return state.updated(cnt=state.cnt + 1)
+
+        loop = LoopWhileNoImprovement(Inc(), max_tries=100, key=lambda state: -min(3, state.cnt))
+        state = loop.run(State(cnt=0)).result()
+
+        self.assertEqual(len(loop.runnable.timers['dispatch.next']), 103)
+        self.assertEqual(state.cnt, 4)
+
+    def test_validation(self):
+        class simo(Runnable, traits.SIMO):
+            def next(self, state):
+                return States(state, state)
+
+        with self.assertRaises(TypeError):
+            LoopWhileNoImprovement(simo())
 
 
 class TestMap(unittest.TestCase):
