@@ -588,6 +588,73 @@ class ArgMin(Runnable, traits.MISO):
         return states[min_idx]
 
 
+class TrackMin(Runnable, traits.SISO):
+    """Tracks (and keeps record of) the "best" (or minimal) :class:`State` seen,
+    according to a metric defined with a `key` function.
+
+    Args:
+        key (callable/str, optional, default=None):
+            Best state is judged according to a metric defined with a `key`.
+            `key` can be a `callable` with a signature::
+
+                key :: (State s, Ord k) => s -> k
+
+            or a string holding a key name/path to be extracted from the input
+            state with `operator.attrgetter` method.
+
+            By default, `key == operator.attrgetter('samples.first.energy')`,
+            thus favoring states containing a sample with the minimal energy.
+
+        output (bool, optional, default=False):
+            Update the output state with the relevant aspect of the best state
+            seen so far.
+
+        input_key (str, optional, default='samples')
+            If `output=True`, then this defines the variable/key name in the
+            input State that shall be included in the output state.
+
+        output_key (str, optional, default='best_samples')
+            If `output=True`, then the key under which the `input_key` from the
+            best state seen so far is stored in the output State.
+
+    """
+
+    def __init__(self, key=None, output=False, input_key='samples',
+                 output_key='best_samples'):
+        super(TrackMin, self).__init__()
+        if key is None:
+            key = 'samples.first.energy'
+        if isinstance(key, six.string_types):
+            key = attrgetter(key)
+        self.key = key
+        self.output = output
+        self.output_key = output_key
+        self.input_key = input_key
+
+    def __repr__(self):
+        return (
+            "{self.name}(key={self.key!r}, output={self.output!r}, "
+            "input_key={self.input_key!r}, output_key={self.output_key!r})"
+        ).format(self=self)
+
+    def init(self, state):
+        self.best = state
+        logger.debug("{} selected {!r} for the initial best state".format(
+            self.name, self.best))
+
+    def next(self, state):
+        if self.key(state) < self.key(self.best):
+            self.best = state
+            self.count('new-best')
+            logger.debug("{} selected {!r} for the new best state".format(
+                self.name, self.best))
+
+        if self.output:
+            return state.updated(**{self.output_key: self.best[self.input_key]})
+
+        return state
+
+
 class LoopUntilNoImprovement(Runnable):
     """Iterates `runnable` for up to `max_iter` times, or until a state quality
     metric, defined by the `key` function, shows no improvement for at least
