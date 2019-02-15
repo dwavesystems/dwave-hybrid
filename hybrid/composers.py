@@ -18,7 +18,7 @@ from hybrid.core import Runnable, SampleSet
 from hybrid.utils import updated_sample, flip_energy_gains
 from hybrid import traits
 
-__all__ = ['IdentityComposer', 'SplatComposer', 'Merge']
+__all__ = ['IdentityComposer', 'SplatComposer', 'GreedyPathMerge']
 
 logger = logging.getLogger(__name__)
 
@@ -49,10 +49,18 @@ class SplatComposer(Runnable, traits.SubsamplesComposer):
             samples=SampleSet.from_samples(composed_sample, state.samples.vartype, composed_energy))
 
 
-class Merge(Runnable, traits.MISO, traits.SamplesIntaking, traits.SamplesProducing):
-    """Dialectic search merge operation.
+class GreedyPathMerge(Runnable, traits.MISO, traits.SamplesIntaking, traits.SamplesProducing):
+    """Dialectic search merge operation [1]. Two input states represent "thesis" and
+    "antithesis". We generate a path from thesis to antithesis (greedy highest
+    energy decrease bit flip at each step), and return the best sample on the
+    path, as the "synthesis".
 
-    Merge(thesis, antithesis) -> synthesis
+    Note: only the first sample (by energy), is considered from either input
+    state.
+
+    [1] Kadioglu S., Sellmann M. (2009) Dialectic Search. In: Gent I.P. (eds)
+        Principles and Practice of Constraint Programming - CP 2009. CP 2009.
+        Lecture Notes in Computer Science, vol 5732. Springer, Berlin, Heidelberg
     """
 
     def next(self, states):

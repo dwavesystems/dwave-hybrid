@@ -19,7 +19,7 @@ import dimod
 
 from hybrid.core import State, States, SampleSet
 from hybrid import traits
-from hybrid.composers import IdentityComposer, SplatComposer, Merge
+from hybrid.composers import IdentityComposer, SplatComposer, GreedyPathMerge
 from hybrid.utils import min_sample, max_sample
 
 
@@ -83,13 +83,13 @@ class TestSplatComposer(unittest.TestCase):
                 subsamples=SampleSet.from_samples_bqm(self.subsamples, self.subproblem))).result())
 
 
-class TestMerge(unittest.TestCase):
+class TestGreedyPathMerge(unittest.TestCase):
 
     def test_basic(self):
         bqm = dimod.BinaryQuadraticModel({}, {'ab': 1, 'bc': -1, 'ca': 1}, 0, dimod.SPIN)
         state = State.from_sample(min_sample(bqm), bqm)
         antistate = State.from_sample(max_sample(bqm), bqm)
 
-        result = Merge().run(States(state, antistate)).result()
+        result = GreedyPathMerge().run(States(state, antistate)).result()
 
         self.assertEqual(result.samples.first.energy, -3.0)
