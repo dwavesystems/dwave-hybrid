@@ -28,7 +28,7 @@ from hybrid import traits
 __all__ = [
     'Branch', 'RacingBranches', 'Race', 'ParallelBranches', 'Parallel',
     'Map', 'Reduce', 'Lambda', 'ArgMin', 'Loop', 'SimpleIterator', 'LoopN',
-    'LoopUntilNoImprovement', 'LoopWhileNoImprovement', 'Unwind'
+    'LoopUntilNoImprovement', 'LoopWhileNoImprovement', 'Unwind', 'TrackMin'
 ]
 
 logger = logging.getLogger(__name__)

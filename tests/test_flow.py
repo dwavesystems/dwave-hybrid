@@ -23,7 +23,7 @@ import dimod
 from hybrid.flow import (
     Branch, RacingBranches, ParallelBranches,
     ArgMin, Loop, Map, Reduce, Lambda, Unwind,
-    LoopWhileNoImprovement, LoopN
+    LoopWhileNoImprovement, LoopN, TrackMin
 )
 from hybrid.core import State, States, Runnable, Present
 from hybrid.utils import min_sample, max_sample
@@ -224,6 +224,56 @@ class TestArgMin(unittest.TestCase):
         fold = ArgMin(key=lambda s: -s.samples.first.energy)
         best = fold.run(states).result()
         self.assertEqual(best.samples.first.energy, 1)
+
+
+class TestTrackMin(unittest.TestCase):
+
+    def test_look_and_feel(self):
+        tracker = TrackMin(key=False, output=False, output_key='a', input_key='a')
+        self.assertEqual(tracker.name, 'TrackMin')
+        self.assertEqual(str(tracker), 'TrackMin')
+        self.assertEqual(repr(tracker), "TrackMin(key=False, output=False, input_key='a', output_key='a')")
+
+    def test_default_tracking(self):
+        """Best seen state is kept (default: state with sampleset with the lowest energy)"""
+
+        bqm = dimod.BinaryQuadraticModel({'a': 1}, {}, 0, dimod.SPIN)
+        min_state = State.from_sample(min_sample(bqm), bqm)    # energy: -1
+        max_state = State.from_sample(max_sample(bqm), bqm)    # energy: +1
+
+        tracker = TrackMin()
+        _ = tracker.run(max_state).result()
+        self.assertEqual(tracker.best.samples.first.energy, +1)
+        _ = tracker.run(min_state).result()
+        self.assertEqual(tracker.best.samples.first.energy, -1)
+        _ = tracker.run(max_state).result()
+        self.assertEqual(tracker.best.samples.first.energy, -1)
+
+    def test_custom_key(self):
+        """Custom key function works, here best state has the highest energy."""
+
+        bqm = dimod.BinaryQuadraticModel({'a': 1}, {}, 0, dimod.SPIN)
+        states = States(
+            State.from_sample(min_sample(bqm), bqm),    # energy: -1
+            State.from_sample(max_sample(bqm), bqm),    # energy: +1
+        )
+
+        tracker = TrackMin(key=lambda s: -s.samples.first.energy)
+        for state in states:
+            tracker.run(state).result()
+        self.assertEqual(tracker.best.samples.first.energy, +1)
+
+    def test_output(self):
+        """Best state is properly output, for a custom key."""
+
+        state1 = State(a=1, en=1)
+        state2 = State(a=2, en=0)
+
+        tracker = TrackMin(key=lambda s: s.en, output=True, input_key='a', output_key='best')
+        result1 = tracker.run(state1).result()
+        self.assertEqual(result1.best, 1)
+        result2 = tracker.run(state2).result()
+        self.assertEqual(result2.best, 2)
 
 
 class TestLoop(unittest.TestCase):
