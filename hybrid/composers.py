@@ -15,10 +15,10 @@
 import logging
 
 from hybrid.core import Runnable, SampleSet
-from hybrid.utils import updated_sample
+from hybrid.utils import updated_sample, flip_energy_gains
 from hybrid import traits
 
-__all__ = ['IdentityComposer', 'SplatComposer']
+__all__ = ['IdentityComposer', 'SplatComposer', 'Merge']
 
 logger = logging.getLogger(__name__)
 
@@ -47,3 +47,47 @@ class SplatComposer(Runnable, traits.SubsamplesComposer):
         composed_energy = state.problem.energy(composed_sample)
         return state.updated(
             samples=SampleSet.from_samples(composed_sample, state.samples.vartype, composed_energy))
+
+
+class Merge(Runnable, traits.MISO, traits.SamplesIntaking, traits.SamplesProducing):
+    """Dialectic search merge operation.
+
+    Merge(thesis, antithesis) -> synthesis
+    """
+
+    def next(self, states):
+        state_thesis, state_antithesis = states
+        bqm = state_thesis.problem
+
+        thesis = dict(state_thesis.samples.first.sample)
+        thesis_en = state_thesis.samples.first.energy
+
+        antithesis = dict(state_antithesis.samples.first.sample)
+
+        synthesis = thesis
+        synthesis_en = thesis_en
+
+        # input sanity check
+        assert len(thesis) == len(antithesis)
+        assert state_thesis.problem == state_antithesis.problem
+
+        diff = {v for v in thesis if thesis[v] != antithesis[v]}
+
+        while diff:
+            flip_energies = flip_energy_gains(bqm, thesis, diff)
+            en, v = flip_energies[-1]
+
+            diff.remove(v)
+            thesis[v] = antithesis[v]
+            thesis_en += en
+
+            if thesis_en < synthesis_en:
+                synthesis = thesis.copy()
+                synthesis_en = thesis_en
+
+        synthesis_samples = SampleSet.from_samples_bqm(synthesis, bqm)
+
+        # calc sanity check
+        assert synthesis_samples.first.energy == synthesis_en
+
+        return state_thesis.updated(samples=synthesis_samples)
