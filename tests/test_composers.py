@@ -17,9 +17,10 @@ import unittest
 
 import dimod
 
-from hybrid.core import State, SampleSet
+from hybrid.core import State, States, SampleSet
 from hybrid import traits
-from hybrid.composers import IdentityComposer, SplatComposer
+from hybrid.composers import IdentityComposer, SplatComposer, Merge
+from hybrid.utils import min_sample, max_sample
 
 
 class TestIdentityComposer(unittest.TestCase):
@@ -80,3 +81,15 @@ class TestSplatComposer(unittest.TestCase):
                 problem=self.problem, subproblem=self.subproblem,
                 samples=SampleSet.from_samples_bqm(self.samples, self.problem),
                 subsamples=SampleSet.from_samples_bqm(self.subsamples, self.subproblem))).result())
+
+
+class TestMerge(unittest.TestCase):
+
+    def test_basic(self):
+        bqm = dimod.BinaryQuadraticModel({}, {'ab': 1, 'bc': -1, 'ca': 1}, 0, dimod.SPIN)
+        state = State.from_sample(min_sample(bqm), bqm)
+        antistate = State.from_sample(max_sample(bqm), bqm)
+
+        result = Merge().run(States(state, antistate)).result()
+
+        self.assertEqual(result.samples.first.energy, -3.0)
