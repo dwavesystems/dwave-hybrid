@@ -42,7 +42,7 @@ problem = sys.argv[1]
 with open(problem) as fp:
     bqm = dimod.BinaryQuadraticModel.from_coo(fp)
 
-
+# construct a Dialectic Search workflow
 generate_antithesis = ( hybrid.IdentityDecomposer()
                       | hybrid.RandomSubproblemSampler()
                       | hybrid.SplatComposer()

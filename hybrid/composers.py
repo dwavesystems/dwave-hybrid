@@ -72,10 +72,11 @@ class GreedyPathMerge(Runnable, traits.MISO, traits.SamplesIntaking, traits.Samp
 
         antithesis = dict(state_antithesis.samples.first.sample)
 
-        synthesis = thesis
+        synthesis = thesis.copy()
         synthesis_en = thesis_en
 
         # input sanity check
+        # TODO: convert to hard input validation
         assert len(thesis) == len(antithesis)
         assert state_thesis.problem == state_antithesis.problem
 
@@ -89,13 +90,14 @@ class GreedyPathMerge(Runnable, traits.MISO, traits.SamplesIntaking, traits.Samp
             thesis[v] = antithesis[v]
             thesis_en += en
 
-            if thesis_en < synthesis_en:
+            if thesis_en <= synthesis_en:
+                # note EQ also, because we want the latest thesis
                 synthesis = thesis.copy()
                 synthesis_en = thesis_en
 
         synthesis_samples = SampleSet.from_samples_bqm(synthesis, bqm)
 
-        # calc sanity check
+        # calculation sanity check
         assert synthesis_samples.first.energy == synthesis_en
 
         return state_thesis.updated(samples=synthesis_samples)
