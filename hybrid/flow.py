@@ -589,12 +589,12 @@ class ArgMin(Runnable, traits.MISO):
 
 
 class TrackMin(Runnable, traits.SISO):
-    """Tracks (and keeps record of) the "best" (or minimal) :class:`State` seen,
-    according to a metric defined with a `key` function.
+    """Tracks and records the best :class:`State` according to a metric defined
+    with a `key` function; typically this is the minimal :class:`State`.
 
     Args:
         key (callable/str, optional, default=None):
-            Best state is judged according to a metric defined with a `key`.
+            Best State is judged according to a metric defined with a `key`.
             `key` can be a `callable` with a signature::
 
                 key :: (State s, Ord k) => s -> k
@@ -606,8 +606,8 @@ class TrackMin(Runnable, traits.SISO):
             thus favoring states containing a sample with the minimal energy.
 
         output (bool, optional, default=False):
-            Update the output state with the relevant aspect of the best state
-            seen so far.
+            Update the output State's `output_key` with the `input_key` of the
+            best State seen so far.
 
         input_key (str, optional, default='samples')
             If `output=True`, then this defines the variable/key name in the
@@ -666,12 +666,12 @@ class LoopUntilNoImprovement(Runnable):
 
         max_iter (int/None, optional, default=1000):
             Maximum number of times the `runnable` is run, regardless of other
-            termination criteria. This is the upper bound. Can be set to `None`.
+            termination criteria. This is the upper bound. If set to `None`,
+            upper bound on the number or iterations is not set.
 
         convergence (int, optional, default=10):
-            Terminating condition based on no-output-change count. If the output
-            state of `runnable` doesn't change for a `convergence` number of
-            sequential runs, looping is terminated.
+            Terminates upon reaching this number of iterations with unchanged
+            output.
 
         key (callable/str):
             Best state is judged according to a metric defined with a `key`.
@@ -719,7 +719,7 @@ class LoopUntilNoImprovement(Runnable):
         return iter((self.runnable,))
 
     def iteration_update(self, iterno, cnt, input_state, output_state):
-        """Implement "converge on non-changing output" behavior:
+        """Implement "converge on unchanging output" behavior:
 
           - loop `max_iter` times, but bail-out earlier if output doesn't change
             (over input) for `convergence` number of iterations
@@ -789,7 +789,7 @@ class LoopWhileNoImprovement(LoopUntilNoImprovement):
         max_tries (int, optional, default=10):
             Maximum number of times the `runnable` is run for the **same** input
             state. On each improvement, the better state is used for the next
-            input state, and tries counter is reset.
+            input state, and the try/trial counter is reset.
 
         key (callable/str):
             Best state is judged according to a metric defined with a `key`.

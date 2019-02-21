@@ -14,14 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Dialectic search [1][2] algorithm outline: For a given assignment (the thesis), it
-greedily improves it. Then it tries to improve the solution further by
-generating randomized modifications (an antithesis) of the current assignment,
-greedily improving it, and then combining the two assignments to form a new
-assignment, which is also greedily improved (the synthesis). If this new
-assignment is at least as good, it is considered the new current assignment. If
-this process does not result in improvements for a while, then the search moves
-to the modified assignment and continues searching from there.
+"""Dialectic search [1][2] algorithm works roughly as follows: it tries to
+greedily improve a given assignment (the thesis), then greedily improve a
+randomized modification (an antithesis) of the current assignment, and finally
+greedily improve a combination of the two assignments (the synthesis). If this
+new assignment is at least as good, it replaces the current assignment. If this
+process does not produce improved results for a set period of time, the search
+continues from the modified assignment instead.
 
 [1] Kadioglu S., Sellmann M. (2009) Dialectic Search. In: Gent I.P. (eds)
     Principles and Practice of Constraint Programming - CP 2009. CP 2009.

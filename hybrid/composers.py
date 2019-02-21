@@ -50,13 +50,13 @@ class SplatComposer(Runnable, traits.SubsamplesComposer):
 
 
 class GreedyPathMerge(Runnable, traits.MISO, traits.SamplesIntaking, traits.SamplesProducing):
-    """Dialectic search merge operation [1]. Two input states represent "thesis" and
-    "antithesis". We generate a path from thesis to antithesis (greedy highest
-    energy decrease bit flip at each step), and return the best sample on the
-    path, as the "synthesis".
+    """Dialectic search merge operation [1]. Generates a path from one input state,
+    representing the thesis, to another input state, representing the antithesis,
+    using a greedy method of single bit flips selected by decreasing energy.
 
-    Note: only the first sample (by energy), is considered from either input
-    state.
+    Returns the best sample on the path, which represents the synthesis.
+
+    Note: only the lowest-energy sample, is considered from either input state.
 
     [1] Kadioglu S., Sellmann M. (2009) Dialectic Search. In: Gent I.P. (eds)
         Principles and Practice of Constraint Programming - CP 2009. CP 2009.
