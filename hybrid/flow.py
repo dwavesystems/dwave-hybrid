@@ -27,7 +27,8 @@ from hybrid import traits
 
 __all__ = [
     'Branch', 'RacingBranches', 'Race', 'ParallelBranches', 'Parallel',
-    'Map', 'Reduce', 'Lambda', 'ArgMin', 'Loop', 'SimpleIterator', 'Unwind'
+    'Map', 'Reduce', 'Lambda', 'ArgMin', 'Loop', 'SimpleIterator', 'LoopN',
+    'LoopUntilNoImprovement', 'LoopWhileNoImprovement', 'Unwind', 'TrackMin'
 ]
 
 logger = logging.getLogger(__name__)
@@ -262,7 +263,11 @@ class ParallelBranches(Runnable, traits.SIMO):
     Args:
         *branches ([:class:`Runnable`]):
             Comma-separated branches.
-        endomorphic (bool):
+
+        endomorphic (bool, optional, default=True):
+            Include an implicit "identity branch", resulting in the input state
+            being copied (prepended) to the output States list.
+
             Set to ``False`` if you are not sure that the codomain of all branches
             is the domain; for example, if there might be a mix of subproblems
             and problems moving between components.
@@ -282,10 +287,6 @@ class ParallelBranches(Runnable, traits.SIMO):
     """
 
     def __init__(self, *branches, **kwargs):
-        """If known upfront codomain for all branches equals domain, state
-        can safely be mixed in with branches' results. Otherwise set
-        `endomorphic=False`.
-        """
         super(ParallelBranches, self).__init__()
         self.branches = branches
         self.endomorphic = kwargs.get('endomorphic', True)
@@ -587,13 +588,107 @@ class ArgMin(Runnable, traits.MISO):
         return states[min_idx]
 
 
-class Loop(Runnable):
+class TrackMin(Runnable, traits.SISO):
+    """Tracks and records the best :class:`State` according to a metric defined
+    with a `key` function; typically this is the minimal :class:`State`.
+
+    Args:
+        key (callable/str, optional, default=None):
+            Best State is judged according to a metric defined with a `key`.
+            `key` can be a `callable` with a signature::
+
+                key :: (State s, Ord k) => s -> k
+
+            or a string holding a key name/path to be extracted from the input
+            state with `operator.attrgetter` method.
+
+            By default, `key == operator.attrgetter('samples.first.energy')`,
+            thus favoring states containing a sample with the minimal energy.
+
+        output (bool, optional, default=False):
+            Update the output State's `output_key` with the `input_key` of the
+            best State seen so far.
+
+        input_key (str, optional, default='samples')
+            If `output=True`, then this defines the variable/key name in the
+            input State that shall be included in the output state.
+
+        output_key (str, optional, default='best_samples')
+            If `output=True`, then the key under which the `input_key` from the
+            best state seen so far is stored in the output State.
+
+    """
+
+    def __init__(self, key=None, output=False, input_key='samples',
+                 output_key='best_samples'):
+        super(TrackMin, self).__init__()
+        if key is None:
+            key = 'samples.first.energy'
+        if isinstance(key, six.string_types):
+            key = attrgetter(key)
+        self.key = key
+        self.output = output
+        self.output_key = output_key
+        self.input_key = input_key
+
+    def __repr__(self):
+        return (
+            "{self.name}(key={self.key!r}, output={self.output!r}, "
+            "input_key={self.input_key!r}, output_key={self.output_key!r})"
+        ).format(self=self)
+
+    def init(self, state):
+        self.best = state
+        logger.debug("{} selected {!r} for the initial best state".format(
+            self.name, self.best))
+
+    def next(self, state):
+        if self.key(state) < self.key(self.best):
+            self.best = state
+            self.count('new-best')
+            logger.debug("{} selected {!r} for the new best state".format(
+                self.name, self.best))
+
+        if self.output:
+            return state.updated(**{self.output_key: self.best[self.input_key]})
+
+        return state
+
+
+class LoopUntilNoImprovement(Runnable):
     """Iterates `runnable` for up to `max_iter` times, or until a state quality
     metric, defined by the `key` function, shows no improvement for at least
-    `convergence` time."""
+    `convergence` number of iterations.
+
+    Args:
+        runnable (:class:`Runnable`):
+            A runnable that's looped over.
+
+        max_iter (int/None, optional, default=1000):
+            Maximum number of times the `runnable` is run, regardless of other
+            termination criteria. This is the upper bound. If set to `None`,
+            upper bound on the number or iterations is not set.
+
+        convergence (int, optional, default=10):
+            Terminates upon reaching this number of iterations with unchanged
+            output.
+
+        key (callable/str):
+            Best state is judged according to a metric defined with a `key`.
+            `key` can be a `callable` with a signature::
+
+                key :: (State s, Ord k) => s -> k
+
+            or a string holding a key name/path to be extracted from the input
+            state with `operator.attrgetter` method.
+
+            By default, `key == operator.attrgetter('samples.first.energy')`,
+            thus favoring states containing a sample with the minimal energy.
+
+    """
 
     def __init__(self, runnable, max_iter=1000, convergence=10, key=None):
-        super(Loop, self).__init__()
+        super(LoopUntilNoImprovement, self).__init__()
         self.runnable = runnable
         self.max_iter = max_iter
         self.convergence = convergence
@@ -623,32 +718,126 @@ class Loop(Runnable):
     def __iter__(self):
         return iter((self.runnable,))
 
+    def iteration_update(self, iterno, cnt, input_state, output_state):
+        """Implement "converge on unchanging output" behavior:
+
+          - loop `max_iter` times, but bail-out earlier if output doesn't change
+            (over input) for `convergence` number of iterations
+
+          - each iteration starts with the previous result state
+
+        Input: relevant counters and I/O states.
+        Output: next input state and next counter values
+        """
+
+        input_energy = self.key(input_state)
+        output_energy = self.key(output_state)
+
+        logger.info("{name} Iteration(iterno={iterno}, output_state_energy={key})".format(
+            name=self.name, iterno=iterno, key=output_energy))
+
+        if output_energy == input_energy:
+            cnt -= 1
+        else:
+            cnt = self.convergence
+
+        return iterno + 1, cnt, output_state
+
     def next(self, state):
-        """Execute one blocking iteration of an instantiated :class:`Loop`."""
-        last = state
-        last_quality = self.key(last)
+        iterno = 0
         cnt = self.convergence
+        input_state = state
 
-        for iterno in range(self.max_iter):
-            state = self.runnable.run(state, executor=immediate_executor).result()
-            state_quality = self.key(state)
+        while True:
+            output_state = self.runnable.run(input_state, executor=immediate_executor).result()
 
-            logger.info("{name} Iteration(iterno={iterno}, best_state_quality={key})".format(
-                name=self.name, iterno=iterno, key=state_quality))
+            iterno, cnt, input_state = self.iteration_update(iterno, cnt, input_state, output_state)
 
-            if state_quality == last_quality:
-                cnt -= 1
-            else:
-                cnt = self.convergence
+            if self.max_iter is not None and iterno >= self.max_iter:
+                break
             if cnt <= 0:
                 break
 
-            last_quality = state_quality
+        return output_state
 
-        return state
 
+class LoopN(LoopUntilNoImprovement):
+    """Iterate `runnable` exactly `n` times, using each output as input in the
+    next iteration.
+    """
+
+    def __init__(self, runnable, n):
+        super(LoopN, self).__init__(
+            runnable=runnable, max_iter=n, convergence=n, key=lambda _: 0)
+
+
+class Loop(LoopUntilNoImprovement):
+    pass
 
 SimpleIterator = Loop
+
+
+class LoopWhileNoImprovement(LoopUntilNoImprovement):
+    """Iterates `runnable` until a state quality metric, defined by the `key`
+    function, shows no improvement for at least `max_tries` number of
+    iterations.
+
+    Args:
+        runnable (:class:`Runnable`):
+            A runnable that's looped over.
+
+        max_tries (int, optional, default=10):
+            Maximum number of times the `runnable` is run for the **same** input
+            state. On each improvement, the better state is used for the next
+            input state, and the try/trial counter is reset.
+
+        key (callable/str):
+            Best state is judged according to a metric defined with a `key`.
+            `key` can be a `callable` with a signature::
+
+                key :: (State s, Ord k) => s -> k
+
+            or a string holding a key name/path to be extracted from the input
+            state with `operator.attrgetter` method.
+
+            By default, `key == operator.attrgetter('samples.first.energy')`,
+            thus favoring states containing a sample with the minimal energy.
+
+    """
+
+    def __init__(self, runnable, max_tries=10, key=None):
+        super(LoopWhileNoImprovement, self).__init__(
+            runnable=runnable, max_iter=None, convergence=max_tries, key=key)
+
+    def iteration_update(self, iterno, cnt, input_state, output_state):
+        """Implement "no-improvement count-down" behavior:
+
+          - loop indefinitely, but bail-out if there's no improvement of output
+            over input for `max_tries` number of iterations
+
+          - each iteration uses the same input state, unless there was an improvement
+            in this iteration, in which case, use the current output as next input
+
+        Input: relevant counters and I/O states.
+        Output: next input state and next counter values
+        """
+
+        input_energy = self.key(input_state)
+        output_energy = self.key(output_state)
+
+        logger.info("{name} Iteration(iterno={iterno}, output_state_energy={key})".format(
+            name=self.name, iterno=iterno, key=output_energy))
+
+        if output_energy >= input_energy:
+            # no improvement, re-use the same input
+            cnt -= 1
+            next_input_state = input_state
+        else:
+            # improvement, use the better output for next input, restart local counter
+            cnt = self.convergence
+            next_input_state = output_state
+
+        return iterno + 1, cnt, next_input_state
 
 
 class Unwind(Runnable, traits.SIMO):

@@ -168,7 +168,7 @@ def bqm_edges_between_variables(bqm, variables):
     return edges
 
 
-def flip_energy_gains(bqm, sample):
+def flip_energy_gains(bqm, sample, variables=None):
     """Order variable flips by descending contribution to energy changes in a BQM.
 
     Args:
@@ -177,6 +177,9 @@ def flip_energy_gains(bqm, sample):
         sample (list/dict):
             Sample values as returned by dimod samplers (0 or 1 values for dimod.BINARY
             and -1 or +1 for dimod.SPIN)
+        variables (sequence, optional, default=None):
+            Consider only flips of these variables. If undefined, consider all
+            variables in `sample`.
 
     Returns:
         list: Energy changes in descending order, in the format of tuples
@@ -205,9 +208,13 @@ def flip_energy_gains(bqm, sample):
     else:
         raise ValueError("vartype not supported")
 
+    if variables is None:
+        variables = iter(sample)
+
     energy_gains = []
     sample = sample_as_dict(sample)
-    for idx, val in sample.items():
+    for idx in variables:
+        val = sample[idx]
         contrib = bqm.linear[idx] + sum(w * sample[neigh] for neigh, w in bqm.adj[idx].items())
         energy_gains.append((contrib * delta(val), idx))
 

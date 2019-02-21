@@ -52,6 +52,18 @@ class TestEnergyFlipGainUtils(unittest.TestCase):
         gains = flip_energy_gains(self.notb, {'a': 1, 'b': 1, 'c': 1})
         self.assertEqual(gains, [(0.0, 'c'), (0.0, 'a'), (-4.0, 'b')])
 
+    def test_subset(self):
+        """Flip energy is correctly calculated for a subset of variables."""
+
+        gains = flip_energy_gains(self.notb, {'a': 1, 'b': 1, 'c': 1}, {'b'})
+        self.assertEqual(gains, [(-4.0, 'b')])
+
+        gains = flip_energy_gains(self.notb, {'a': 1, 'b': 1, 'c': 1}, ['c'])
+        self.assertEqual(gains, [(0.0, 'c')])
+
+        gains = flip_energy_gains(self.notb, {'a': 1, 'b': 1, 'c': 1}, 'ab')
+        self.assertEqual(gains, [(0.0, 'a'), (-4.0, 'b')])
+
     def test_localsearch_adversaries(self):
         """When var flip increases energy."""
 

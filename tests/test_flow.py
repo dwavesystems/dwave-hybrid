@@ -22,7 +22,8 @@ import dimod
 
 from hybrid.flow import (
     Branch, RacingBranches, ParallelBranches,
-    ArgMin, Loop, Map, Reduce, Lambda, Unwind
+    ArgMin, Loop, Map, Reduce, Lambda, Unwind,
+    LoopWhileNoImprovement, LoopN, TrackMin
 )
 from hybrid.core import State, States, Runnable, Present
 from hybrid.utils import min_sample, max_sample
@@ -225,14 +226,74 @@ class TestArgMin(unittest.TestCase):
         self.assertEqual(best.samples.first.energy, 1)
 
 
+class TestTrackMin(unittest.TestCase):
+
+    def test_look_and_feel(self):
+        tracker = TrackMin(key=False, output=False, output_key='a', input_key='a')
+        self.assertEqual(tracker.name, 'TrackMin')
+        self.assertEqual(str(tracker), 'TrackMin')
+        self.assertEqual(repr(tracker), "TrackMin(key=False, output=False, input_key='a', output_key='a')")
+
+    def test_default_tracking(self):
+        """Best seen state is kept (default: state with sampleset with the lowest energy)"""
+
+        bqm = dimod.BinaryQuadraticModel({'a': 1}, {}, 0, dimod.SPIN)
+        min_state = State.from_sample(min_sample(bqm), bqm)    # energy: -1
+        max_state = State.from_sample(max_sample(bqm), bqm)    # energy: +1
+
+        tracker = TrackMin()
+        _ = tracker.run(max_state).result()
+        self.assertEqual(tracker.best.samples.first.energy, +1)
+        _ = tracker.run(min_state).result()
+        self.assertEqual(tracker.best.samples.first.energy, -1)
+        _ = tracker.run(max_state).result()
+        self.assertEqual(tracker.best.samples.first.energy, -1)
+
+    def test_custom_key(self):
+        """Custom key function works, here best state has the highest energy."""
+
+        bqm = dimod.BinaryQuadraticModel({'a': 1}, {}, 0, dimod.SPIN)
+        states = States(
+            State.from_sample(min_sample(bqm), bqm),    # energy: -1
+            State.from_sample(max_sample(bqm), bqm),    # energy: +1
+        )
+
+        tracker = TrackMin(key=lambda s: -s.samples.first.energy)
+        for state in states:
+            tracker.run(state).result()
+        self.assertEqual(tracker.best.samples.first.energy, +1)
+
+    def test_output(self):
+        """Best state is properly output, for a custom key."""
+
+        state1 = State(a=1, en=1)
+        state2 = State(a=2, en=0)
+
+        tracker = TrackMin(key=lambda s: s.en, output=True, input_key='a', output_key='best')
+        result1 = tracker.run(state1).result()
+        self.assertEqual(result1.best, 1)
+        result2 = tracker.run(state2).result()
+        self.assertEqual(result2.best, 2)
+
+
 class TestLoop(unittest.TestCase):
 
-    def test_basic(self):
+    def test_basic_max_iter(self):
         class Inc(Runnable):
             def next(self, state):
                 return state.updated(cnt=state.cnt + 1)
 
-        it = Loop(Inc(), max_iter=100, convergence=100, key=lambda _: None)
+        it = Loop(Inc(), max_iter=100, convergence=1000, key=lambda _: None)
+        s = it.run(State(cnt=0)).result()
+
+        self.assertEqual(s.cnt, 100)
+
+    def test_basic_convergence(self):
+        class Inc(Runnable):
+            def next(self, state):
+                return state.updated(cnt=state.cnt + 1)
+
+        it = Loop(Inc(), max_iter=1000, convergence=100, key=lambda _: None)
         s = it.run(State(cnt=0)).result()
 
         self.assertEqual(s.cnt, 100)
@@ -244,6 +305,52 @@ class TestLoop(unittest.TestCase):
 
         with self.assertRaises(TypeError):
             Loop(simo())
+
+
+class TestLoopN(unittest.TestCase):
+
+    def test_basic(self):
+        class Inc(Runnable):
+            def next(self, state):
+                return state.updated(cnt=state.cnt + 1)
+
+        it = LoopN(Inc(), 10)
+        s = it.run(State(cnt=0)).result()
+
+        self.assertEqual(s.cnt, 10)
+
+
+class TestLoopWhileNoImprovement(unittest.TestCase):
+
+    def test_no_improvement_tries(self):
+        class Inc(Runnable):
+            def next(self, state):
+                return state.updated(cnt=state.cnt + 1)
+
+        loop = LoopWhileNoImprovement(Inc(), max_tries=10, key=lambda _: 0)
+        state = loop.run(State(cnt=0)).result()
+
+        self.assertEqual(len(loop.runnable.timers['dispatch.next']), 10)
+        self.assertEqual(state.cnt, 1)
+
+    def test_runs_with_improvement(self):
+        class Inc(Runnable):
+            def next(self, state):
+                return state.updated(cnt=state.cnt + 1)
+
+        loop = LoopWhileNoImprovement(Inc(), max_tries=100, key=lambda state: -min(3, state.cnt))
+        state = loop.run(State(cnt=0)).result()
+
+        self.assertEqual(len(loop.runnable.timers['dispatch.next']), 103)
+        self.assertEqual(state.cnt, 4)
+
+    def test_validation(self):
+        class simo(Runnable, traits.SIMO):
+            def next(self, state):
+                return States(state, state)
+
+        with self.assertRaises(TypeError):
+            LoopWhileNoImprovement(simo())
 
 
 class TestMap(unittest.TestCase):
