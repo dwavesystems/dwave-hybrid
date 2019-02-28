@@ -110,6 +110,38 @@ class TestEnergyImpactDecomposer(unittest.TestCase):
         self.assertEqual(len(states[0].subproblem), 10)
         self.assertEqual(list(dict(states[0].subproblem.linear).values()), list(range(0,10)))
 
+    def test_energy_traverse(self):
+        eid = EnergyImpactDecomposer(size=1, traversal='energy')
+        var = eid.traverse(bqm=None, sample=None, order=[1,2,3], visited=[2,1], size=2)
+        self.assertEqual(var, [3])
+
+    def test_bfs_traverse_connected(self):
+        eid = EnergyImpactDecomposer(size=None, traversal='bfs')
+        bqm = dimod.BinaryQuadraticModel({}, {'ab': 1, 'bc': 1, 'cd': 1, 'da': 1}, 0.0, dimod.SPIN)
+        var = eid.traverse(bqm=bqm, sample=None, order='bdac', visited=set(), size=3)
+        # start from 'b', pick 2 more neighbors
+        self.assertEqual(var, set('abc'))
+
+    def test_bfs_traverse_connected_too_small(self):
+        eid = EnergyImpactDecomposer(size=None, traversal='bfs')
+        bqm = dimod.BinaryQuadraticModel({}, {'ab': 1, 'bc': 1, 'cd': 1, 'da': 1}, 0.0, dimod.SPIN)
+        var = eid.traverse(bqm=bqm, sample=None, order='bdac', visited=set(), size=5)
+        # start from 'b', try to pick more then there is (get complete graph back)
+        self.assertEqual(var, set('abcd'))
+
+    def test_bfs_traverse_connected_some_visited(self):
+        eid = EnergyImpactDecomposer(size=None, traversal='bfs')
+        bqm = dimod.BinaryQuadraticModel({}, {'ab': 1, 'bc': 1, 'cd': 1, 'da': 1, 'bd': 1}, 0.0, dimod.SPIN)
+        var = eid.traverse(bqm=bqm, sample=None, order='bdac', visited=set('b'), size=3)
+        # start with 'b' visited, so use 'd' as root and pick 2 more neighbors
+        self.assertEqual(var, set('dac'))
+
+    def test_bfs_traverse_disconnected_some_visited(self):
+        eid = EnergyImpactDecomposer(size=None, traversal='bfs')
+        bqm = dimod.BinaryQuadraticModel({}, {'ab': 1, 'bc': 1, 'cd': 1, 'da': 1, 'ef': 1, 'fg': 1}, 0.0, dimod.SPIN)
+        var = eid.traverse(bqm=bqm, sample=None, order='abcdefg', visited=set('abc'), size=3)
+        # pick 'd' from first graph component, and 'ef' from the second
+        self.assertEqual(var, set('def'))
 
 class TestRandomSubproblemDecomposer(unittest.TestCase):
     bqm = dimod.BinaryQuadraticModel({}, {'ab': 1, 'bc': 1}, 0, dimod.SPIN)
