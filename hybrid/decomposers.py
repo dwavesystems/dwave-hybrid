@@ -15,7 +15,7 @@
 import logging
 import collections
 import random
-from itertools import cycle
+import itertools
 
 import networkx as nx
 
@@ -93,10 +93,10 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
                  traversal='energy'):
 
         traversers = {
-            'energy': lambda eid, bqm, sample: select_localsearch_adversaries(
-                bqm, sample, min_gain=eid.min_gain),
-            'bfs': lambda eid, bqm, sample: [],
-            'pfs': lambda eid, bqm, sample: [],
+            'energy': lambda bqm, sample, order, visited: list(itertools.islice(
+                (v for v in order if v not in visited), size)),
+            'bfs': lambda bqm, sample, order, visited: [],
+            'pfs': lambda bqm, sample, order, visited: [],
         }
 
         super(EnergyImpactDecomposer, self).__init__()
@@ -119,7 +119,7 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
         self._rolling_bqm = None
 
         # variable caching
-        self._variables = []
+        self._ordered_variables = []
         self._prev_sample = None
 
     def __repr__(self):
@@ -152,20 +152,24 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
         if sample_changed:
             self._prev_sample = sample
 
-        if bqm_changed or sample_changed or not self._variables:
-            self._variables = self.traverse(self, bqm, sample)
+        # cache energy impact calculation per (bqm, sample)
+        if bqm_changed or sample_changed or not self._ordered_variables:
+            self._ordered_variables = select_localsearch_adversaries(
+                bqm, sample, min_gain=self.min_gain)
 
         if self.rolling:
             if len(self._unrolled_vars) >= self.rolling_history * len(bqm):
                 logger.debug("Rolling reset at unrolled history size = %d",
-                            len(self._unrolled_vars))
+                             len(self._unrolled_vars))
                 self._rewind_rolling(state)
                 # reset before exception, to be ready on a subsequent call
                 if not self.silent_rewind:
                     raise EndOfStream
 
-        novel_vars = [v for v in self._variables if v not in self._unrolled_vars]
-        next_vars = novel_vars[:size]
+        # pick variables for the next subproblem
+        next_vars = self.traverse(bqm, sample,
+                                  order=self._ordered_variables,
+                                  visited=self._unrolled_vars)
 
         logger.debug("Selected %d subproblem variables: %r",
                      len(next_vars), next_vars)
@@ -245,7 +249,7 @@ class TilingChimeraDecomposer(Runnable, traits.ProblemDecomposer, traits.Embeddi
     def init(self, state):
         self.blocks = iter(chimera_tiles(state.problem, *self.size).items())
         if self.loop:
-            self.blocks = cycle(self.blocks)
+            self.blocks = itertools.cycle(self.blocks)
 
     def next(self, state):
         """Each call returns a subsequent block of size `self.size` Chimera cells."""
