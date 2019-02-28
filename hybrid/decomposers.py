@@ -88,15 +88,64 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
         See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/decomposers.html#examples.
     """
 
+    @classmethod
+    def _energy(cls, bqm, sample, order, visited, size):
+        return list(itertools.islice(
+                (v for v in order if v not in visited), size))
+
+    @classmethod
+    def _bfs_nodes(cls, graph, root, size):
+        """Traverse `graph` with BFS staring from `root`, up to `size` nodes.
+        Return subgraph nodes iterator (including root node).
+        """
+        if size < 1:
+            return iter(())
+
+        return itertools.chain(
+            (root,),
+            itertools.islice((v for u, v in nx.bfs_edges(graph, root)), size-1)
+        )
+
+    @classmethod
+    def _bfs(cls, bqm, sample, order, visited, size):
+        """Traverse `bqm` graph using multi-start BFS, until `size` variables
+        are selected. Each subgraph is seeded from `order` list.
+
+        Note: a lot of room for optimization. Nx graph and order could be cached,
+        of we could use a BFS which accepts a "node mask" - set of visited nodes.
+        """
+        graph = bqm.to_networkx_graph()
+        graph.remove_nodes_from(visited)
+
+        variables = set()
+        order = iter(order)
+
+        while len(variables) < size and len(graph):
+            # find the next untraversed variable in (energy) order
+            try:
+                source = next(order)
+                while source in visited or source in variables:
+                    source = next(order)
+            except StopIteration:
+                break
+
+            # get a subgraph induced by source
+            nodes = list(cls._bfs_nodes(graph, source, size - len(variables)))
+            variables.update(nodes)
+
+            # in next iteration we traverse a reduced BQM graph
+            graph.remove_nodes_from(nodes)
+
+        return variables
+
     def __init__(self, size, min_gain=None,
                  rolling=True, rolling_history=0.1, silent_rewind=True,
                  traversal='energy'):
 
         traversers = {
-            'energy': lambda bqm, sample, order, visited: list(itertools.islice(
-                (v for v in order if v not in visited), size)),
-            'bfs': lambda bqm, sample, order, visited: [],
-            'pfs': lambda bqm, sample, order, visited: [],
+            'energy': self._energy,
+            'bfs': self._bfs,
+            'pfs': lambda *a, **kw: None,
         }
 
         super(EnergyImpactDecomposer, self).__init__()
@@ -169,7 +218,8 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
         # pick variables for the next subproblem
         next_vars = self.traverse(bqm, sample,
                                   order=self._ordered_variables,
-                                  visited=self._unrolled_vars)
+                                  visited=self._unrolled_vars,
+                                  size=self.size)
 
         logger.debug("Selected %d subproblem variables: %r",
                      len(next_vars), next_vars)
