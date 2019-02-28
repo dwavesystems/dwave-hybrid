@@ -70,23 +70,49 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
             On unrolling reset condition, should :exc:`EndOfStream` be raised together
             with resetting/rewinding the subproblem generator?
 
+        traversal (str, optional, default='energy'):
+            Traversal algorithm used to pick a subproblem of `size`. Options are:
+
+            energy:
+                Use the next `size` variables in the list of variables ordered by energy impact.
+
+            bfs:
+                Breadth-first traversal seeded by the next variable in the energy impact list.
+
+            pfs:
+                Priority-first traversal seeded by variables from the energy impact list,
+                proceeding with the variable on the search boundary that has the highest
+                energy impact.
+
     Examples:
         See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/decomposers.html#examples.
     """
 
     def __init__(self, size, min_gain=None,
-                 rolling=True, rolling_history=0.1, silent_rewind=True):
+                 rolling=True, rolling_history=0.1, silent_rewind=True,
+                 traversal='energy'):
+
+        traversers = {
+            'energy': lambda eid, bqm, sample: select_localsearch_adversaries(
+                bqm, sample, min_gain=eid.min_gain),
+            'bfs': lambda eid, bqm, sample: [],
+            'pfs': lambda eid, bqm, sample: [],
+        }
 
         super(EnergyImpactDecomposer, self).__init__()
 
         if rolling and rolling_history < 0.0 or rolling_history > 1.0:
             raise ValueError("rolling_history must be a float in range [0.0, 1.0]")
 
+        if traversal not in traversers:
+            raise ValueError("traversal mode not supported: {}".format(traversal))
+
         self.size = size
         self.min_gain = min_gain
         self.rolling = rolling
         self.rolling_history = rolling_history
         self.silent_rewind = silent_rewind
+        self.traverse = traversers[traversal]
 
         # variables unrolled so far
         self._unrolled_vars = set()
@@ -127,8 +153,7 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
             self._prev_sample = sample
 
         if bqm_changed or sample_changed or not self._variables:
-            self._variables = select_localsearch_adversaries(
-                bqm, sample, min_gain=self.min_gain)
+            self._variables = self.traverse(self, bqm, sample)
 
         if self.rolling:
             if len(self._unrolled_vars) >= self.rolling_history * len(bqm):
