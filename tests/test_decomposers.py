@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import string
 import itertools
 import unittest
 from functools import partial
@@ -142,6 +143,26 @@ class TestEnergyImpactDecomposer(unittest.TestCase):
         var = eid.traverse(bqm=bqm, sample=None, order='abcdefg', visited=set('abc'), size=3)
         # pick 'd' from first graph component, and 'ef' from the second
         self.assertEqual(var, set('def'))
+
+    def test_bfs_on_sequential_eid_calls_over_disconnected_problem_graph(self):
+        # problem graph has two components, each one is 4-node cycle graph
+        edges = {'ab': 1, 'bc': 1, 'cd': 1, 'da': 1,
+                 'ef': 1, 'fg': 1, 'gh': 1, 'he': 1}
+        biases = dict(zip(string.ascii_letters, range(8, 0, -1)))
+        bqm = dimod.BinaryQuadraticModel(biases, edges, 0.0, 'SPIN')
+        sample = {i: -1 for i in bqm.variables}
+
+        state = State.from_sample(sample, bqm)
+        eid = EnergyImpactDecomposer(size=3, rolling=True, rolling_history=1.0, silent_rewind=False)
+        states = list(iter(partial(eid.next, state=state), None))
+
+        # energy impact list is: [a..h], so of the 3 subproblems generated,
+        # the middle one is disconnected with one var from first group and two
+        # variables from the second
+        self.assertEqual(set(states[0].subproblem.variables), set('abc'))
+        self.assertEqual(set(states[1].subproblem.variables), set('def'))
+        self.assertEqual(set(states[2].subproblem.variables), set('gh'))
+
 
 class TestRandomSubproblemDecomposer(unittest.TestCase):
     bqm = dimod.BinaryQuadraticModel({}, {'ab': 1, 'bc': 1}, 0, dimod.SPIN)
