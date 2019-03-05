@@ -279,6 +279,24 @@ class TestEnergyImpactDecomposer(unittest.TestCase):
         # the second component is exhausted in search for 3 variable subproblem
         self.assertEqual(set(states[2].subproblem.variables), set('gh'))
 
+    def test_pfs_on_impactful_far_subproblem(self):
+        # problem graph has two components, each one is 4-node cycle graph
+        # variable flip energy gains order variables: a, h..b
+        edges = {'ab': 1, 'bc': 1, 'cd': 1, 'da': 1,
+                 'ef': 1, 'fg': 1, 'gh': 1, 'he': 1,
+                 'de': 0}
+        biases = dict(zip(string.ascii_letters, range(8)))
+        biases['a'] += 10
+        bqm = dimod.BinaryQuadraticModel(biases, edges, 0.0, 'SPIN')
+        sample = {i: -1 for i in bqm.variables}
+
+        state = State.from_sample(sample, bqm)
+        eid = EnergyImpactDecomposer(size=5, traversal='pfs')
+        result = eid.run(state).result()
+
+        # move towards second cluster and pick the highest energy variables from there
+        self.assertEqual(set(result.subproblem.variables), set('adehg'))
+
 
 class TestRandomSubproblemDecomposer(unittest.TestCase):
     bqm = dimod.BinaryQuadraticModel({}, {'ab': 1, 'bc': 1}, 0, dimod.SPIN)
