@@ -219,6 +219,66 @@ class TestEnergyImpactDecomposer(unittest.TestCase):
         self.assertEqual(set(pfs(graph, 3, 7, priority)), set([1, 2, 3, 4, 5, 6, 7]))
         self.assertEqual(set(pfs(graph, 3, 8, priority)), set([0, 1, 2, 3, 4, 5, 6, 7]))
 
+    def test_pfs_traverse_connected(self):
+        eid = EnergyImpactDecomposer(size=None, traversal='pfs')
+        bqm = dimod.BinaryQuadraticModel({}, {'ab': 1, 'bc': 1, 'cd': 1, 'da': 1}, 0.0, dimod.SPIN)
+        priority = collections.OrderedDict(zip('bdac', itertools.count(0, -1)))
+        var = eid.traverse(bqm=bqm, sample=None, ordered_priority=priority, visited=set(), size=3)
+        # start from 'b', pick 2 connected variables, traversed in order of best energy (priority)
+        self.assertEqual(var, set('bad'))
+
+    def test_pfs_traverse_connected_too_small(self):
+        eid = EnergyImpactDecomposer(size=None, traversal='pfs')
+        bqm = dimod.BinaryQuadraticModel({}, {'ab': 1, 'bc': 1, 'cd': 1, 'da': 1}, 0.0, dimod.SPIN)
+        priority = collections.OrderedDict(zip('bdac', itertools.count(0, -1)))
+        var = eid.traverse(bqm=bqm, sample=None, ordered_priority=priority, visited=set(), size=5)
+        # start from 'b', try to pick more then there is (get complete graph back)
+        self.assertEqual(var, set('abcd'))
+
+    def test_pfs_traverse_connected_some_visited(self):
+        eid = EnergyImpactDecomposer(size=None, traversal='pfs')
+        bqm = dimod.BinaryQuadraticModel({}, {'ab': 1, 'bc': 1, 'cd': 1, 'da': 1, 'bd': 1}, 0.0, dimod.SPIN)
+        priority = collections.OrderedDict(zip('bdac', itertools.count(0, -1)))
+        var = eid.traverse(bqm=bqm, sample=None, ordered_priority=priority, visited=set('b'), size=3)
+        # start with 'b' visited, so use 'd' as root and pick 2 more neighbors
+        self.assertEqual(var, set('dac'))
+
+    def test_pfs_traverse_disconnected_some_visited(self):
+        eid = EnergyImpactDecomposer(size=None, traversal='pfs')
+        bqm = dimod.BinaryQuadraticModel({}, {'ab': 1, 'bc': 1, 'cd': 1, 'da': 1, 'ef': 1, 'fg': 1}, 0.0, dimod.SPIN)
+        priority = collections.OrderedDict(zip('abcdefg', itertools.count(0, -1)))
+        var = eid.traverse(bqm=bqm, sample=None, ordered_priority=priority, visited=set('abc'), size=3)
+        # pick 'd' from first graph component, and 'ef' from the second
+        self.assertEqual(var, set('def'))
+
+    def test_pfs_on_sequential_eid_calls_over_disconnected_problem_graph(self):
+        # problem graph has two components, each one is 4-node cycle graph
+        edges = {'ab': 1, 'bc': 1, 'cd': 1, 'da': 1,
+                 'ef': 1, 'fg': 1, 'gh': 1, 'he': 1}
+        biases = dict(zip(string.ascii_letters, range(8, 0, -1)))
+        bqm = dimod.BinaryQuadraticModel(biases, edges, 0.0, 'SPIN')
+        sample = {i: -1 for i in bqm.variables}
+
+        state = State.from_sample(sample, bqm)
+        eid = EnergyImpactDecomposer(size=3, traversal='pfs', rolling=True,
+                                     rolling_history=1.0, silent_rewind=False)
+        states = list(iter(partial(eid.next, state=state), None))
+
+        # energy impact list is: [a..h], so of the 3 subproblems generated,
+        # the middle one is disconnected with one var from first group and two
+        # variables from the second
+
+        # pfs is seeded with `a` and connected nodes in order of energy are picked
+        self.assertEqual(set(states[0].subproblem.variables), set('abc'))
+
+        # `d` left from the first component, and the seed for the next
+        # subproblem is the next highest in energy `e`.
+        # unlike in bfs, the order of `e`'s neighbors is well defined
+        self.assertEqual(set(states[1].subproblem.variables), set('def'))
+
+        # the second component is exhausted in search for 3 variable subproblem
+        self.assertEqual(set(states[2].subproblem.variables), set('gh'))
+
 
 class TestRandomSubproblemDecomposer(unittest.TestCase):
     bqm = dimod.BinaryQuadraticModel({}, {'ab': 1, 'bc': 1}, 0, dimod.SPIN)
