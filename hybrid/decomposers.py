@@ -25,7 +25,7 @@ from hybrid.core import Runnable, State
 from hybrid.exceptions import EndOfStream
 from hybrid import traits
 from hybrid.utils import (
-    bqm_induced_by, select_localsearch_adversaries, select_random_subgraph,
+    bqm_induced_by, flip_energy_gains, select_random_subgraph,
     chimera_tiles)
 
 __all__ = [
@@ -91,12 +91,12 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
     """
 
     @classmethod
-    def _energy(cls, bqm, sample, order, visited, size):
+    def _energy(cls, bqm, sample, ordered_priority, visited, size):
         return list(itertools.islice(
-                (v for v in order if v not in visited), size))
+                (v for v in ordered_priority if v not in visited), size))
 
     @classmethod
-    def _bfs_nodes(cls, graph, source, size):
+    def _bfs_nodes(cls, graph, source, size, **kwargs):
         """Traverse `graph` with BFS staring from `source`, up to `size` nodes.
         Return subgraph nodes iterator (including source node).
         """
@@ -145,18 +145,20 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
         return iter(visited)
 
     @classmethod
-    def _bfs(cls, bqm, sample, order, visited, size):
-        """Traverse `bqm` graph using multi-start BFS, until `size` variables
-        are selected. Each subgraph is seeded from `order` list.
+    def _iterative_graph_search(cls, method, bqm, sample, ordered_priority, visited, size):
+        """Traverse `bqm` graph using multi-start graph search `method`, until
+        `size` variables are selected. Each subgraph is seeded from
+        `ordered_priority` ordered dictionary.
 
-        Note: a lot of room for optimization. Nx graph and order could be cached,
-        of we could use a BFS which accepts a "node mask" - set of visited nodes.
+        Note: a lot of room for optimization. Nx graph could be cached,
+        or we could use a search/traverse method (BFS/PFS) which accepts a
+        "node mask" - set of visited nodes.
         """
         graph = bqm.to_networkx_graph()
         graph.remove_nodes_from(visited)
 
         variables = set()
-        order = iter(order)
+        order = iter(ordered_priority)
 
         while len(variables) < size and len(graph):
             # find the next untraversed variable in (energy) order
@@ -168,7 +170,8 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
                 break
 
             # get a subgraph induced by source
-            nodes = list(cls._bfs_nodes(graph, source, size - len(variables)))
+            nodes = list(
+                method(graph, source, size - len(variables), priority=ordered_priority.get))
             variables.update(nodes)
 
             # in next iteration we traverse a reduced BQM graph
@@ -182,8 +185,8 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
 
         traversers = {
             'energy': self._energy,
-            'bfs': self._bfs,
-            'pfs': lambda *a, **kw: None,
+            'bfs': partial(self._iterative_graph_search, method=self._bfs_nodes),
+            'pfs': partial(self._iterative_graph_search, method=self._pfs_nodes),
         }
 
         super(EnergyImpactDecomposer, self).__init__()
@@ -205,8 +208,8 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
         self._unrolled_vars = set()
         self._rolling_bqm = None
 
-        # variable caching
-        self._ordered_variables = []
+        # variable energy impact caching
+        self._variable_priority = collections.OrderedDict()
         self._prev_sample = None
 
     def __repr__(self):
@@ -240,9 +243,9 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
             self._prev_sample = sample
 
         # cache energy impact calculation per (bqm, sample)
-        if bqm_changed or sample_changed or not self._ordered_variables:
-            self._ordered_variables = select_localsearch_adversaries(
-                bqm, sample, min_gain=self.min_gain)
+        if bqm_changed or sample_changed or not self._variable_priority:
+            impact = flip_energy_gains(bqm, sample, min_gain=self.min_gain)
+            self._variable_priority = collections.OrderedDict((v, en) for en, v in impact)
 
         if self.rolling:
             if len(self._unrolled_vars) >= self.rolling_history * len(bqm):
@@ -255,7 +258,7 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
 
         # pick variables for the next subproblem
         next_vars = self.traverse(bqm, sample,
-                                  order=self._ordered_variables,
+                                  ordered_priority=self._variable_priority,
                                   visited=self._unrolled_vars,
                                   size=self.size)
 
