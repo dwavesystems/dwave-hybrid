@@ -16,6 +16,8 @@ import logging
 import collections
 import random
 import itertools
+from heapq import heappush, heappop
+from functools import partial
 
 import networkx as nx
 
@@ -94,17 +96,53 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
                 (v for v in order if v not in visited), size))
 
     @classmethod
-    def _bfs_nodes(cls, graph, root, size):
-        """Traverse `graph` with BFS staring from `root`, up to `size` nodes.
-        Return subgraph nodes iterator (including root node).
+    def _bfs_nodes(cls, graph, source, size):
+        """Traverse `graph` with BFS staring from `source`, up to `size` nodes.
+        Return subgraph nodes iterator (including source node).
         """
         if size < 1:
             return iter(())
 
         return itertools.chain(
-            (root,),
-            itertools.islice((v for u, v in nx.bfs_edges(graph, root)), size-1)
+            (source,),
+            itertools.islice((v for u, v in nx.bfs_edges(graph, source)), size-1)
         )
+
+    @classmethod
+    def _pfs_nodes(cls, graph, source, size, priority):
+        """Priority-first traversal of `graph` starting from `source` node,
+        returning up to `size` nodes iterable. Node priority is determined by
+        `priority(node)` callable. Nodes with higher priority value are
+        traversed before nodes with lower priority.
+        """
+        if size < 1:
+            return iter(())
+
+        # use min-heap to implement (max) priority queue
+        # use insertion order to break priority tie
+        queue = []
+        counter = itertools.count()
+        push = lambda priority, node: heappush(queue, (-priority, next(counter), node))
+        pop = partial(heappop, queue)
+
+        visited = set()
+        enqueued = set()
+        push(priority(source), source)
+
+        while queue and len(visited) < size:
+            _, _, node = pop()
+
+            if node in visited:
+                continue
+
+            visited.add(node)
+
+            for neighbor in graph[node]:
+                if neighbor not in enqueued:
+                    enqueued.add(neighbor)
+                    push(priority(neighbor), neighbor)
+
+        return iter(visited)
 
     @classmethod
     def _bfs(cls, bqm, sample, order, visited, size):
