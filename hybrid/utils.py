@@ -168,7 +168,7 @@ def bqm_edges_between_variables(bqm, variables):
     return edges
 
 
-def flip_energy_gains(bqm, sample, variables=None):
+def flip_energy_gains(bqm, sample, variables=None, min_gain=None):
     """Order variable flips by descending contribution to energy changes in a BQM.
 
     Args:
@@ -180,6 +180,9 @@ def flip_energy_gains(bqm, sample, variables=None):
         variables (sequence, optional, default=None):
             Consider only flips of these variables. If undefined, consider all
             variables in `sample`.
+        min_gain (float, optional, default=None):
+            Minimum required energy increase from flipping a sample value to return
+            its corresponding variable.
 
     Returns:
         list: Energy changes in descending order, in the format of tuples
@@ -211,12 +214,17 @@ def flip_energy_gains(bqm, sample, variables=None):
     if variables is None:
         variables = iter(sample)
 
+    if min_gain is None:
+        min_gain = float('-inf')
+
     energy_gains = []
     sample = sample_as_dict(sample)
     for idx in variables:
         val = sample[idx]
         contrib = bqm.linear[idx] + sum(w * sample[neigh] for neigh, w in bqm.adj[idx].items())
-        energy_gains.append((contrib * delta(val), idx))
+        en = contrib * delta(val)
+        if en >= min_gain:
+            energy_gains.append((en, idx))
 
     energy_gains.sort(reverse=True)
     return energy_gains
@@ -255,14 +263,12 @@ def select_localsearch_adversaries(bqm, sample, max_n=None, min_gain=None):
         ['d', 'c']
 
     """
-    var_gains = flip_energy_gains(bqm, sample)
+    var_gains = flip_energy_gains(bqm, sample, min_gain=min_gain)
 
     if max_n is None:
         max_n = len(sample)
-    if min_gain is None:
-        variables = [var for _, var in var_gains]
-    else:
-        variables = [var for en, var in var_gains if en >= min_gain]
+
+    variables = [var for _, var in var_gains]
 
     return variables[:max_n]
 
