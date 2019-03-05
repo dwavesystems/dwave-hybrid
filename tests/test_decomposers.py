@@ -18,6 +18,7 @@ import unittest
 from functools import partial
 
 import dimod
+import networkx as nx
 
 from hybrid.decomposers import (
     EnergyImpactDecomposer, RandomSubproblemDecomposer, RandomConstraintDecomposer)
@@ -162,6 +163,43 @@ class TestEnergyImpactDecomposer(unittest.TestCase):
         self.assertEqual(set(states[0].subproblem.variables), set('abc'))
         self.assertEqual(set(states[1].subproblem.variables), set('def'))
         self.assertEqual(set(states[2].subproblem.variables), set('gh'))
+
+    def test_nx_pfs_edgecases(self):
+        pfs = EnergyImpactDecomposer._pfs_nodes
+        graph = nx.Graph({'a': 'b', 'b': 'c', 'c': 'a'})
+        priority = dict(zip('abc', itertools.count())).get
+
+        self.assertEqual(set(pfs(graph, 'a', 0, priority)), set())
+        self.assertEqual(set(pfs(graph, 'a', 1, priority)), set('a'))
+        self.assertEqual(set(pfs(graph, 'a', 3, priority)), set('abc'))
+        self.assertEqual(set(pfs(graph, 'a', 4, priority)), set('abc'))
+
+    def test_nx_pfs_priority_respected(self):
+        pfs = EnergyImpactDecomposer._pfs_nodes
+        graph = nx.Graph({'a': 'b', 'b': 'c', 'c': 'a'})
+
+        priority = dict(zip('abc', [1, 2, 3])).get
+        self.assertEqual(set(pfs(graph, 'a', 2, priority)), set('ac'))
+        self.assertEqual(set(pfs(graph, 'b', 2, priority)), set('bc'))
+        self.assertEqual(set(pfs(graph, 'c', 2, priority)), set('cb'))
+
+    def test_nx_pfs_deep_search(self):
+        pfs = EnergyImpactDecomposer._pfs_nodes
+
+        # two K4 graphs connected with one edge
+        graph = nx.complete_graph(4)
+        graph.add_edges_from(nx.complete_graph(range(4,8)).edges)
+        graph.add_edge(1, 4)
+
+        # use node index for weight/priority
+        priority = lambda node: node
+
+        # make sure once the second cluster is within reach, we deplete it
+        self.assertEqual(set(pfs(graph, 3, 2, priority)), set([2, 3]))
+        self.assertEqual(set(pfs(graph, 3, 3, priority)), set([1, 2, 3]))
+        self.assertEqual(set(pfs(graph, 3, 4, priority)), set([1, 2, 3, 4]))
+        self.assertEqual(set(pfs(graph, 3, 7, priority)), set([1, 2, 3, 4, 5, 6, 7]))
+        self.assertEqual(set(pfs(graph, 3, 8, priority)), set([0, 1, 2, 3, 4, 5, 6, 7]))
 
 
 class TestRandomSubproblemDecomposer(unittest.TestCase):
