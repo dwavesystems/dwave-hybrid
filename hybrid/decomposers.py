@@ -145,7 +145,7 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
         return iter(visited)
 
     @classmethod
-    def _iterative_graph_search(cls, method, bqm, sample, ordered_priority, visited, size):
+    def _iterative_graph_search(cls, bqm, sample, ordered_priority, visited, size, method):
         """Traverse `bqm` graph using multi-start graph search `method`, until
         `size` variables are selected. Each subgraph is seeded from
         `ordered_priority` ordered dictionary.

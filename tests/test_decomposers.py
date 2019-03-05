@@ -160,15 +160,27 @@ class TestEnergyImpactDecomposer(unittest.TestCase):
         sample = {i: -1 for i in bqm.variables}
 
         state = State.from_sample(sample, bqm)
-        eid = EnergyImpactDecomposer(size=3, rolling=True, rolling_history=1.0, silent_rewind=False)
+        eid = EnergyImpactDecomposer(size=3, traversal='bfs', rolling=True,
+                                     rolling_history=1.0, silent_rewind=False)
         states = list(iter(partial(eid.next, state=state), None))
 
         # energy impact list is: [a..h], so of the 3 subproblems generated,
         # the middle one is disconnected with one var from first group and two
         # variables from the second
-        self.assertEqual(set(states[0].subproblem.variables), set('abc'))
-        self.assertEqual(set(states[1].subproblem.variables), set('def'))
-        self.assertEqual(set(states[2].subproblem.variables), set('gh'))
+
+        # `c` has higher energy, but it's not connected to `a`, so `d` is picked
+        self.assertEqual(set(states[0].subproblem.variables), set('abd'))
+
+        # `c` is picked from the first component, and the seed for the next
+        # subproblem is `e`. however, the order of `e`'s neighbors is not defined,
+        # so if we need to pick just one, it could be `f` or `h`
+        # (note: PFS has a defined order of neighbors)
+        self.assertTrue(set('cefh').difference(states[1].subproblem.variables).issubset('fh'))
+        self.assertEqual(len(states[1].subproblem.variables), 3)
+
+        # the second component is exhausted in search for 3 variable subproblem
+        third = set(states[2].subproblem.variables)
+        self.assertTrue(third == set('gh') or third == set('gf'))
 
     def test_nx_pfs_edgecases(self):
         pfs = EnergyImpactDecomposer._pfs_nodes
