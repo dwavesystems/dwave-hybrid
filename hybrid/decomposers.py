@@ -73,10 +73,11 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
             with resetting/rewinding the subproblem generator?
 
         traversal (str, optional, default='energy'):
-            Traversal algorithm used to pick a subproblem of `size`. Options are:
+            Traversal algorithm used to pick a subproblem of `size` variables. Options are:
 
             energy:
-                Use the next `size` variables in the list of variables ordered by energy impact.
+                Use the next `size` variables in the list of variables ordered
+                descendingly by energy impact.
 
             bfs:
                 Breadth-first traversal seeded by the next variable in the energy impact list.
@@ -97,8 +98,8 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
 
     @classmethod
     def _bfs_nodes(cls, graph, source, size, **kwargs):
-        """Traverse `graph` with BFS staring from `source`, up to `size` nodes.
-        Return subgraph nodes iterator (including source node).
+        """Traverse `graph` with BFS starting from `source`, up to `size` nodes.
+        Return an iterator of subgraph nodes (including source node).
         """
         if size < 1:
             return iter(())
