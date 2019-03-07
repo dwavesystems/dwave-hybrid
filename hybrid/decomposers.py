@@ -15,7 +15,9 @@
 import logging
 import collections
 import random
-from itertools import cycle
+import itertools
+from heapq import heappush, heappop
+from functools import partial
 
 import networkx as nx
 
@@ -23,7 +25,7 @@ from hybrid.core import Runnable, State
 from hybrid.exceptions import EndOfStream
 from hybrid import traits
 from hybrid.utils import (
-    bqm_induced_by, select_localsearch_adversaries, select_random_subgraph,
+    bqm_induced_by, flip_energy_gains, select_random_subgraph,
     chimera_tiles)
 
 __all__ = [
@@ -70,30 +72,145 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
             On unrolling reset condition, should :exc:`EndOfStream` be raised together
             with resetting/rewinding the subproblem generator?
 
+        traversal (str, optional, default='energy'):
+            Traversal algorithm used to pick a subproblem of `size` variables. Options are:
+
+            energy:
+                Use the next `size` variables in the list of variables ordered
+                descendingly by energy impact.
+
+            bfs:
+                Breadth-first traversal seeded by the next variable in the energy impact list.
+
+            pfs:
+                Priority-first traversal seeded by variables from the energy impact list,
+                proceeding with the variable on the search boundary that has the highest
+                energy impact.
+
     Examples:
         See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/decomposers.html#examples.
     """
 
+    @classmethod
+    def _energy(cls, bqm, sample, ordered_priority, visited, size):
+        return list(itertools.islice(
+                (v for v in ordered_priority if v not in visited), size))
+
+    @classmethod
+    def _bfs_nodes(cls, graph, source, size, **kwargs):
+        """Traverse `graph` with BFS starting from `source`, up to `size` nodes.
+        Return an iterator of subgraph nodes (including source node).
+        """
+        if size < 1:
+            return iter(())
+
+        return itertools.chain(
+            (source,),
+            itertools.islice((v for u, v in nx.bfs_edges(graph, source)), size-1)
+        )
+
+    @classmethod
+    def _pfs_nodes(cls, graph, source, size, priority):
+        """Priority-first traversal of `graph` starting from `source` node,
+        returning up to `size` nodes iterable. Node priority is determined by
+        `priority(node)` callable. Nodes with higher priority value are
+        traversed before nodes with lower priority.
+        """
+        if size < 1:
+            return iter(())
+
+        # use min-heap to implement (max) priority queue
+        # use insertion order to break priority tie
+        queue = []
+        counter = itertools.count()
+        push = lambda priority, node: heappush(queue, (-priority, next(counter), node))
+        pop = partial(heappop, queue)
+
+        visited = set()
+        enqueued = set()
+        push(priority(source), source)
+
+        while queue and len(visited) < size:
+            _, _, node = pop()
+
+            if node in visited:
+                continue
+
+            visited.add(node)
+
+            for neighbor in graph[node]:
+                if neighbor not in enqueued:
+                    enqueued.add(neighbor)
+                    push(priority(neighbor), neighbor)
+
+        return iter(visited)
+
+    @classmethod
+    def _iterative_graph_search(cls, bqm, sample, ordered_priority, visited, size, method):
+        """Traverse `bqm` graph using multi-start graph search `method`, until
+        `size` variables are selected. Each subgraph is seeded from
+        `ordered_priority` ordered dictionary.
+
+        Note: a lot of room for optimization. Nx graph could be cached,
+        or we could use a search/traverse method (BFS/PFS) which accepts a
+        "node mask" - set of visited nodes.
+        """
+        graph = bqm.to_networkx_graph()
+        graph.remove_nodes_from(visited)
+
+        variables = set()
+        order = iter(ordered_priority)
+
+        while len(variables) < size and len(graph):
+            # find the next untraversed variable in (energy) order
+            try:
+                source = next(order)
+                while source in visited or source in variables:
+                    source = next(order)
+            except StopIteration:
+                break
+
+            # get a subgraph induced by source
+            nodes = list(
+                method(graph, source, size - len(variables), priority=ordered_priority.get))
+            variables.update(nodes)
+
+            # in next iteration we traverse a reduced BQM graph
+            graph.remove_nodes_from(nodes)
+
+        return variables
+
     def __init__(self, size, min_gain=None,
-                 rolling=True, rolling_history=0.1, silent_rewind=True):
+                 rolling=True, rolling_history=0.1, silent_rewind=True,
+                 traversal='energy'):
+
+        traversers = {
+            'energy': self._energy,
+            'bfs': partial(self._iterative_graph_search, method=self._bfs_nodes),
+            'pfs': partial(self._iterative_graph_search, method=self._pfs_nodes),
+        }
 
         super(EnergyImpactDecomposer, self).__init__()
 
         if rolling and rolling_history < 0.0 or rolling_history > 1.0:
             raise ValueError("rolling_history must be a float in range [0.0, 1.0]")
 
+        if traversal not in traversers:
+            raise ValueError("traversal mode not supported: {}".format(traversal))
+
         self.size = size
         self.min_gain = min_gain
         self.rolling = rolling
         self.rolling_history = rolling_history
         self.silent_rewind = silent_rewind
+        self.traverse = traversers[traversal]
 
         # variables unrolled so far
         self._unrolled_vars = set()
         self._rolling_bqm = None
 
-        # variable caching
-        self._variables = []
+        # variable energy impact caching
+        self._variable_priority = collections.OrderedDict()
         self._prev_sample = None
 
     def __repr__(self):
@@ -126,21 +243,25 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
         if sample_changed:
             self._prev_sample = sample
 
-        if bqm_changed or sample_changed or not self._variables:
-            self._variables = select_localsearch_adversaries(
-                bqm, sample, min_gain=self.min_gain)
+        # cache energy impact calculation per (bqm, sample)
+        if bqm_changed or sample_changed or not self._variable_priority:
+            impact = flip_energy_gains(bqm, sample, min_gain=self.min_gain)
+            self._variable_priority = collections.OrderedDict((v, en) for en, v in impact)
 
         if self.rolling:
             if len(self._unrolled_vars) >= self.rolling_history * len(bqm):
                 logger.debug("Rolling reset at unrolled history size = %d",
-                            len(self._unrolled_vars))
+                             len(self._unrolled_vars))
                 self._rewind_rolling(state)
                 # reset before exception, to be ready on a subsequent call
                 if not self.silent_rewind:
                     raise EndOfStream
 
-        novel_vars = [v for v in self._variables if v not in self._unrolled_vars]
-        next_vars = novel_vars[:size]
+        # pick variables for the next subproblem
+        next_vars = self.traverse(bqm, sample,
+                                  ordered_priority=self._variable_priority,
+                                  visited=self._unrolled_vars,
+                                  size=self.size)
 
         logger.debug("Selected %d subproblem variables: %r",
                      len(next_vars), next_vars)
@@ -220,7 +341,7 @@ class TilingChimeraDecomposer(Runnable, traits.ProblemDecomposer, traits.Embeddi
     def init(self, state):
         self.blocks = iter(chimera_tiles(state.problem, *self.size).items())
         if self.loop:
-            self.blocks = cycle(self.blocks)
+            self.blocks = itertools.cycle(self.blocks)
 
     def next(self, state):
         """Each call returns a subsequent block of size `self.size` Chimera cells."""
