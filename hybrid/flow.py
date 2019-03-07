@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import logging
+import threading
 import concurrent.futures
 from operator import attrgetter
 from functools import partial
@@ -708,6 +709,9 @@ class LoopUntilNoImprovement(Runnable):
         self.outputs = self.runnable.outputs
         self.multi_output = self.runnable.multi_output
 
+        # stop flag
+        self._stop_event = threading.Event()
+
     def __str__(self):
         return "Loop over {}".format(self.runnable)
 
@@ -748,7 +752,7 @@ class LoopUntilNoImprovement(Runnable):
         cnt = self.convergence
         input_state = state
 
-        while True:
+        while not self._stop_event.is_set():
             output_state = self.runnable.run(input_state, executor=immediate_executor).result()
 
             iterno, cnt, input_state = self.iteration_update(iterno, cnt, input_state, output_state)
@@ -759,6 +763,10 @@ class LoopUntilNoImprovement(Runnable):
                 break
 
         return output_state
+
+    def halt(self):
+        self.runnable.stop()
+        self._stop_event.set()
 
 
 class LoopN(LoopUntilNoImprovement):
