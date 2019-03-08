@@ -780,9 +780,27 @@ class LoopN(LoopUntilNoImprovement):
 
 
 class Loop(LoopUntilNoImprovement):
-    pass
+    """Iterate `runnable` up to `n` times, using each output as input in the
+    next iteration.
 
-SimpleIterator = Loop
+    Args:
+        runnable (:class:`Runnable`):
+            A runnable that's looped over.
+
+        n (int/None, optional, default=None):
+            Number of times the `runnable` is run. If set to `None`,
+            upper bound on the number or iterations is not set.
+    """
+
+    def __init__(self, runnable, n=None):
+        if n is None:
+            n = float('inf')
+
+        super(Loop, self).__init__(
+            runnable=runnable, max_iter=n, convergence=n, key=lambda _: 0)
+
+
+SimpleIterator = LoopUntilNoImprovement
 
 
 class LoopWhileNoImprovement(LoopUntilNoImprovement):
