@@ -23,7 +23,7 @@ import dimod
 from hybrid.flow import (
     Branch, RacingBranches, ParallelBranches,
     ArgMin, Loop, Map, Reduce, Lambda, Unwind,
-    LoopWhileNoImprovement, LoopN, TrackMin
+    LoopWhileNoImprovement, TrackMin, SimpleIterator
 )
 from hybrid.core import State, States, Runnable, Present
 from hybrid.utils import min_sample, max_sample
@@ -276,14 +276,14 @@ class TestTrackMin(unittest.TestCase):
         self.assertEqual(result2.best, 2)
 
 
-class TestLoop(unittest.TestCase):
+class TestSimpleIterator(unittest.TestCase):
 
     def test_basic_max_iter(self):
         class Inc(Runnable):
             def next(self, state):
                 return state.updated(cnt=state.cnt + 1)
 
-        it = Loop(Inc(), max_iter=100, convergence=1000, key=lambda _: None)
+        it = SimpleIterator(Inc(), max_iter=100, convergence=1000, key=lambda _: None)
         s = it.run(State(cnt=0)).result()
 
         self.assertEqual(s.cnt, 100)
@@ -293,7 +293,7 @@ class TestLoop(unittest.TestCase):
             def next(self, state):
                 return state.updated(cnt=state.cnt + 1)
 
-        it = Loop(Inc(), max_iter=1000, convergence=100, key=lambda _: None)
+        it = SimpleIterator(Inc(), max_iter=1000, convergence=100, key=lambda _: None)
         s = it.run(State(cnt=0)).result()
 
         self.assertEqual(s.cnt, 100)
@@ -304,20 +304,31 @@ class TestLoop(unittest.TestCase):
                 return States(state, state)
 
         with self.assertRaises(TypeError):
-            Loop(simo())
+            SimpleIterator(simo())
 
 
-class TestLoopN(unittest.TestCase):
+class TestLoop(unittest.TestCase):
 
-    def test_basic(self):
+    def test_finite_loop(self):
         class Inc(Runnable):
             def next(self, state):
                 return state.updated(cnt=state.cnt + 1)
 
-        it = LoopN(Inc(), 10)
+        it = Loop(Inc(), 10)
         s = it.run(State(cnt=0)).result()
 
         self.assertEqual(s.cnt, 10)
+
+    def test_infinite_loop(self):
+        class Inc(Runnable):
+            def next(self, state):
+                return state.updated(cnt=state.cnt + 1)
+
+        it = Loop(Inc())
+        s = it.run(State(cnt=0)).result()
+        it.stop()
+
+        self.assertTrue(s.cnt > 0)
 
 
 class TestLoopWhileNoImprovement(unittest.TestCase):

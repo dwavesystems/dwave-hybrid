@@ -28,7 +28,7 @@ from hybrid import traits
 
 __all__ = [
     'Branch', 'RacingBranches', 'Race', 'ParallelBranches', 'Parallel',
-    'Map', 'Reduce', 'Lambda', 'ArgMin', 'Loop', 'SimpleIterator', 'LoopN',
+    'Map', 'Reduce', 'Lambda', 'ArgMin', 'Loop', 'SimpleIterator',
     'LoopUntilNoImprovement', 'LoopWhileNoImprovement', 'Unwind', 'TrackMin'
 ]
 
