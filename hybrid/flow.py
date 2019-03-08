@@ -769,16 +769,6 @@ class LoopUntilNoImprovement(Runnable):
         self._stop_event.set()
 
 
-class LoopN(LoopUntilNoImprovement):
-    """Iterate `runnable` exactly `n` times, using each output as input in the
-    next iteration.
-    """
-
-    def __init__(self, runnable, n):
-        super(LoopN, self).__init__(
-            runnable=runnable, max_iter=n, convergence=n, key=lambda _: 0)
-
-
 class Loop(LoopUntilNoImprovement):
     """Iterate `runnable` up to `n` times, using each output as input in the
     next iteration.
