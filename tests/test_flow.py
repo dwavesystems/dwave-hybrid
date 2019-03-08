@@ -22,8 +22,8 @@ import dimod
 
 from hybrid.flow import (
     Branch, RacingBranches, ParallelBranches,
-    ArgMin, Loop, Map, Reduce, Lambda, Unwind,
-    LoopWhileNoImprovement, TrackMin, SimpleIterator
+    ArgMin, Map, Reduce, Lambda, Unwind, TrackMin,
+    LoopUntilNoImprovement, LoopWhileNoImprovement, SimpleIterator, Loop
 )
 from hybrid.core import State, States, Runnable, Present
 from hybrid.utils import min_sample, max_sample
@@ -276,14 +276,14 @@ class TestTrackMin(unittest.TestCase):
         self.assertEqual(result2.best, 2)
 
 
-class TestSimpleIterator(unittest.TestCase):
+class TestLoopUntilNoImprovement(unittest.TestCase):
 
     def test_basic_max_iter(self):
         class Inc(Runnable):
             def next(self, state):
                 return state.updated(cnt=state.cnt + 1)
 
-        it = SimpleIterator(Inc(), max_iter=100, convergence=1000, key=lambda _: None)
+        it = LoopUntilNoImprovement(Inc(), max_iter=100, convergence=1000, key=lambda _: None)
         s = it.run(State(cnt=0)).result()
 
         self.assertEqual(s.cnt, 100)
@@ -293,7 +293,7 @@ class TestSimpleIterator(unittest.TestCase):
             def next(self, state):
                 return state.updated(cnt=state.cnt + 1)
 
-        it = SimpleIterator(Inc(), max_iter=1000, convergence=100, key=lambda _: None)
+        it = LoopUntilNoImprovement(Inc(), max_iter=1000, convergence=100, key=lambda _: None)
         s = it.run(State(cnt=0)).result()
 
         self.assertEqual(s.cnt, 100)
@@ -304,7 +304,7 @@ class TestSimpleIterator(unittest.TestCase):
                 return States(state, state)
 
         with self.assertRaises(TypeError):
-            SimpleIterator(simo())
+            LoopUntilNoImprovement(simo())
 
 
 class TestLoop(unittest.TestCase):

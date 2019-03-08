@@ -665,14 +665,16 @@ class LoopUntilNoImprovement(Runnable):
         runnable (:class:`Runnable`):
             A runnable that's looped over.
 
-        max_iter (int/None, optional, default=1000):
+        max_iter (int/None, optional, default=None):
             Maximum number of times the `runnable` is run, regardless of other
             termination criteria. This is the upper bound. If set to `None`,
             upper bound on the number or iterations is not set.
 
-        convergence (int, optional, default=10):
+        convergence (int/None, optional, default=None):
             Terminates upon reaching this number of iterations with unchanged
-            output.
+            output. If set to `None`, convergence is not checked, so the only
+            termination criteria if defined with `max_iter`. Setting neither
+            creates an infinite loop.
 
         key (callable/str):
             Best state is judged according to a metric defined with a `key`.
@@ -688,7 +690,7 @@ class LoopUntilNoImprovement(Runnable):
 
     """
 
-    def __init__(self, runnable, max_iter=1000, convergence=10, key=None):
+    def __init__(self, runnable, max_iter=None, convergence=None, key=None):
         super(LoopUntilNoImprovement, self).__init__()
         self.runnable = runnable
         self.max_iter = max_iter
@@ -749,7 +751,7 @@ class LoopUntilNoImprovement(Runnable):
 
     def next(self, state):
         iterno = 0
-        cnt = self.convergence
+        cnt = self.convergence or 0
         input_state = state
 
         while not self._stop_event.is_set():
@@ -759,7 +761,7 @@ class LoopUntilNoImprovement(Runnable):
 
             if self.max_iter is not None and iterno >= self.max_iter:
                 break
-            if cnt <= 0:
+            if self.convergence is not None and cnt <= 0:
                 break
 
         return output_state
@@ -770,27 +772,10 @@ class LoopUntilNoImprovement(Runnable):
 
 
 class Loop(LoopUntilNoImprovement):
-    """Iterate `runnable` up to `n` times, using each output as input in the
-    next iteration.
-
-    Args:
-        runnable (:class:`Runnable`):
-            A runnable that's looped over.
-
-        n (int/None, optional, default=None):
-            Number of times the `runnable` is run. If set to `None`,
-            upper bound on the number or iterations is not set.
-    """
-
-    def __init__(self, runnable, n=None):
-        if n is None:
-            n = float('inf')
-
-        super(Loop, self).__init__(
-            runnable=runnable, max_iter=n, convergence=n, key=lambda _: 0)
+    pass
 
 
-SimpleIterator = LoopUntilNoImprovement
+SimpleIterator = Loop
 
 
 class LoopWhileNoImprovement(LoopUntilNoImprovement):
