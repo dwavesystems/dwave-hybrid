@@ -283,9 +283,19 @@ class TestLoopUntilNoImprovement(unittest.TestCase):
             def next(self, state):
                 return state.updated(cnt=state.cnt + 1)
 
+        # iterate for `max_iter`
         it = LoopUntilNoImprovement(Inc(), max_iter=100, convergence=1000, key=lambda _: None)
         s = it.run(State(cnt=0)).result()
+        self.assertEqual(s.cnt, 100)
 
+        # `key` function not needed if `convergence` undefined
+        it = LoopUntilNoImprovement(Inc(), max_iter=100, convergence=None)
+        s = it.run(State(cnt=0)).result()
+        self.assertEqual(s.cnt, 100)
+
+        # `convergence` not needed for simple finite loop
+        it = LoopUntilNoImprovement(Inc(), max_iter=100)
+        s = it.run(State(cnt=0)).result()
         self.assertEqual(s.cnt, 100)
 
     def test_basic_convergence(self):
