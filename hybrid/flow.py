@@ -156,7 +156,7 @@ class Branch(Runnable):
 
 
 class RacingBranches(Runnable, traits.SIMO):
-    """Runs (races) multiple :class:`Branch`es in parallel, but stops all others
+    """Runs (races) multiple :class:`Branch` classes in parallel, but stops all others
     after the first one finishes. Returns the results of all branches, in order
     specified.
 
