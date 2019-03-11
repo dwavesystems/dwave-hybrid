@@ -298,17 +298,6 @@ class TestLoopUntilNoImprovement(unittest.TestCase):
 
         self.assertEqual(s.cnt, 100)
 
-    def test_validation(self):
-        class simo(Runnable, traits.SIMO):
-            def next(self, state):
-                return States(state, state)
-
-        with self.assertRaises(TypeError):
-            LoopUntilNoImprovement(simo())
-
-
-class TestLoop(unittest.TestCase):
-
     def test_finite_loop(self):
         class Inc(Runnable):
             def next(self, state):
@@ -325,10 +314,18 @@ class TestLoop(unittest.TestCase):
                 return state.updated(cnt=state.cnt + 1)
 
         it = Loop(Inc())
-        s = it.run(State(cnt=0)).result()
+        s = it.run(State(cnt=0))
         it.stop()
 
-        self.assertTrue(s.cnt > 0)
+        self.assertTrue(s.result().cnt >= 0)
+
+    def test_validation(self):
+        class simo(Runnable, traits.SIMO):
+            def next(self, state):
+                return States(state, state)
+
+        with self.assertRaises(TypeError):
+            LoopUntilNoImprovement(simo())
 
 
 class TestLoopWhileNoImprovement(unittest.TestCase):
