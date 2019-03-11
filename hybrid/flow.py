@@ -736,6 +736,9 @@ class LoopUntilNoImprovement(Runnable):
         Output: next input state and next counter values
         """
 
+        if self.convergence is None:
+            return iterno + 1, cnt, output_state
+
         input_energy = self.key(input_state)
         output_energy = self.key(output_state)
 
@@ -753,6 +756,7 @@ class LoopUntilNoImprovement(Runnable):
         iterno = 0
         cnt = self.convergence or 0
         input_state = state
+        output_state = input_state
 
         while not self._stop_event.is_set():
             output_state = self.runnable.run(input_state, executor=immediate_executor).result()
