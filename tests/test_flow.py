@@ -318,7 +318,22 @@ class TestLoopUntilNoImprovement(unittest.TestCase):
 
         self.assertEqual(s.cnt, 10)
 
-    def test_infinite_loop(self):
+    def test_infinite_loop_stops_before_first_run(self):
+        """An infinite loop can be preemptively stopped (before starting)."""
+
+        class Inc(Runnable):
+            def next(self, state):
+                return state.updated(cnt=state.cnt + 1)
+
+        loop = Loop(Inc())
+        loop.stop()
+        s = loop.run(State(cnt=0))
+
+        self.assertEqual(s.result().cnt, 0)
+
+    def test_infinite_loop_stops(self):
+        """An infinite loop can be stopped after at least one iteration."""
+
         class Inc(Runnable):
             def __init__(self):
                 super(Inc, self).__init__()
@@ -332,7 +347,7 @@ class TestLoopUntilNoImprovement(unittest.TestCase):
         s = loop.run(State(cnt=0))
 
         # make sure loop body runnable is run at least once, then issue stop
-        loop.runnable.first_run.wait()
+        loop.runnable.first_run.wait(timeout=1)
         loop.stop()
 
         self.assertTrue(s.result().cnt >= 1)
@@ -397,16 +412,32 @@ class TestLoopWhileNoImprovement(unittest.TestCase):
         self.assertEqual(len(loop.runnable.timers['dispatch.next']), 5)
         self.assertEqual(state.cnt, 1)
 
-    def test_infinite_loop(self):
-        class Inc(Runnable):
-            def next(self, state):
-                return state.updated(cnt=state.cnt + 1)
+    def test_infinite_loop_stops(self):
+        """An infinite loop can be stopped after 10 iterations."""
 
-        loop = LoopWhileNoImprovement(Inc())
-        state = loop.run(State(cnt=0))
+        class Countdown(Runnable):
+            """Countdown runnable that sets a semaphore on reaching zero."""
+
+            def __init__(self):
+                super(Countdown, self).__init__()
+                self.ring = threading.Event()
+
+            def next(self, state):
+                output = state.updated(cnt=state.cnt - 1)
+                if output.cnt <= 0:
+                    self.ring.set()
+                return output
+
+        countdown = Countdown()
+        loop = LoopWhileNoImprovement(countdown)
+        state = loop.run(State(cnt=10))
+
+        # stop only AFTER countdown reaches zero (10 iterations)
+        # timeout in case Countdown failed before setting the flag
+        countdown.ring.wait(timeout=1)
         loop.stop()
 
-        self.assertTrue(state.result().cnt >= 0)
+        self.assertTrue(state.result().cnt <= 0)
 
     def test_runs_with_improvement(self):
         class Inc(Runnable):
