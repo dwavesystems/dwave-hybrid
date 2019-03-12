@@ -668,13 +668,13 @@ class LoopUntilNoImprovement(Runnable):
 
         max_iter (int/None, optional, default=None):
             Maximum number of times the `runnable` is run, regardless of other
-            termination criteria. This is the upper bound. If set to `None`,
-            upper bound on the number or iterations is not set.
+            termination criteria. This is the upper bound. By default, an upper
+            bound on the number of iterations is not set.
 
         convergence (int/None, optional, default=None):
             Terminates upon reaching this number of iterations with unchanged
-            output. If set to `None`, convergence is not checked, so the only
-            termination criteria if defined with `max_iter`. Setting neither
+            output. By default, convergence is not checked, so the only
+            termination criteria is defined with `max_iter`. Setting neither
             creates an infinite loop.
 
         key (callable/str):
@@ -793,12 +793,13 @@ class SimpleIterator(LoopUntilNoImprovement):
 class LoopWhileNoImprovement(LoopUntilNoImprovement):
     """Iterates `runnable` until a state quality metric, defined by the `key`
     function, shows no improvement for at least `max_tries` number of
-    iterations (or until `max_iter` number of iterations is exceeded).
+    iterations or until `max_iter` number of iterations is exceeded.
 
     Note:
         Unlike `LoopUntilNoImprovement`/`Loop`, `LoopWhileNoImprovement` will
-        run the loop body runnable with the same input if it shows no
-        improvement, and it will use the new output if it's better than previous.
+        run the loop body runnable with the **same input** if output shows no
+        improvement (up to `max_tries` times), and it will use the new output
+        if it's better than the input.
 
     Args:
         runnable (:class:`Runnable`):
@@ -806,14 +807,14 @@ class LoopWhileNoImprovement(LoopUntilNoImprovement):
 
         max_iter (int/None, optional, default=None):
             Maximum number of times the `runnable` is run, regardless of other
-            termination criteria. This is the upper bound. If set to `None`,
-            upper bound on the number or iterations is not set (the default).
+            termination criteria. This is the upper bound. By default, an upper
+            bound on the number of iterations is not set.
 
         max_tries (int, optional, default=None):
             Maximum number of times the `runnable` is run for the **same** input
             state. On each improvement, the better state is used for the next
-            input state, and the try/trial counter is reset. Default to an
-            infinite loop.
+            input state, and the try/trial counter is reset. Defaults to an
+            infinite loop (unbounded number of tries).
 
         key (callable/str):
             Best state is judged according to a metric defined with a `key`.
