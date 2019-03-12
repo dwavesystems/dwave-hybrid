@@ -320,14 +320,49 @@ class TestLoopUntilNoImprovement(unittest.TestCase):
 
     def test_infinite_loop(self):
         class Inc(Runnable):
+            def __init__(self):
+                super(Inc, self).__init__()
+                self.first_run = threading.Event()
+
             def next(self, state):
+                self.first_run.set()
                 return state.updated(cnt=state.cnt + 1)
 
-        it = Loop(Inc())
-        s = it.run(State(cnt=0))
-        it.stop()
+        loop = Loop(Inc())
+        s = loop.run(State(cnt=0))
 
-        self.assertTrue(s.result().cnt >= 0)
+        # make sure loop body runnable is run at least once, then issue stop
+        loop.runnable.first_run.wait()
+        loop.stop()
+
+        self.assertTrue(s.result().cnt >= 1)
+
+    def test_infinite_loop_over_interruptable_runnable(self):
+        """Stop signal must propagate to child runnable."""
+
+        class IntInc(Runnable):
+            def __init__(self):
+                super(IntInc, self).__init__()
+                self.time_to_stop = threading.Event()
+                self.first_run = threading.Event()
+
+            def next(self, state):
+                self.first_run.set()
+                self.time_to_stop.wait()
+                return state.updated(cnt=state.cnt + 1)
+
+            def halt(self):
+                self.time_to_stop.set()
+
+        loop = Loop(IntInc())
+        s = loop.run(State(cnt=0))
+
+        # make sure loop body runnable is run at least once
+        loop.runnable.first_run.wait()
+
+        loop.stop()
+
+        self.assertTrue(s.result().cnt >= 1)
 
     def test_validation(self):
         class simo(Runnable, traits.SIMO):
