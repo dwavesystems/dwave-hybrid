@@ -60,24 +60,24 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
             by at least this amount.
 
         rolling (bool, optional, default=True):
-            Should successive calls for the same problem (but maybe different samples)
-            produce subproblems on different variables rolling down the list of all variables
-            sorted by decreasing impact?
+            If True, successive calls for the same problem (with possibly different samples)
+            produce subproblems on different variables, selected by rolling down the list of all
+            variables sorted by decreasing impact.
 
         rolling_history (float, optional, default=0.1):
-            Size of unrolled variables pool, as a fraction of the problem size (0.0 to 1.0).
-            Determines the reset condition for subproblem unrolling.
+            Ratio, as a float in range 0.0 to 1.0, of variables as yet unselected by the
+            rolling selection to the problem size. Determines the reset condition for subproblem unrolling.
 
         silent_rewind (bool, optional, default=True):
-            On unrolling reset condition, should :exc:`EndOfStream` be raised together
-            with resetting/rewinding the subproblem generator?
+            If False, raises :exc:`EndOfStream` when resetting/rewinding the subproblem generator
+            upon the reset condition for unrolling.
 
         traversal (str, optional, default='energy'):
             Traversal algorithm used to pick a subproblem of `size` variables. Options are:
 
             energy:
                 Use the next `size` variables in the list of variables ordered
-                descendingly by energy impact.
+                by descending energy impact.
 
             bfs:
                 Breadth-first traversal seeded by the next variable in the energy impact list.
@@ -275,7 +275,7 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
 
 
 class RandomSubproblemDecomposer(Runnable, traits.ProblemDecomposer):
-    """Select a subproblem of `size` random variables.
+    """Selects a subproblem of `size` random variables.
 
     The selection currently implemented does not ensure that the variables are connected
     in the problem graph.

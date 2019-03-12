@@ -15,8 +15,15 @@ Classes
 .. autoclass:: Branch
 .. autoclass:: Lambda
 .. autoclass:: Loop
+.. autoclass:: LoopN
+.. autoclass:: LoopUntilNoImprovement
+.. autoclass:: LoopWhileNoImprovement
 .. autoclass:: Map
+.. autoclass:: ParallelBranches
 .. autoclass:: RacingBranches
+.. autoclass:: Reduce
+.. autoclass:: TrackMin
+.. autoclass:: Unwind
 
 Methods
 =======

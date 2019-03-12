@@ -121,7 +121,7 @@ class State(PliableDict):
     def updated(self, **kwargs):
         """Return a (deep) copy of the state, updated from `kwargs`.
 
-        It has `dict.update` semantics with immutability of `sorted`. Currently an
+        This methos has `dict.update` semantics with immutability of `sorted`. Currently an
         exception is the `debug` key, if it exists, for which a depth-unlimited
         recursive merge is executed.
 
@@ -210,7 +210,7 @@ class States(list):
 
 
 class Runnable(traits.StateTraits):
-    """Component such as samplers and branches that can be run for an iteration.
+    """Components such as samplers and branches that can be run for an iteration.
 
     Examples:
         This example runs a tabu search on a binary quadratic model. An initial state is
@@ -227,9 +227,10 @@ class Runnable(traits.StateTraits):
         >>> # Run one iteration of the sampler
         >>> new_state = sampler.next(State.from_sample({'x': 0, 'y': 0, 'z': 1, 'a': 1, 'b': 1, 'c': 0}, bqm))
         >>> print(new_state.samples)      # doctest: +SKIP
-        Response(rec.array([([1, 1, 1, 1, 1, 1], -1., 1)],
-          dtype=[('sample', 'i1', (6,)), ('energy', '<f8'), ('num_occurrences', '<i4')]),
-          ['a', 'b', 'c', 'x', 'y', 'z'], {}, 'BINARY')
+              a  b  c  x  y  z  energy  num_occ.
+           0  1  1  1  1  1  1    -1.0         1
+
+           [ 1 rows, 6 variables ]
 
     """
 
@@ -346,7 +347,7 @@ class Runnable(traits.StateTraits):
 
         Examples:
             These two code snippets run one iteration of a sampler to produce a new state.
-            The first is thread async call, and the second is a blocking call.
+            The first is an asynchronous call and the second a blocking call.
 
             >>> sampler.run(State.from_sample(min_sample(bqm), bqm))   # doctest: +SKIP
             <Future at 0x20cbe22ea20 state=running>
