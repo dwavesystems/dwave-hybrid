@@ -791,10 +791,11 @@ class LoopWhileNoImprovement(LoopUntilNoImprovement):
         runnable (:class:`Runnable`):
             A runnable that's looped over.
 
-        max_tries (int, optional, default=10):
+        max_tries (int, optional, default=None):
             Maximum number of times the `runnable` is run for the **same** input
             state. On each improvement, the better state is used for the next
-            input state, and the try/trial counter is reset.
+            input state, and the try/trial counter is reset. Default to an
+            infinite loop.
 
         key (callable/str):
             Best state is judged according to a metric defined with a `key`.
@@ -810,7 +811,7 @@ class LoopWhileNoImprovement(LoopUntilNoImprovement):
 
     """
 
-    def __init__(self, runnable, max_tries=10, key=None):
+    def __init__(self, runnable, max_tries=None, key=None):
         super(LoopWhileNoImprovement, self).__init__(
             runnable=runnable, max_iter=None, convergence=max_tries, key=key)
 
@@ -839,7 +840,7 @@ class LoopWhileNoImprovement(LoopUntilNoImprovement):
             next_input_state = input_state
         else:
             # improvement, use the better output for next input, restart local counter
-            cnt = self.convergence
+            cnt = self.convergence or 0
             next_input_state = output_state
 
         return iterno + 1, cnt, next_input_state

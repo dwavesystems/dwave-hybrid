@@ -351,6 +351,17 @@ class TestLoopWhileNoImprovement(unittest.TestCase):
         self.assertEqual(len(loop.runnable.timers['dispatch.next']), 10)
         self.assertEqual(state.cnt, 1)
 
+    def test_infinite_loop(self):
+        class Inc(Runnable):
+            def next(self, state):
+                return state.updated(cnt=state.cnt + 1)
+
+        loop = LoopWhileNoImprovement(Inc())
+        state = loop.run(State(cnt=0))
+        loop.stop()
+
+        self.assertTrue(state.result().cnt >= 0)
+
     def test_runs_with_improvement(self):
         class Inc(Runnable):
             def next(self, state):
