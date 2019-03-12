@@ -121,7 +121,7 @@ class State(PliableDict):
     def updated(self, **kwargs):
         """Return a (deep) copy of the state, updated from `kwargs`.
 
-        This methos has `dict.update` semantics with immutability of `sorted`. Currently an
+        This method has `dict.update` semantics with immutability of `sorted`. Currently an
         exception is the `debug` key, if it exists, for which a depth-unlimited
         recursive merge is executed.
 

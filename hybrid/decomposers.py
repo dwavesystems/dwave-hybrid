@@ -65,9 +65,9 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
             variables sorted by decreasing impact.
 
         rolling_history (float, optional, default=0.1):
-            Ratio, as a float in range 0.0 to 1.0, of variables as yet unselected by the
-            rolling selection to the problem size. Determines the reset condition for subproblem unrolling.
-
+            Fraction of the problem size, as a float in range 0.0 to 1.0, that should participate
+            in the rolling selection. Once reached, subproblem unrolling is reset.
+            
         silent_rewind (bool, optional, default=True):
             If False, raises :exc:`EndOfStream` when resetting/rewinding the subproblem generator
             upon the reset condition for unrolling.
