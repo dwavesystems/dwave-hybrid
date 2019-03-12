@@ -14,6 +14,7 @@
 
 import logging
 import threading
+import warnings
 import concurrent.futures
 from operator import attrgetter
 from functools import partial
@@ -28,8 +29,8 @@ from hybrid import traits
 
 __all__ = [
     'Branch', 'RacingBranches', 'Race', 'ParallelBranches', 'Parallel',
-    'Map', 'Reduce', 'Lambda', 'ArgMin', 'Loop', 'SimpleIterator',
-    'LoopUntilNoImprovement', 'LoopWhileNoImprovement', 'Unwind', 'TrackMin'
+    'Map', 'Reduce', 'Lambda', 'ArgMin', 'Unwind', 'TrackMin',
+    'Loop', 'LoopUntilNoImprovement', 'LoopWhileNoImprovement'
 ]
 
 logger = logging.getLogger(__name__)
@@ -779,7 +780,14 @@ class Loop(LoopUntilNoImprovement):
     pass
 
 
-SimpleIterator = Loop
+class SimpleIterator(LoopUntilNoImprovement):
+    """Deprecated loop runnable. Use `Loop`/`LoopUntilNoImprovement` instead."""
+
+    def __init__(self, *args, **kwargs):
+        super(SimpleIterator, self).__init__(*args, **kwargs)
+
+        warnings.warn("SimpleIterator is deprecated, please use Loop instead.",
+                        DeprecationWarning)
 
 
 class LoopWhileNoImprovement(LoopUntilNoImprovement):
