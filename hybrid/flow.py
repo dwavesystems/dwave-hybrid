@@ -838,6 +838,9 @@ class LoopWhileNoImprovement(LoopUntilNoImprovement):
         Output: next input state and next counter values
         """
 
+        if self.convergence is None:
+            return iterno + 1, cnt, output_state
+
         input_energy = self.key(input_state)
         output_energy = self.key(output_state)
 
@@ -850,7 +853,7 @@ class LoopWhileNoImprovement(LoopUntilNoImprovement):
             next_input_state = input_state
         else:
             # improvement, use the better output for next input, restart local counter
-            cnt = self.convergence or 0
+            cnt = self.convergence
             next_input_state = output_state
 
         return iterno + 1, cnt, next_input_state
