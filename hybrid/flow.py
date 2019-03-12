@@ -785,11 +785,21 @@ SimpleIterator = Loop
 class LoopWhileNoImprovement(LoopUntilNoImprovement):
     """Iterates `runnable` until a state quality metric, defined by the `key`
     function, shows no improvement for at least `max_tries` number of
-    iterations.
+    iterations (or until `max_iter` number of iterations is exceeded).
+
+    Note:
+        Unlike `LoopUntilNoImprovement`/`Loop`, `LoopWhileNoImprovement` will
+        run the loop body runnable with the same input if it shows no
+        improvement, and it will use the new output if it's better than previous.
 
     Args:
         runnable (:class:`Runnable`):
             A runnable that's looped over.
+
+        max_iter (int/None, optional, default=None):
+            Maximum number of times the `runnable` is run, regardless of other
+            termination criteria. This is the upper bound. If set to `None`,
+            upper bound on the number or iterations is not set (the default).
 
         max_tries (int, optional, default=None):
             Maximum number of times the `runnable` is run for the **same** input
@@ -811,9 +821,9 @@ class LoopWhileNoImprovement(LoopUntilNoImprovement):
 
     """
 
-    def __init__(self, runnable, max_tries=None, key=None):
+    def __init__(self, runnable, max_iter=None, max_tries=None, key=None):
         super(LoopWhileNoImprovement, self).__init__(
-            runnable=runnable, max_iter=None, convergence=max_tries, key=key)
+            runnable=runnable, max_iter=max_iter, convergence=max_tries, key=key)
 
     def iteration_update(self, iterno, cnt, input_state, output_state):
         """Implement "no-improvement count-down" behavior:
