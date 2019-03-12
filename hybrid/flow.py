@@ -13,6 +13,8 @@
 # limitations under the License.
 
 import logging
+import threading
+import warnings
 import concurrent.futures
 from operator import attrgetter
 from functools import partial
@@ -27,8 +29,8 @@ from hybrid import traits
 
 __all__ = [
     'Branch', 'RacingBranches', 'Race', 'ParallelBranches', 'Parallel',
-    'Map', 'Reduce', 'Lambda', 'ArgMin', 'Loop', 'SimpleIterator', 'LoopN',
-    'LoopUntilNoImprovement', 'LoopWhileNoImprovement', 'Unwind', 'TrackMin'
+    'Map', 'Reduce', 'Lambda', 'ArgMin', 'Unwind', 'TrackMin',
+    'Loop', 'LoopUntilNoImprovement', 'LoopWhileNoImprovement'
 ]
 
 logger = logging.getLogger(__name__)
@@ -664,14 +666,16 @@ class LoopUntilNoImprovement(Runnable):
         runnable (:class:`Runnable`):
             A runnable that's looped over.
 
-        max_iter (int/None, optional, default=1000):
+        max_iter (int/None, optional, default=None):
             Maximum number of times the `runnable` is run, regardless of other
-            termination criteria. This is the upper bound. If set to `None`,
-            upper bound on the number or iterations is not set.
+            termination criteria. This is the upper bound. By default, an upper
+            bound on the number of iterations is not set.
 
-        convergence (int, optional, default=10):
+        convergence (int/None, optional, default=None):
             Terminates upon reaching this number of iterations with unchanged
-            output.
+            output. By default, convergence is not checked, so the only
+            termination criteria is defined with `max_iter`. Setting neither
+            creates an infinite loop.
 
         key (callable/str):
             Best state is judged according to a metric defined with a `key`.
@@ -687,7 +691,7 @@ class LoopUntilNoImprovement(Runnable):
 
     """
 
-    def __init__(self, runnable, max_iter=1000, convergence=10, key=None):
+    def __init__(self, runnable, max_iter=None, convergence=None, key=None):
         super(LoopUntilNoImprovement, self).__init__()
         self.runnable = runnable
         self.max_iter = max_iter
@@ -707,6 +711,9 @@ class LoopUntilNoImprovement(Runnable):
         self.multi_input = self.runnable.multi_input
         self.outputs = self.runnable.outputs
         self.multi_output = self.runnable.multi_output
+
+        # stop flag
+        self._stop_event = threading.Event()
 
     def __str__(self):
         return "Loop over {}".format(self.runnable)
@@ -730,6 +737,9 @@ class LoopUntilNoImprovement(Runnable):
         Output: next input state and next counter values
         """
 
+        if self.convergence is None:
+            return iterno + 1, cnt, output_state
+
         input_energy = self.key(input_state)
         output_energy = self.key(output_state)
 
@@ -745,51 +755,66 @@ class LoopUntilNoImprovement(Runnable):
 
     def next(self, state):
         iterno = 0
-        cnt = self.convergence
+        cnt = self.convergence or 0
         input_state = state
+        output_state = input_state
 
-        while True:
+        while not self._stop_event.is_set():
             output_state = self.runnable.run(input_state, executor=immediate_executor).result()
 
             iterno, cnt, input_state = self.iteration_update(iterno, cnt, input_state, output_state)
 
             if self.max_iter is not None and iterno >= self.max_iter:
                 break
-            if cnt <= 0:
+            if self.convergence is not None and cnt <= 0:
                 break
 
         return output_state
 
-
-class LoopN(LoopUntilNoImprovement):
-    """Iterate `runnable` exactly `n` times, using each output as input in the
-    next iteration.
-    """
-
-    def __init__(self, runnable, n):
-        super(LoopN, self).__init__(
-            runnable=runnable, max_iter=n, convergence=n, key=lambda _: 0)
+    def halt(self):
+        self.runnable.stop()
+        self._stop_event.set()
 
 
 class Loop(LoopUntilNoImprovement):
     pass
 
-SimpleIterator = Loop
+
+class SimpleIterator(LoopUntilNoImprovement):
+    """Deprecated loop runnable. Use `Loop`/`LoopUntilNoImprovement` instead."""
+
+    def __init__(self, *args, **kwargs):
+        super(SimpleIterator, self).__init__(*args, **kwargs)
+
+        warnings.warn("SimpleIterator is deprecated, please use Loop instead.",
+                        DeprecationWarning)
 
 
 class LoopWhileNoImprovement(LoopUntilNoImprovement):
     """Iterates `runnable` until a state quality metric, defined by the `key`
     function, shows no improvement for at least `max_tries` number of
-    iterations.
+    iterations or until `max_iter` number of iterations is exceeded.
+
+    Note:
+        Unlike `LoopUntilNoImprovement`/`Loop`, `LoopWhileNoImprovement` will
+        run the loop body runnable with the **same input** if output shows no
+        improvement (up to `max_tries` times), and it will use the new output
+        if it's better than the input.
 
     Args:
         runnable (:class:`Runnable`):
             A runnable that's looped over.
 
-        max_tries (int, optional, default=10):
+        max_iter (int/None, optional, default=None):
+            Maximum number of times the `runnable` is run, regardless of other
+            termination criteria. This is the upper bound. By default, an upper
+            bound on the number of iterations is not set.
+
+        max_tries (int, optional, default=None):
             Maximum number of times the `runnable` is run for the **same** input
             state. On each improvement, the better state is used for the next
-            input state, and the try/trial counter is reset.
+            input state, and the try/trial counter is reset. Defaults to an
+            infinite loop (unbounded number of tries).
 
         key (callable/str):
             Best state is judged according to a metric defined with a `key`.
@@ -805,9 +830,9 @@ class LoopWhileNoImprovement(LoopUntilNoImprovement):
 
     """
 
-    def __init__(self, runnable, max_tries=10, key=None):
+    def __init__(self, runnable, max_iter=None, max_tries=None, key=None):
         super(LoopWhileNoImprovement, self).__init__(
-            runnable=runnable, max_iter=None, convergence=max_tries, key=key)
+            runnable=runnable, max_iter=max_iter, convergence=max_tries, key=key)
 
     def iteration_update(self, iterno, cnt, input_state, output_state):
         """Implement "no-improvement count-down" behavior:
@@ -821,6 +846,9 @@ class LoopWhileNoImprovement(LoopUntilNoImprovement):
         Input: relevant counters and I/O states.
         Output: next input state and next counter values
         """
+
+        if self.convergence is None:
+            return iterno + 1, cnt, output_state
 
         input_energy = self.key(input_state)
         output_energy = self.key(output_state)

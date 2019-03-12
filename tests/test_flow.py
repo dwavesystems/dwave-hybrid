@@ -22,8 +22,8 @@ import dimod
 
 from hybrid.flow import (
     Branch, RacingBranches, ParallelBranches,
-    ArgMin, Loop, Map, Reduce, Lambda, Unwind,
-    LoopWhileNoImprovement, LoopN, TrackMin
+    ArgMin, Map, Reduce, Lambda, Unwind, TrackMin,
+    LoopUntilNoImprovement, LoopWhileNoImprovement, SimpleIterator, Loop
 )
 from hybrid.core import State, States, Runnable, Present
 from hybrid.utils import min_sample, max_sample
@@ -276,16 +276,26 @@ class TestTrackMin(unittest.TestCase):
         self.assertEqual(result2.best, 2)
 
 
-class TestLoop(unittest.TestCase):
+class TestLoopUntilNoImprovement(unittest.TestCase):
 
     def test_basic_max_iter(self):
         class Inc(Runnable):
             def next(self, state):
                 return state.updated(cnt=state.cnt + 1)
 
-        it = Loop(Inc(), max_iter=100, convergence=1000, key=lambda _: None)
+        # iterate for `max_iter`
+        it = LoopUntilNoImprovement(Inc(), max_iter=100, convergence=1000, key=lambda _: None)
         s = it.run(State(cnt=0)).result()
+        self.assertEqual(s.cnt, 100)
 
+        # `key` function not needed if `convergence` undefined
+        it = LoopUntilNoImprovement(Inc(), max_iter=100, convergence=None)
+        s = it.run(State(cnt=0)).result()
+        self.assertEqual(s.cnt, 100)
+
+        # `convergence` not needed for simple finite loop
+        it = LoopUntilNoImprovement(Inc(), max_iter=100)
+        s = it.run(State(cnt=0)).result()
         self.assertEqual(s.cnt, 100)
 
     def test_basic_convergence(self):
@@ -293,10 +303,81 @@ class TestLoop(unittest.TestCase):
             def next(self, state):
                 return state.updated(cnt=state.cnt + 1)
 
-        it = Loop(Inc(), max_iter=1000, convergence=100, key=lambda _: None)
+        it = LoopUntilNoImprovement(Inc(), max_iter=1000, convergence=100, key=lambda _: None)
         s = it.run(State(cnt=0)).result()
 
         self.assertEqual(s.cnt, 100)
+
+    def test_finite_loop(self):
+        class Inc(Runnable):
+            def next(self, state):
+                return state.updated(cnt=state.cnt + 1)
+
+        it = Loop(Inc(), 10)
+        s = it.run(State(cnt=0)).result()
+
+        self.assertEqual(s.cnt, 10)
+
+    def test_infinite_loop_stops_before_first_run(self):
+        """An infinite loop can be preemptively stopped (before starting)."""
+
+        class Inc(Runnable):
+            def next(self, state):
+                return state.updated(cnt=state.cnt + 1)
+
+        loop = Loop(Inc())
+        loop.stop()
+        s = loop.run(State(cnt=0))
+
+        self.assertEqual(s.result().cnt, 0)
+
+    def test_infinite_loop_stops(self):
+        """An infinite loop can be stopped after at least one iteration."""
+
+        class Inc(Runnable):
+            def __init__(self):
+                super(Inc, self).__init__()
+                self.first_run = threading.Event()
+
+            def next(self, state):
+                self.first_run.set()
+                return state.updated(cnt=state.cnt + 1)
+
+        loop = Loop(Inc())
+        s = loop.run(State(cnt=0))
+
+        # make sure loop body runnable is run at least once, then issue stop
+        loop.runnable.first_run.wait(timeout=1)
+        loop.stop()
+
+        self.assertTrue(s.result().cnt >= 1)
+
+    def test_infinite_loop_over_interruptable_runnable(self):
+        """Stop signal must propagate to child runnable."""
+
+        class IntInc(Runnable):
+            def __init__(self):
+                super(IntInc, self).__init__()
+                self.time_to_stop = threading.Event()
+                self.first_run = threading.Event()
+
+            def next(self, state):
+                self.first_run.set()
+                self.time_to_stop.wait()
+                return state.updated(cnt=state.cnt + 1)
+
+            def halt(self):
+                self.time_to_stop.set()
+
+        loop = Loop(IntInc())
+        s = loop.run(State(cnt=0))
+
+        # make sure loop body runnable is run at least once
+        loop.runnable.first_run.wait()
+
+        loop.stop()
+
+        self.assertTrue(s.result().cnt >= 1)
 
     def test_validation(self):
         class simo(Runnable, traits.SIMO):
@@ -304,20 +385,7 @@ class TestLoop(unittest.TestCase):
                 return States(state, state)
 
         with self.assertRaises(TypeError):
-            Loop(simo())
-
-
-class TestLoopN(unittest.TestCase):
-
-    def test_basic(self):
-        class Inc(Runnable):
-            def next(self, state):
-                return state.updated(cnt=state.cnt + 1)
-
-        it = LoopN(Inc(), 10)
-        s = it.run(State(cnt=0)).result()
-
-        self.assertEqual(s.cnt, 10)
+            LoopUntilNoImprovement(simo())
 
 
 class TestLoopWhileNoImprovement(unittest.TestCase):
@@ -332,6 +400,44 @@ class TestLoopWhileNoImprovement(unittest.TestCase):
 
         self.assertEqual(len(loop.runnable.timers['dispatch.next']), 10)
         self.assertEqual(state.cnt, 1)
+
+    def test_max_iter(self):
+        class Inc(Runnable):
+            def next(self, state):
+                return state.updated(cnt=state.cnt + 1)
+
+        loop = LoopWhileNoImprovement(Inc(), max_iter=5, max_tries=10, key=lambda _: 0)
+        state = loop.run(State(cnt=0)).result()
+
+        self.assertEqual(len(loop.runnable.timers['dispatch.next']), 5)
+        self.assertEqual(state.cnt, 1)
+
+    def test_infinite_loop_stops(self):
+        """An infinite loop can be stopped after 10 iterations."""
+
+        class Countdown(Runnable):
+            """Countdown runnable that sets a semaphore on reaching zero."""
+
+            def __init__(self):
+                super(Countdown, self).__init__()
+                self.ring = threading.Event()
+
+            def next(self, state):
+                output = state.updated(cnt=state.cnt - 1)
+                if output.cnt <= 0:
+                    self.ring.set()
+                return output
+
+        countdown = Countdown()
+        loop = LoopWhileNoImprovement(countdown)
+        state = loop.run(State(cnt=10))
+
+        # stop only AFTER countdown reaches zero (10 iterations)
+        # timeout in case Countdown failed before setting the flag
+        countdown.ring.wait(timeout=1)
+        loop.stop()
+
+        self.assertTrue(state.result().cnt <= 0)
 
     def test_runs_with_improvement(self):
         class Inc(Runnable):
