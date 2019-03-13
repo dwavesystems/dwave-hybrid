@@ -158,7 +158,7 @@ class Branch(Runnable):
 
 
 class RacingBranches(Runnable, traits.SIMO):
-    """Runs (races) multiple workflows of :class:`~hybrid.core.Runnable` classes in parallel, stopping all
+    """Runs (races) multiple workflows of type :class:`~hybrid.core.Runnable` in parallel, stopping all
     once the first finishes. Returns the results of all, in the specified order.
 
     Args:
@@ -261,7 +261,7 @@ Race = RacingBranches
 
 
 class ParallelBranches(Runnable, traits.SIMO):
-    """Runs multiple multiple workflows of :class:`~hybrid.core.Runnable` classes in parallel,
+    """Runs multiple multiple workflows of type :class:`~hybrid.core.Runnable` in parallel,
     blocking until all finish.
 
     Args:
