@@ -37,10 +37,10 @@ logger = logging.getLogger(__name__)
 
 
 class Branch(Runnable):
-    """Sequentially executed :class:`Runnable` components.
+    """Sequentially executed :class:`~hybrid.core.Runnable` components.
 
     Args:
-        components (iterable of :class:`Runnable`): Complete processing sequence to
+        components (iterable of :class:`~hybrid.core.Runnable`): Complete processing sequence to
             update a current set of samples, such as: :code:`decomposer | sampler | composer`.
 
     Examples:
@@ -59,9 +59,11 @@ class Branch(Runnable):
         ...           SplatComposer())
         >>> new_state = branch.next(State.from_sample(min_sample(bqm), bqm))
         >>> print(new_state.subsamples)      # doctest: +SKIP
-        Response(rec.array([([-1,  1, -1,  1, -1,  1], -5., 1),
-           ([ 1, -1,  1, -1, -1,  1], -5., 1)],
-        >>> # Above response snipped for brevity
+               4   5   6   7   8   9  energy  num_occ.
+           0  +1  -1  -1  +1  -1  +1    -5.0         1
+           1  +1  -1  -1  +1  -1  +1    -5.0         1
+
+           [ 2 rows, 6 variables ]
 
     """
 
@@ -156,12 +158,11 @@ class Branch(Runnable):
 
 
 class RacingBranches(Runnable, traits.SIMO):
-    """Runs (races) multiple :class:`Branch`es in parallel, but stops all others
-    after the first one finishes. Returns the results of all branches, in order
-    specified.
+    """Runs (races) multiple workflows of type :class:`~hybrid.core.Runnable` in parallel, stopping all
+    once the first finishes. Returns the results of all, in the specified order.
 
     Args:
-        *branches ([:class:`Runnable`]):
+        *branches ([:class:`~hybrid.core.Runnable`]):
             Comma-separated branches.
         endomorphic (bool):
             Set to ``False`` if you are not sure that the codomain of all branches
@@ -260,10 +261,11 @@ Race = RacingBranches
 
 
 class ParallelBranches(Runnable, traits.SIMO):
-    """Runs multiple :class:`Branch`es in parallel, blocking until all finish.
+    """Runs multiple multiple workflows of type :class:`~hybrid.core.Runnable` in parallel,
+    blocking until all finish.
 
     Args:
-        *branches ([:class:`Runnable`]):
+        *branches ([:class:`~hybrid.core.Runnable`]):
             Comma-separated branches.
 
         endomorphic (bool, optional, default=True):
@@ -278,8 +280,8 @@ class ParallelBranches(Runnable, traits.SIMO):
         `ParallelBranches` is also available as `Parallel`.
 
     Examples:
-        This example runs two branches: a classical tabu search interrupted by
-        samples of subproblems returned from a D-Wave system.
+        This example runs two branches, a classical tabu search and a random sampler, until
+        both terminate.
 
         >>> Parallel(                     # doctest: +SKIP
                 TabuSubproblemSampler(),
@@ -351,10 +353,10 @@ Parallel = ParallelBranches
 
 
 class Map(Runnable, traits.MIMO):
-    """Runs a specified runnable in parallel on all input states.
+    """Runs a specified :class:`~hybrid.core.Runnable` in parallel on all input states.
 
     Args:
-        runnable (:class:`Runnable`):
+        runnable (:class:`~hybrid.core.Runnable`):
             A runnable executed for every input state.
 
     Examples:
@@ -404,11 +406,11 @@ class Map(Runnable, traits.MIMO):
 
 
 class Reduce(Runnable, traits.MISO):
-    """Fold-left using the specified runnable on a sequence of input states,
+    """Fold-left using the specified :class:`~hybrid.core.Runnable` on a sequence of input states,
     producing a single output state.
 
     Args:
-        runnable (:class:`Runnable`):
+        runnable (:class:`~hybrid.core.Runnable`):
             A runnable used as the fold-left operator. It should accept a
             2-State input and produce a single State on output.
 
@@ -432,7 +434,7 @@ class Reduce(Runnable, traits.MISO):
         # preemptively check runnable's i/o dimensionality
         if runnable.validate_input and runnable.validate_output:
             if not runnable.multi_input or runnable.multi_output:
-                raise TypeError("runnable's must be of multi-input, single-output type")
+                raise TypeError("runnables must be of multi-input, single-output type")
 
         # patch components's I/O requirements based on the subcomponents' requirements
         self.multi_input = True
@@ -473,13 +475,13 @@ class Lambda(Runnable, traits.NotValidated):
     Args:
         next (callable):
             Implementation of runnable's `next` method, provided as a callable
-            (usually lambda expression for simple operations). Signature of the
-            callable has to match the signature of :meth:`Runnable.next()`, i.e.
+            (usually a lambda expression for simple operations). Signature of the
+            callable has to match the signature of :meth:`~hybrid.core.Runnable.next()`; i.e.,
             it accepts two arguments: runnable instance and state instance.
         error (callable):
-            Implementation of runnable's `error` method. See :meth:`Runnable.error`.
+            Implementation of runnable's `error` method. See :meth:`~hybrid.core.Runnable.error`.
         init (callable):
-            Implementation of runnable's `init` method. See :meth:`Runnable.init`.
+            Implementation of runnable's `init` method. See :meth:`~hybrid.core.Runnable.init`.
 
     Note:
         Traits are not enforced, apart from the SISO requirement. Also, note
@@ -526,12 +528,12 @@ class Lambda(Runnable, traits.NotValidated):
 
 
 class ArgMin(Runnable, traits.MISO):
-    """Selects the best state from a sequence of states (:class:`States`).
+    """Selects the best state from a sequence of :class:`~hybrid.core.States`.
 
     Args:
         key (callable/str):
             Best state is judged according to a metric defined with a `key`.
-            `key` can be a `callable` with a signature::
+            The `key` can be a `callable` with a signature::
 
                 key :: (State s, Ord k) => s -> k
 
@@ -591,12 +593,12 @@ class ArgMin(Runnable, traits.MISO):
 
 
 class TrackMin(Runnable, traits.SISO):
-    """Tracks and records the best :class:`State` according to a metric defined
-    with a `key` function; typically this is the minimal :class:`State`.
+    """Tracks and records the best :class:`~hybrid.core.State` according to a metric defined
+    with a `key` function; typically this is the minimal state.
 
     Args:
         key (callable/str, optional, default=None):
-            Best State is judged according to a metric defined with a `key`.
+            Best state is judged according to a metric defined with a `key`.
             `key` can be a `callable` with a signature::
 
                 key :: (State s, Ord k) => s -> k
@@ -608,16 +610,16 @@ class TrackMin(Runnable, traits.SISO):
             thus favoring states containing a sample with the minimal energy.
 
         output (bool, optional, default=False):
-            Update the output State's `output_key` with the `input_key` of the
-            best State seen so far.
+            Update the output state's `output_key` with the `input_key` of the
+            best state seen so far.
 
         input_key (str, optional, default='samples')
             If `output=True`, then this defines the variable/key name in the
-            input State that shall be included in the output state.
+            input state that shall be included in the output state.
 
         output_key (str, optional, default='best_samples')
             If `output=True`, then the key under which the `input_key` from the
-            best state seen so far is stored in the output State.
+            best state seen so far is stored in the output state.
 
     """
 
@@ -658,12 +660,12 @@ class TrackMin(Runnable, traits.SISO):
 
 
 class LoopUntilNoImprovement(Runnable):
-    """Iterates `runnable` for up to `max_iter` times, or until a state quality
+    """Iterates :class:`~hybrid.core.Runnable` for up to `max_iter` times, or until a state quality
     metric, defined by the `key` function, shows no improvement for at least
     `convergence` number of iterations.
 
     Args:
-        runnable (:class:`Runnable`):
+        runnable (:class:`~hybrid.core.Runnable`):
             A runnable that's looped over.
 
         max_iter (int/None, optional, default=None):
@@ -791,7 +793,7 @@ class SimpleIterator(LoopUntilNoImprovement):
 
 
 class LoopWhileNoImprovement(LoopUntilNoImprovement):
-    """Iterates `runnable` until a state quality metric, defined by the `key`
+    """Iterates :class:`~hybrid.core.Runnable` until a state quality metric, defined by the `key`
     function, shows no improvement for at least `max_tries` number of
     iterations or until `max_iter` number of iterations is exceeded.
 
@@ -802,7 +804,7 @@ class LoopWhileNoImprovement(LoopUntilNoImprovement):
         if it's better than the input.
 
     Args:
-        runnable (:class:`Runnable`):
+        runnable (:class:`~hybrid.core.Runnable`):
             A runnable that's looped over.
 
         max_iter (int/None, optional, default=None):
@@ -869,7 +871,7 @@ class LoopWhileNoImprovement(LoopUntilNoImprovement):
 
 
 class Unwind(Runnable, traits.SIMO):
-    """Iterates `runnable` until :exc:`EndOfStream` is raised, collecting all
+    """Iterates :class:`~hybrid.core.Runnable` until :exc:`EndOfStream` is raised, collecting all
     output states along the way.
     """
 

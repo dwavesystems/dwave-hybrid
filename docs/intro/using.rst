@@ -47,7 +47,7 @@ The following example demonstrates a simple workflow that uses just one :class:`
 a sampler representing the classical tabu search algorithm, to solve a problem
 (fully classically, without decomposition). The example solves a small problem of a
 triangle graph of nodes identically coupled. An initial :class:`.State` of all-zero
-samples is set as a starting point. The solution, `new_state` is derived from a single
+samples is set as a starting point. The solution, `new_state`, is derived from a single
 iteration of the `TabuProblemSampler` :class:`.Runnable`.
 
 >>> import dimod
@@ -59,9 +59,10 @@ iteration of the `TabuProblemSampler` :class:`.Runnable`.
 >>> # Sample the problem
 >>> new_state = sampler.run(state).result()
 >>> print(new_state.samples)                     # doctest: +SKIP
-SampleSet(rec.array([([ 1, -1, -1], -0.5, 1)],
-          dtype=[('sample', 'i1', (3,)), ('energy', '<f8'), ('num_occurrences', '<i4')]),
-          ['a', 'b', 'c'], {}, 'SPIN')
+       a   b   c  energy  num_occ.
+   0  +1  -1  -1    -0.5         1
+
+   [ 1 rows, 3 variables ]
 
 Flow Structuring
 ----------------
@@ -71,7 +72,7 @@ components. As shown in the :ref:`overview` section, you can create a *branch* o
 classes; for example :code:`decomposer | sampler | composer`, which delegates part
 of a problem to a sampler such as the D-Wave system.
 
-The following example a branch comprising a decomposer, local Tabu solver, and a composer.
+The following example shows a branch comprising a decomposer, local Tabu solver, and a composer.
 A 10-variable binary quadratic model is decomposed by the energy impact of its variables
 into a 6-variable subproblem to be sampled twice. An initial state of all -1 values
 is set using the utility function :meth:`~hybrid.utils.min_sample`.
@@ -85,9 +86,11 @@ is set using the utility function :meth:`~hybrid.utils.min_sample`.
 ...           SplatComposer())
 >>> new_state = branch.next(State.from_sample(min_sample(bqm), bqm))
 >>> print(new_state.subsamples)      # doctest: +SKIP
-Response(rec.array([([-1,  1, -1,  1, -1,  1], -5., 1),
-   ([ 1, -1,  1, -1, -1,  1], -5., 1)],
->>> # Above response snipped for brevity
+       4   5   6   7   8   9  energy  num_occ.
+   0  +1  -1  -1  +1  -1  +1    -5.0         1
+   1  +1  -1  -1  +1  -1  +1    -5.0         1
+
+   [ 2 rows, 6 variables ]
 
 Such :class:`.Branch` classes can be run in parallel using the :class:`.RacingBranches` class.
 From the outputs of these parallel branches, :class:`.ArgMin` selects a new current sample.
@@ -112,9 +115,8 @@ Tailoring State Selection
 -------------------------
 
 The next example tailors a state selector for a sampler that does some post-processing
-and can alert upon suspect samples. `states`, a :class:`~hybrid.core.States` output from
-the sampler is shown below with the first of three :class:`~hybrid.core.State` flagged as
-problematic using the `info` field::
+and can alert upon suspect samples. In the sampler output shown below, the first of three
+:class:`~hybrid.core.State` classes is flagged as problematic using the `info` field::
 
     [{'problem': BinaryQuadraticModel({'a': 0.0, 'b': 0.0, 'c': 0.0}, {('a', 'b'): 0.5, ('b', 'c'): 0.5, ('c', 'a'): 0.5},
     0.0, Vartype.SPIN),'samples': SampleSet(rec.array([([0, 1, 0], 0., 1)],
@@ -126,7 +128,7 @@ problematic using the `info` field::
     0.0, Vartype.SPIN),'samples': SampleSet(rec.array([([0, 0, 0], 0., 1)],
     dtype=[('sample', 'i1', (3,)), ('energy', '<f8'), ('num_occurrences', '<i4')]), ['a', 'b', 'c'], {}, 'SPIN')}]
 
-This code snippet defines a metric got the key argument in :class:`~hybrid.flow.ArgMin`::
+This code snippet defines a metric for the key argument in :class:`~hybrid.flow.ArgMin`::
 
     def preempt(si):
         if 'Postprocessor' in si.samples.info:
@@ -134,8 +136,8 @@ This code snippet defines a metric got the key argument in :class:`~hybrid.flow.
         else:
             return(si.samples.first.energy)
 
-Using the key in :class:`~hybrid.flow.ArgMin` on `states`, the :class:`~hybrid.core.States` above,
-finds the state with the lowest energy excluding the flagged state:
+Using the defined key on the above input, :class:`~hybrid.flow.ArgMin` finds the state
+with the lowest energy excluding the flagged state:
 
 >>> ArgMin(key=preempt).next(states)     # doctest: +SKIP
 {'problem': BinaryQuadraticModel({'a': 0.0, 'b': 0.0, 'c': 0.0}, {('a', 'b'): 0.5, ('b', 'c'): 0.5, ('c', 'a'): 0.5},

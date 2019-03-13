@@ -76,7 +76,7 @@ Example
     # Construct a problem
     bqm = dimod.BinaryQuadraticModel({}, {'ab': 1, 'bc': -1, 'ca': 1}, 0, dimod.SPIN)
 
-    # Define the solver
+    # Define the workflow
     iteration = RacingBranches(
         InterruptableTabuSampler(),
         EnergyImpactDecomposer(size=2)
