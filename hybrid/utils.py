@@ -64,10 +64,10 @@ def bqm_reduced_to(bqm, variables, sample, keep_offset=True):
         This example reduces a 3-variable BQM to two variables.
 
         >>> import dimod           # Create a binary quadratic model
-        >>> bqm = dimod.BinaryQuadraticModel({}, {('a', 'b'): -1, ('b', 'c'): -1, ('c', 'a'): -1}, 0, 'BINARY')
+        >>> bqm = dimod.BinaryQuadraticModel({}, {('a', 'b'): -1.0, ('b', 'c'): -1.0, ('c', 'a'): -1.0}, 0.0, 'BINARY')
         >>> sample = {'a': 1, 'b': 1, 'c': 0}
         >>> bqm_reduced_to(bqm, ['a', 'b'], sample)
-        BinaryQuadraticModel({'a': 0.0, 'b': 0.0}, {('a', 'b'): -1}, 0.0, Vartype.BINARY)
+        BinaryQuadraticModel({'a': 0.0, 'b': 0.0}, {('a', 'b'): -1.0}, 0.0, Vartype.BINARY)
 
     """
 
@@ -112,10 +112,10 @@ def bqm_induced_by(bqm, variables, sample):
         >>> import dimod           # Create a binary quadratic model from a path graph
         >>> import networkx as nx
         >>> bqm = dimod.BinaryQuadraticModel({},
-        ...             {edge: edge[0] for edge in set(nx.path_graph(6).edges)}, 0, 'BINARY')
+        ...             {edge: edge[0] + 0.5 for edge in set(nx.path_graph(6).edges)}, 0, 'BINARY')
         >>> sample = {1: 3, 4: 3}
         >>> bqm_induced_by(bqm, [2, 3], sample)
-        BinaryQuadraticModel({2: 3.0, 3: 9.0}, {(2, 3): 2.0}, 0.0, Vartype.BINARY)
+        BinaryQuadraticModel({2: 4.5, 3: 10.5}, {(2, 3): 2.5}, 0.0, Vartype.BINARY)
 
     """
 
@@ -194,7 +194,7 @@ def flip_energy_gains(bqm, sample, variables=None, min_gain=None):
         path graph.
 
         >>> import dimod
-        >>> bqm = dimod.BinaryQuadraticModel({}, {'ab': 0, 'bc': 1, 'cd': 2}, 0, 'SPIN')
+        >>> bqm = dimod.BinaryQuadraticModel({}, {'ab': 0.0, 'bc': 1.0, 'cd': 2.0}, 0, 'SPIN')
         >>> flip_energy_gains(bqm, {'a': -1, 'b': 1, 'c': 1, 'd': -1})
         [(4.0, 'd'), (2.0, 'c'), (0.0, 'a'), (-2.0, 'b')]
 
