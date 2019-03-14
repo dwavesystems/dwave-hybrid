@@ -911,6 +911,7 @@ class Unwind(Runnable, traits.SIMO):
 
     def next(self, state, **runopts):
         output = States()
+        runopts['executor'] = immediate_executor
 
         while True:
             try:
