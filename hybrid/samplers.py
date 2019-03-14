@@ -58,8 +58,8 @@ class QPUSubproblemExternalEmbeddingSampler(Runnable, traits.SubproblemSampler, 
         See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/samplers.html#examples.
     """
 
-    def __init__(self, num_reads=100, qpu_sampler=None):
-        super(QPUSubproblemExternalEmbeddingSampler, self).__init__()
+    def __init__(self, num_reads=100, qpu_sampler=None, **runopts):
+        super(QPUSubproblemExternalEmbeddingSampler, self).__init__(**runopts)
 
         self.num_reads = num_reads
         if qpu_sampler is None:
@@ -70,7 +70,7 @@ class QPUSubproblemExternalEmbeddingSampler(Runnable, traits.SubproblemSampler, 
         return ("{self}(num_reads={self.num_reads!r}, "
                        "qpu_sampler={self.sampler!r})").format(self=self)
 
-    def next(self, state):
+    def next(self, state, **runopts):
         sampler = FixedEmbeddingComposite(self.sampler, embedding=state.embedding)
         response = sampler.sample(state.subproblem, num_reads=self.num_reads)
         return state.updated(subsamples=response)
@@ -90,8 +90,8 @@ class QPUSubproblemAutoEmbeddingSampler(Runnable, traits.SubproblemSampler):
         See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/samplers.html#examples.
     """
 
-    def __init__(self, num_reads=100, qpu_sampler=None):
-        super(QPUSubproblemAutoEmbeddingSampler, self).__init__()
+    def __init__(self, num_reads=100, qpu_sampler=None, **runopts):
+        super(QPUSubproblemAutoEmbeddingSampler, self).__init__(**runopts)
 
         self.num_reads = num_reads
 
@@ -108,7 +108,7 @@ class QPUSubproblemAutoEmbeddingSampler(Runnable, traits.SubproblemSampler):
         return ("{self}(num_reads={self.num_reads!r}, "
                        "qpu_sampler={self.sampler!r})").format(self=self)
 
-    def next(self, state):
+    def next(self, state, **runopts):
         response = self.sampler.sample(state.subproblem, num_reads=self.num_reads)
         return state.updated(subsamples=response)
 
@@ -134,8 +134,8 @@ class ReverseAnnealingAutoEmbeddingSampler(Runnable, traits.SubproblemSampler):
             details, see :meth:`~dwave.system.DWaveSampler.validate_anneal_schedule`.
     """
 
-    def __init__(self, num_reads=100, qpu_sampler=None, anneal_schedule=None):
-        super(ReverseAnnealingAutoEmbeddingSampler, self).__init__()
+    def __init__(self, num_reads=100, qpu_sampler=None, anneal_schedule=None, **runopts):
+        super(ReverseAnnealingAutoEmbeddingSampler, self).__init__(**runopts)
 
         self.num_reads = num_reads
 
@@ -163,7 +163,7 @@ class ReverseAnnealingAutoEmbeddingSampler(Runnable, traits.SubproblemSampler):
                        "qpu_sampler={self.sampler!r}, "
                        "anneal_schedule={self.anneal_schedule!r})").format(self=self)
 
-    def next(self, state):
+    def next(self, state, **runopts):
         # TODO: handle more than just the first subsample
         response = self.sampler.sample(
             state.subproblem, num_reads=self.num_reads,
@@ -185,8 +185,8 @@ class SimulatedAnnealingSubproblemSampler(Runnable, traits.SubproblemSampler):
         See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/samplers.html#examples.
     """
 
-    def __init__(self, num_reads=1, sweeps=1000):
-        super(SimulatedAnnealingSubproblemSampler, self).__init__()
+    def __init__(self, num_reads=1, sweeps=1000, **runopts):
+        super(SimulatedAnnealingSubproblemSampler, self).__init__(**runopts)
         self.num_reads = num_reads
         self.sweeps = sweeps
         self.sampler = SimulatedAnnealingSampler()
@@ -196,7 +196,7 @@ class SimulatedAnnealingSubproblemSampler(Runnable, traits.SubproblemSampler):
         return ("{self}(num_reads={self.num_reads!r}, "
                        "sweeps={self.sweeps!r})").format(self=self)
 
-    def next(self, state):
+    def next(self, state, **runopts):
         subbqm = state.subproblem
         response = self.sampler.sample(
             subbqm, num_reads=self.num_reads, sweeps=self.sweeps,
@@ -223,8 +223,8 @@ class SimulatedAnnealingProblemSampler(Runnable, traits.ProblemSampler):
 
     """
 
-    def __init__(self, num_reads=1, sweeps=1000):
-        super(SimulatedAnnealingProblemSampler, self).__init__()
+    def __init__(self, num_reads=1, sweeps=1000, **runopts):
+        super(SimulatedAnnealingProblemSampler, self).__init__(**runopts)
         self.num_reads = num_reads
         self.sweeps = sweeps
         self.sampler = SimulatedAnnealingSampler()
@@ -234,7 +234,7 @@ class SimulatedAnnealingProblemSampler(Runnable, traits.ProblemSampler):
         return ("{self}(num_reads={self.num_reads!r}, "
                        "sweeps={self.sweeps!r})").format(self=self)
 
-    def next(self, state):
+    def next(self, state, **runopts):
         bqm = state.problem
         response = self.sampler.sample(
             bqm, num_reads=self.num_reads, sweeps=self.sweeps,
@@ -267,8 +267,8 @@ class TabuSubproblemSampler(Runnable, traits.SubproblemSampler):
         See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/samplers.html#examples.
     """
 
-    def __init__(self, num_reads=1, tenure=None, timeout=20):
-        super(TabuSubproblemSampler, self).__init__()
+    def __init__(self, num_reads=1, tenure=None, timeout=20, **runopts):
+        super(TabuSubproblemSampler, self).__init__(**runopts)
         self.num_reads = num_reads
         self.tenure = tenure
         self.timeout = timeout
@@ -279,7 +279,7 @@ class TabuSubproblemSampler(Runnable, traits.SubproblemSampler):
                        "tenure={self.tenure!r}, "
                        "timeout={self.timeout!r})").format(self=self)
 
-    def next(self, state):
+    def next(self, state, **runopts):
         subbqm = state.subproblem
         response = self.sampler.sample(
             subbqm, tenure=self.tenure, timeout=self.timeout, num_reads=self.num_reads)
@@ -303,8 +303,8 @@ class TabuProblemSampler(Runnable, traits.ProblemSampler):
         See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/samplers.html#examples.
     """
 
-    def __init__(self, num_reads=1, tenure=None, timeout=20):
-        super(TabuProblemSampler, self).__init__()
+    def __init__(self, num_reads=1, tenure=None, timeout=20, **runopts):
+        super(TabuProblemSampler, self).__init__(**runopts)
         self.num_reads = num_reads
         self.tenure = tenure
         self.timeout = timeout
@@ -315,7 +315,7 @@ class TabuProblemSampler(Runnable, traits.ProblemSampler):
                        "tenure={self.tenure!r}, "
                        "timeout={self.timeout!r})").format(self=self)
 
-    def next(self, state):
+    def next(self, state, **runopts):
         sampleset = self.sampler.sample(
             state.problem, init_solution=state.samples, tenure=self.tenure,
             timeout=self.timeout, num_reads=self.num_reads)
@@ -344,9 +344,9 @@ class InterruptableTabuSampler(TabuProblemSampler):
         See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/samplers.html#examples.
     """
 
-    def __init__(self, quantum_timeout=20, timeout=None, **kwargs):
-        self.quantum_timeout = kwargs['timeout'] = quantum_timeout
-        super(InterruptableTabuSampler, self).__init__(**kwargs)
+    def __init__(self, quantum_timeout=20, timeout=None, **runopts):
+        self.quantum_timeout = runopts['timeout'] = quantum_timeout
+        super(InterruptableTabuSampler, self).__init__(**runopts)
         self.max_timeout = timeout
         self._stop_event = threading.Event()
 
@@ -354,12 +354,12 @@ class InterruptableTabuSampler(TabuProblemSampler):
         return ("{self}(quantum_timeout={self.quantum_timeout!r}, "
                        "timeout={self.timeout!r})").format(self=self)
 
-    def next(self, state):
+    def next(self, state, **runopts):
         start = time.time()
         iterno = 1
         self._stop_event.clear()
         while True:
-            state = super(InterruptableTabuSampler, self).next(state)
+            state = super(InterruptableTabuSampler, self).next(state, **runopts)
             runtime = time.time() - start
             timeout = self.max_timeout is not None and runtime >= self.max_timeout
             if self._stop_event.is_set() or timeout:
@@ -375,7 +375,7 @@ class InterruptableTabuSampler(TabuProblemSampler):
 class RandomSubproblemSampler(Runnable, traits.SubproblemSampler):
     """A random sample generator for a subproblem."""
 
-    def next(self, state):
+    def next(self, state, **runopts):
         bqm = state.subproblem
         sample = random_sample(bqm)
         sampleset = SampleSet.from_samples(sample,

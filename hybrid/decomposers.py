@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 class IdentityDecomposer(Runnable, traits.ProblemDecomposer):
     """Selects a subproblem that is a full copy of the problem."""
 
-    def next(self, state):
+    def next(self, state, **runopts):
         return state.updated(subproblem=state.problem)
 
 
@@ -182,7 +182,7 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
 
     def __init__(self, size, min_gain=None,
                  rolling=True, rolling_history=0.1, silent_rewind=True,
-                 traversal='energy'):
+                 traversal='energy', **runopts):
 
         traversers = {
             'energy': self._energy,
@@ -190,7 +190,7 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
             'pfs': partial(self._iterative_graph_search, method=self._pfs_nodes),
         }
 
-        super(EnergyImpactDecomposer, self).__init__()
+        super(EnergyImpactDecomposer, self).__init__(**runopts)
 
         if rolling and rolling_history < 0.0 or rolling_history > 1.0:
             raise ValueError("rolling_history must be a float in range [0.0, 1.0]")
@@ -225,7 +225,7 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
         self._rolling_bqm = state.problem
         self._rolling_sample = state.sample
 
-    def next(self, state):
+    def next(self, state, **runopts):
         bqm = state.problem
         sample = state.samples.change_vartype(bqm.vartype).first.sample
 
@@ -288,15 +288,15 @@ class RandomSubproblemDecomposer(Runnable, traits.ProblemDecomposer):
         See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/decomposers.html#examples.
     """
 
-    def __init__(self, size):
-        super(RandomSubproblemDecomposer, self).__init__()
+    def __init__(self, size, **runopts):
+        super(RandomSubproblemDecomposer, self).__init__(**runopts)
 
         self.size = size
 
     def __repr__(self):
         return "{self}(size={self.size!r})".format(self=self)
 
-    def next(self, state):
+    def next(self, state, **runopts):
         bqm = state.problem
 
         if self.size > len(bqm):
@@ -328,9 +328,9 @@ class TilingChimeraDecomposer(Runnable, traits.ProblemDecomposer, traits.Embeddi
         See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/decomposers.html#examples.
     """
 
-    def __init__(self, size=(4,4,4), loop=True):
+    def __init__(self, size=(4,4,4), loop=True, **runopts):
         """Size C(n,m,t) defines a Chimera subgraph returned with each call."""
-        super(TilingChimeraDecomposer, self).__init__()
+        super(TilingChimeraDecomposer, self).__init__(**runopts)
         self.size = size
         self.loop = loop
         self.blocks = None
@@ -338,12 +338,12 @@ class TilingChimeraDecomposer(Runnable, traits.ProblemDecomposer, traits.Embeddi
     def __repr__(self):
         return "{self}(size={self.size!r}, loop={self.loop!r})".format(self=self)
 
-    def init(self, state):
+    def init(self, state, **runopts):
         self.blocks = iter(chimera_tiles(state.problem, *self.size).items())
         if self.loop:
             self.blocks = itertools.cycle(self.blocks)
 
-    def next(self, state):
+    def next(self, state, **runopts):
         """Each call returns a subsequent block of size `self.size` Chimera cells."""
         bqm = state.problem
         pos, embedding = next(self.blocks)
@@ -371,8 +371,8 @@ class RandomConstraintDecomposer(Runnable, traits.ProblemDecomposer):
         See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/decomposers.html#examples.
     """
 
-    def __init__(self, size, constraints):
-        super(RandomConstraintDecomposer, self).__init__()
+    def __init__(self, size, constraints, **runopts):
+        super(RandomConstraintDecomposer, self).__init__(**runopts)
 
         self.size = size
 
@@ -385,7 +385,7 @@ class RandomConstraintDecomposer(Runnable, traits.ProblemDecomposer):
     def __repr__(self):
         return "{self}(size={self.size!r}, constraints={self.constraints!r})".format(self=self)
 
-    def init(self, state):
+    def init(self, state, **runopts):
         if self.size > len(state.problem):
             raise ValueError("subproblem size cannot be greater than the problem size")
 
@@ -396,7 +396,7 @@ class RandomConstraintDecomposer(Runnable, traits.ProblemDecomposer):
                 if any(v in const for v in self.constraints[i]):
                     CG.add_edge(i, ci)
 
-    def next(self, state):
+    def next(self, state, **runopts):
         CG = self.constraint_graph
         size = self.size
         constraints = self.constraints

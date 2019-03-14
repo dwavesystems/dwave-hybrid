@@ -67,8 +67,8 @@ class Branch(Runnable):
 
     """
 
-    def __init__(self, components=(), *args, **kwargs):
-        super(Branch, self).__init__(*args, **kwargs)
+    def __init__(self, components=(), **runopts):
+        super(Branch, self).__init__(**runopts)
         self.components = tuple(components)
 
         if not self.components:
@@ -126,7 +126,7 @@ class Branch(Runnable):
     def __iter__(self):
         return iter(self.components)
 
-    def next(self, state):
+    def next(self, state, **runopts):
         """Start an iteration of an instantiated :class:`Branch`.
 
         Accepts a state and returns a new state.
@@ -141,8 +141,12 @@ class Branch(Runnable):
                 new_state = branch.next(core.State.from_sample(min_sample(bqm), bqm)
 
         """
+
+        runopts['executor'] = immediate_executor
+
         for component in self.components:
-            state = component.run(state, executor=immediate_executor)
+            state = component.run(state, **runopts)
+
         return state.result()
 
     def error(self, exc):
@@ -185,14 +189,14 @@ class RacingBranches(Runnable, traits.SIMO):
 
     """
 
-    def __init__(self, *branches, **kwargs):
+    def __init__(self, *branches, **runopts):
         """If known upfront codomain for all branches equals domain, state
         can safely be mixed in with branches' results. Otherwise set
         `endomorphic=False`.
         """
-        super(RacingBranches, self).__init__()
         self.branches = branches
-        self.endomorphic = kwargs.get('endomorphic', True)
+        self.endomorphic = runopts.pop('endomorphic', True)
+        super(RacingBranches, self).__init__(**runopts)
 
         if not self.branches:
             raise ValueError("racing branches requires at least one branch")
@@ -224,10 +228,10 @@ class RacingBranches(Runnable, traits.SIMO):
     def __iter__(self):
         return iter(self.branches)
 
-    def next(self, state):
+    def next(self, state, **runopts):
         """Execute one blocking iteration of an instantiated :class:`RacingBranches`."""
 
-        futures = [branch.run(state.updated()) for branch in self.branches]
+        futures = [branch.run(state.updated(), **runopts) for branch in self.branches]
 
         states = States()
         if self.endomorphic:
@@ -290,10 +294,10 @@ class ParallelBranches(Runnable, traits.SIMO):
 
     """
 
-    def __init__(self, *branches, **kwargs):
-        super(ParallelBranches, self).__init__()
+    def __init__(self, *branches, **runopts):
         self.branches = branches
-        self.endomorphic = kwargs.get('endomorphic', True)
+        self.endomorphic = runopts.pop('endomorphic', True)
+        super(ParallelBranches, self).__init__(**runopts)
 
         if not self.branches:
             raise ValueError("parallel branches require at least one branch")
@@ -325,8 +329,8 @@ class ParallelBranches(Runnable, traits.SIMO):
     def __iter__(self):
         return iter(self.branches)
 
-    def next(self, state):
-        futures = [branch.run(state.updated()) for branch in self.branches]
+    def next(self, state, **runopts):
+        futures = [branch.run(state.updated(), **runopts) for branch in self.branches]
 
         states = States()
         if self.endomorphic:
@@ -368,11 +372,11 @@ class Map(Runnable, traits.MIMO):
 
     """
 
-    def __init__(self, runnable, *args, **kwargs):
+    def __init__(self, runnable, **runopts):
         if not isinstance(runnable, Runnable):
             raise TypeError("'runnable' is not instance of Runnable")
 
-        super(Map, self).__init__(*args, **kwargs)
+        super(Map, self).__init__(**runopts)
         self.runnable = runnable
 
         # patch components's I/O requirements based on the subcomponents' requirements
@@ -392,8 +396,8 @@ class Map(Runnable, traits.MIMO):
     def __iter__(self):
         return iter((self.runnable,))
 
-    def next(self, states):
-        self._futures = [self.runnable.run(state) for state in states]
+    def next(self, states, **runopts):
+        self._futures = [self.runnable.run(state, **runopts) for state in states]
 
         concurrent.futures.wait(self._futures,
                                 return_when=concurrent.futures.ALL_COMPLETED)
@@ -420,14 +424,14 @@ class Reduce(Runnable, traits.MISO):
 
     """
 
-    def __init__(self, runnable, initial_state=None, *args, **kwargs):
+    def __init__(self, runnable, initial_state=None, **runopts):
         if not isinstance(runnable, Runnable):
             raise TypeError("'runnable' is not instance of Runnable")
 
         if initial_state is not None and not isinstance(initial_state, State):
             raise TypeError("'initial_state' is not instance of State")
 
-        super(Reduce, self).__init__(*args, **kwargs)
+        super(Reduce, self).__init__(**runopts)
         self.runnable = runnable
         self.initial_state = initial_state
 
@@ -452,7 +456,7 @@ class Reduce(Runnable, traits.MISO):
     def __iter__(self):
         return iter((self.runnable,))
 
-    def next(self, states):
+    def next(self, states, **runopts):
         """Collapse all `states` to a single output state using the `self.runnable`."""
 
         states = iter(states)
@@ -462,8 +466,10 @@ class Reduce(Runnable, traits.MISO):
         else:
             result = self.initial_state
 
+        runopts['executor'] = immediate_executor
+
         for state in states:
-            result = self.runnable.run(States(result, state), executor=immediate_executor).result()
+            result = self.runnable.run(States(result, state), **runopts).result()
 
         return result
 
@@ -500,7 +506,7 @@ class Lambda(Runnable, traits.NotValidated):
         [{'problem': None, 'x': 1, 'samples': None}, {'problem': None, 'x': 2, 'samples': None}]
     """
 
-    def __init__(self, next, error=None, init=None, *args, **kwargs):
+    def __init__(self, next, error=None, init=None, **runopts):
         if not callable(next):
             raise TypeError("'next' is not callable")
         if error is not None and not callable(error):
@@ -508,14 +514,14 @@ class Lambda(Runnable, traits.NotValidated):
         if init is not None and not callable(init):
             raise TypeError("'init' is not callable")
 
-        super(Lambda, self).__init__(*args, **kwargs)
+        super(Lambda, self).__init__(**runopts)
 
         # bind to self
-        self.next = partial(next, self)
+        self.next = partial(next, self, **runopts)
         if error is not None:
             self.error = partial(error, self)
         if init is not None:
-            self.init = partial(init, self)
+            self.init = partial(init, self, **runopts)
 
         # keep a copy for inspection (without cycles to `self`)
         self._next = next
@@ -557,9 +563,9 @@ class ArgMin(Runnable, traits.MISO):
 
     """
 
-    def __init__(self, key=None):
+    def __init__(self, key=None, **runopts):
         """Return the state which minimizes the objective function `key`."""
-        super(ArgMin, self).__init__()
+        super(ArgMin, self).__init__(**runopts)
         if key is None:
             key = 'samples.first.energy'
         if isinstance(key, six.string_types):
@@ -572,7 +578,7 @@ class ArgMin(Runnable, traits.MISO):
     def __repr__(self):
         return "{}(key={!r})".format(self.name, self.key)
 
-    def next(self, states):
+    def next(self, states, **runopts):
         """Execute one blocking iteration of an instantiated :class:`ArgMin`."""
 
         # expand `return min(states, key=self.key)` for logging/tracking
@@ -624,8 +630,8 @@ class TrackMin(Runnable, traits.SISO):
     """
 
     def __init__(self, key=None, output=False, input_key='samples',
-                 output_key='best_samples'):
-        super(TrackMin, self).__init__()
+                 output_key='best_samples', **runopts):
+        super(TrackMin, self).__init__(**runopts)
         if key is None:
             key = 'samples.first.energy'
         if isinstance(key, six.string_types):
@@ -641,12 +647,12 @@ class TrackMin(Runnable, traits.SISO):
             "input_key={self.input_key!r}, output_key={self.output_key!r})"
         ).format(self=self)
 
-    def init(self, state):
+    def init(self, state, **runopts):
         self.best = state
         logger.debug("{} selected {!r} for the initial best state".format(
             self.name, self.best))
 
-    def next(self, state):
+    def next(self, state, **runopts):
         if self.key(state) < self.key(self.best):
             self.best = state
             self.count('new-best')
@@ -693,8 +699,8 @@ class LoopUntilNoImprovement(Runnable):
 
     """
 
-    def __init__(self, runnable, max_iter=None, convergence=None, key=None):
-        super(LoopUntilNoImprovement, self).__init__()
+    def __init__(self, runnable, max_iter=None, convergence=None, key=None, **runopts):
+        super(LoopUntilNoImprovement, self).__init__(**runopts)
         self.runnable = runnable
         self.max_iter = max_iter
         self.convergence = convergence
@@ -755,14 +761,16 @@ class LoopUntilNoImprovement(Runnable):
 
         return iterno + 1, cnt, output_state
 
-    def next(self, state):
+    def next(self, state, **runopts):
         iterno = 0
         cnt = self.convergence or 0
         input_state = state
         output_state = input_state
 
+        runopts['executor'] = immediate_executor
+
         while not self._stop_event.is_set():
-            output_state = self.runnable.run(input_state, executor=immediate_executor).result()
+            output_state = self.runnable.run(input_state, **runopts).result()
 
             iterno, cnt, input_state = self.iteration_update(iterno, cnt, input_state, output_state)
 
@@ -832,9 +840,10 @@ class LoopWhileNoImprovement(LoopUntilNoImprovement):
 
     """
 
-    def __init__(self, runnable, max_iter=None, max_tries=None, key=None):
+    def __init__(self, runnable, max_iter=None, max_tries=None, key=None, **runopts):
         super(LoopWhileNoImprovement, self).__init__(
-            runnable=runnable, max_iter=max_iter, convergence=max_tries, key=key)
+            runnable=runnable, max_iter=max_iter, convergence=max_tries,
+            key=key, **runopts)
 
     def iteration_update(self, iterno, cnt, input_state, output_state):
         """Implement "no-improvement count-down" behavior:
@@ -875,11 +884,11 @@ class Unwind(Runnable, traits.SIMO):
     output states along the way.
     """
 
-    def __init__(self, runnable):
+    def __init__(self, runnable, **runopts):
         if not isinstance(runnable, Runnable):
             raise TypeError("'runnable' is not instance of Runnable")
 
-        super(Unwind, self).__init__()
+        super(Unwind, self).__init__(**runopts)
         self.runnable = runnable
 
         # preemptively check runnable's i/o dimensionality
@@ -900,12 +909,12 @@ class Unwind(Runnable, traits.SIMO):
     def __iter__(self):
         return iter((self.runnable,))
 
-    def next(self, state):
+    def next(self, state, **runopts):
         output = States()
 
         while True:
             try:
-                state = self.runnable.run(state).result()
+                state = self.runnable.run(state, **runopts).result()
                 output.append(state)
             except EndOfStream:
                 break

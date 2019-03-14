@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 class IdentityComposer(Runnable, traits.SubsamplesComposer):
     """Copy `subsamples` to `samples` verbatim."""
 
-    def next(self, state):
+    def next(self, state, **runopts):
         return state.updated(samples=state.subsamples)
 
 
@@ -37,7 +37,7 @@ class SplatComposer(Runnable, traits.SubsamplesComposer):
         See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/composers.html#examples.
     """
 
-    def next(self, state):
+    def next(self, state, **runopts):
         # update the first sample in `state.sampleset`, inplace
         # XXX: assume one global sample, one subsample
         # TODO: generalize
@@ -63,7 +63,7 @@ class GreedyPathMerge(Runnable, traits.MISO, traits.SamplesIntaking, traits.Samp
         Lecture Notes in Computer Science, vol 5732. Springer, Berlin, Heidelberg
     """
 
-    def next(self, states):
+    def next(self, states, **runopts):
         state_thesis, state_antithesis = states
         bqm = state_thesis.problem
 
