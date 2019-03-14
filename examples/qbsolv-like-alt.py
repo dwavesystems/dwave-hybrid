@@ -27,7 +27,8 @@ problem = sys.argv[1]
 with open(problem) as fp:
     bqm = dimod.BinaryQuadraticModel.from_coo(fp)
 
-# define the solver
+
+# define a qbsolv-like workflow
 def merge_substates(component, substates):
     a, b = substates
     return a.updated(
@@ -59,7 +60,8 @@ iteration = hybrid.Race(
 
 main = hybrid.Loop(iteration, max_iter=10, convergence=3)
 
-# run solver
+
+# run the workflow
 init_state = hybrid.State.from_sample(hybrid.min_sample(bqm), bqm)
 solution = main.run(init_state).result()
 
@@ -67,4 +69,4 @@ solution = main.run(init_state).result()
 hybrid.profiling.print_counters(main)
 
 # show results
-print("Solution: sample={s.samples.first}".format(s=solution))
+print("Solution: sample={.samples.first}".format(solution))

@@ -20,38 +20,37 @@ import sys
 import operator
 
 import dimod
-
-from hybrid.samplers import (
-    SimulatedAnnealingSubproblemSampler,
-    TabuSubproblemSampler, InterruptableTabuSampler)
-from hybrid.decomposers import EnergyImpactDecomposer, IdentityDecomposer
-from hybrid.composers import SplatComposer
-from hybrid.core import State
-from hybrid.flow import RacingBranches, ArgMin, Loop
-from hybrid.utils import min_sample
+import hybrid
 
 
+# load a problem
 problem = sys.argv[1]
 with open(problem) as fp:
     bqm = dimod.BinaryQuadraticModel.from_coo(fp)
 
 
-iteration = RacingBranches(
-    IdentityDecomposer() | SimulatedAnnealingSubproblemSampler() | SplatComposer(),
-    EnergyImpactDecomposer(size=50)
-        | RacingBranches(
-            SimulatedAnnealingSubproblemSampler(sweeps=1000),
-            TabuSubproblemSampler(tenure=20, timeout=10),
+# construct a workflow that races Simulated Annealing against SA/Tabu on a subproblem
+iteration = hybrid.RacingBranches(
+    hybrid.SimulatedAnnealingProblemSampler(),
+    hybrid.EnergyImpactDecomposer(size=50)
+        | hybrid.RacingBranches(
+            hybrid.SimulatedAnnealingSubproblemSampler(sweeps=1000),
+            hybrid.TabuSubproblemSampler(tenure=20, timeout=10),
             endomorphic=False
         )
-        | ArgMin(operator.attrgetter('subsamples.first.energy'))
-        | SplatComposer()
-) | ArgMin()
+        | hybrid.ArgMin('subsamples.first.energy')
+        | hybrid.SplatComposer()
+) | hybrid.ArgMin('samples.first.energy')
+main = hybrid.Loop(iteration, max_iter=10, convergence=3)
 
-main = Loop(iteration, max_iter=10, convergence=3)
 
-init_state = State.from_sample(min_sample(bqm), bqm)
-
+# run the workflow
+init_state = hybrid.State.from_sample(hybrid.utils.min_sample(bqm), bqm)
 solution = main.run(init_state).result()
 
-print("Solution: energy={s.samples.first.energy}".format(s=solution))
+# show results
+print("""
+Solution:
+    energy={s.samples.first.energy}
+    sample={s.samples.first.sample}
+""".format(s=solution))
