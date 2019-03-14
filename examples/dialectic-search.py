@@ -56,7 +56,7 @@ local_update = hybrid.LoopWhileNoImprovement(
     hybrid.Parallel(generate_antithesis) | generate_synthesis | min_tracker,
     max_tries=10)
 
-global_update = hybrid.LoopN(generate_antithesis | local_update, n=10)
+global_update = hybrid.Loop(generate_antithesis | local_update, max_iter=10)
 
 # run solver
 init_state = hybrid.State.from_sample(hybrid.min_sample(bqm), bqm)
