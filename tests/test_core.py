@@ -229,6 +229,29 @@ class TestRunnable(unittest.TestCase):
 
         self.assertEqual(s2.x, (1 + 1) ** 3)
 
+    def test_runopts_propagate(self):
+        class Add(Runnable):
+            def next(self, state, const):
+                return state.updated(x=state.x + const)
+
+        add = Add(const=8)
+        s1 = State(x=5)
+        s2 = add.run(s1).result()
+
+        self.assertEqual(s2.x, s1.x + add.runopts['const'])
+
+    def test_runopts_are_overridden(self):
+        class Affine(Runnable):
+            def next(self, state, scale, offset):
+                return state.updated(x=scale * state.x + offset)
+
+        add = Affine(scale=3, offset=7)
+        s1 = State(x=2)
+        s2 = add.run(s1, scale=5).result()
+
+        # scale is from run-time, offset is from construction-time
+        self.assertEqual(s2.x, 5 * s1.x + 7)
+
 
 class TestHybridSampler(unittest.TestCase):
 
