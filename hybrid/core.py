@@ -212,6 +212,10 @@ class States(list):
 class Runnable(traits.StateTraits):
     """Components such as samplers and branches that can be run for an iteration.
 
+    Args:
+        **runopts (dict):
+            Keyword arguments passed down to each `Runnable.run` call.
+
     Examples:
         This example runs a tabu search on a binary quadratic model. An initial state is
         manually set to :math:`x=y=0, z=1; a=b=1, c=0` and an updated
@@ -234,8 +238,10 @@ class Runnable(traits.StateTraits):
 
     """
 
-    def __init__(self, *args, **kwargs):
-        super(Runnable, self).__init__(*args, **kwargs)
+    def __init__(self, **runopts):
+        super(Runnable, self).__init__()
+
+        self.runopts = runopts
 
         self.timers = {}
         self.timeit = make_timeit(self.timers, prefix=self.name, loglevel=logging.TRACE)
@@ -298,7 +304,7 @@ class Runnable(traits.StateTraits):
         """
         pass
 
-    def dispatch(self, future):
+    def dispatch(self, future, **kwargs):
         """Dispatch state from resolving `future` to either `next` or `error` methods.
 
         Args:
@@ -325,13 +331,13 @@ class Runnable(traits.StateTraits):
         self.validate_input_state_traits(state)
 
         with self.timeit('dispatch.next'):
-            new_state = self.next(state)
+            new_state = self.next(state, **kwargs)
 
         self.validate_output_state_traits(new_state)
 
         return new_state
 
-    def run(self, state, executor=None):
+    def run(self, state, **kwargs):
         """Execute the next step/iteration of an instantiated :class:`Runnable`.
 
         Accepts a state in a :class:`~concurrent.futures.Future`-like object and
@@ -356,6 +362,12 @@ class Runnable(traits.StateTraits):
             <Present at 0x20ca68cd2b0 state=finished returned State>
         """
 
+        # merge deferred local runopts with explicit kwarg options
+        runopts = self.runopts.copy()
+        runopts.update(kwargs)
+
+        # based on merged runopts, decide on the executor
+        executor = runopts.pop('executor', None)
         if executor is None:
             executor = thread_executor
 
@@ -363,7 +375,7 @@ class Runnable(traits.StateTraits):
             raise TypeError("expecting 'concurrent.futures.Executor' subclass instance for 'executor'")
 
         with self.timeit('dispatch'):
-            return executor.submit(self.dispatch, state)
+            return executor.submit(self.dispatch, state, **runopts)
 
     def stop(self):
         """Terminate an iteration of an instantiated :class:`Runnable`."""
