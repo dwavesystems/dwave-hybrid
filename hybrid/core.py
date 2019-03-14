@@ -263,14 +263,14 @@ class Runnable(traits.StateTraits):
         """Return the :class:`Runnable` class name."""
         return self.__class__.__name__
 
-    def init(self, state):
+    def init(self, state, **runopts):
         """Run prior to the first next/run, with the first state received.
 
         Default to NOP.
         """
         pass
 
-    def next(self, state):
+    def next(self, state, **runopts):
         """Execute one blocking iteration of an instantiated :class:`Runnable` with a valid state as input.
 
         Args:
@@ -325,7 +325,7 @@ class Runnable(traits.StateTraits):
 
         if not getattr(self, '_initialized', False):
             with self.timeit('dispatch.init'):
-                self.init(state)
+                self.init(state, **kwargs)
             setattr(self, '_initialized', True)
 
         self.validate_input_state_traits(state)

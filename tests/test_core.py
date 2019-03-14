@@ -242,6 +242,9 @@ class TestRunnable(unittest.TestCase):
 
     def test_runopts_are_overridden(self):
         class Affine(Runnable):
+            def init(self, state, scale, **kwargs):
+                self.final_scale = scale
+
             def next(self, state, scale, offset):
                 return state.updated(x=scale * state.x + offset)
 
@@ -251,6 +254,9 @@ class TestRunnable(unittest.TestCase):
 
         # scale is from run-time, offset is from construction-time
         self.assertEqual(s2.x, 5 * s1.x + 7)
+
+        # init() should get the same
+        self.assertEqual(add.final_scale, 5)
 
 
 class TestHybridSampler(unittest.TestCase):
