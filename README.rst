@@ -65,32 +65,26 @@ Example
 .. code-block:: python
 
     import dimod
-    from hybrid.samplers import (
-        QPUSubproblemAutoEmbeddingSampler, InterruptableTabuSampler)
-    from hybrid.decomposers import EnergyImpactDecomposer
-    from hybrid.composers import SplatComposer
-    from hybrid.core import State
-    from hybrid.flow import RacingBranches, ArgMin, Loop
-    from hybrid.utils import min_sample
+    import hybrid
 
     # Construct a problem
     bqm = dimod.BinaryQuadraticModel({}, {'ab': 1, 'bc': -1, 'ca': 1}, 0, dimod.SPIN)
 
     # Define the workflow
-    iteration = RacingBranches(
-        InterruptableTabuSampler(),
-        EnergyImpactDecomposer(size=2)
-        | QPUSubproblemAutoEmbeddingSampler()
-        | SplatComposer()
-    ) | ArgMin()
-    main = Loop(iteration, max_iter=10, convergence=3)
+    iteration = hybrid.RacingBranches(
+        hybrid.InterruptableTabuSampler(),
+        hybrid.EnergyImpactDecomposer(size=2)
+        | hybrid.QPUSubproblemAutoEmbeddingSampler()
+        | hybrid.SplatComposer()
+    ) | hybrid.ArgMin()
+    workflow = hybrid.LoopUntilNoImprovement(iteration, convergence=3)
 
     # Solve the problem
-    init_state = State.from_sample(min_sample(bqm), bqm)
-    solution = main.run(init_state).result()
+    init_state = hybrid.State.from_sample(hybrid.utils.min_sample(bqm), bqm)
+    final_state = workflow.run(init_state).result()
 
     # Print results
-    print("Solution: sample={s.samples.first}".format(s=solution))
+    print("Solution: sample={.samples.first}".format(final_state))
 
 
 .. example-end-marker

@@ -36,10 +36,12 @@ import sys
 import dimod
 import hybrid
 
+
 # load a problem
 problem = sys.argv[1]
 with open(problem) as fp:
     bqm = dimod.BinaryQuadraticModel.from_coo(fp)
+
 
 # construct a Dialectic Search workflow
 generate_antithesis = ( hybrid.IdentityDecomposer()
@@ -56,11 +58,15 @@ local_update = hybrid.LoopWhileNoImprovement(
     hybrid.Parallel(generate_antithesis) | generate_synthesis | min_tracker,
     max_tries=10)
 
-global_update = hybrid.LoopN(generate_antithesis | local_update, n=10)
+global_update = hybrid.Loop(generate_antithesis | local_update, max_iter=10)
 
-# run solver
+
+# run the workflow
 init_state = hybrid.State.from_sample(hybrid.min_sample(bqm), bqm)
-final = global_update.run(init_state).result()
+final_state = global_update.run(init_state).result()
+
+# show execution profile
+hybrid.profiling.print_counters(global_update)
 
 # show results
-print("Solution: sample={s.samples.first}".format(s=min_tracker.best))
+print("Solution: sample={.samples.first}".format(min_tracker.best))

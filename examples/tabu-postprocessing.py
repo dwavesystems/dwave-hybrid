@@ -19,34 +19,30 @@ from __future__ import print_function
 import sys
 
 import dimod
-
-from hybrid.samplers import (
-    QPUSubproblemAutoEmbeddingSampler, TabuProblemSampler, InterruptableTabuSampler)
-from hybrid.decomposers import EnergyImpactDecomposer
-from hybrid.composers import SplatComposer
-from hybrid.core import State, SampleSet
-from hybrid.flow import RacingBranches, ArgMin, Loop
-from hybrid.utils import min_sample, max_sample, random_sample
+import hybrid
 
 
+# load a problem
 problem = sys.argv[1]
 with open(problem) as fp:
     bqm = dimod.BinaryQuadraticModel.from_coo(fp)
 
 
-# Run Tabu in parallel with QPU, but post-process QPU samples with very short Tabu
-iteration = RacingBranches(
-    InterruptableTabuSampler(),
-    EnergyImpactDecomposer(size=50)
-    | QPUSubproblemAutoEmbeddingSampler(num_reads=100)
-    | SplatComposer()
-    | TabuProblemSampler(timeout=1)
-) | ArgMin()
+# run Tabu in parallel with QPU, but post-process QPU samples with very short Tabu
+iteration = hybrid.RacingBranches(
+    hybrid.InterruptableTabuSampler(),
+    hybrid.EnergyImpactDecomposer(size=50)
+    | hybrid.QPUSubproblemAutoEmbeddingSampler(num_reads=100)
+    | hybrid.SplatComposer()
+    | hybrid.TabuProblemSampler(timeout=1)
+) | hybrid.ArgMin()
 
-main = Loop(iteration, max_iter=10, convergence=3)
+main = hybrid.Loop(iteration, max_iter=10, convergence=3)
 
-init_state = State.from_sample(min_sample(bqm), bqm)
 
+# run the workflow
+init_state = hybrid.State.from_sample(hybrid.utils.min_sample(bqm), bqm)
 solution = main.run(init_state).result()
 
-print("Solution: energy={s.samples.first.energy}".format(s=solution))
+# show results
+print("Solution: sample={.samples.first}".format(solution))

@@ -15,7 +15,6 @@ Classes
 .. autoclass:: Branch
 .. autoclass:: Lambda
 .. autoclass:: Loop
-.. autoclass:: LoopN
 .. autoclass:: LoopUntilNoImprovement
 .. autoclass:: LoopWhileNoImprovement
 .. autoclass:: Map
