@@ -212,6 +212,10 @@ class States(list):
 class Runnable(traits.StateTraits):
     """Components such as samplers and branches that can be run for an iteration.
 
+    Args:
+        **runopts (dict):
+            Keyword arguments passed down to each `Runnable.run` call.
+
     Examples:
         This example runs a tabu search on a binary quadratic model. An initial state is
         manually set to :math:`x=y=0, z=1; a=b=1, c=0` and an updated
@@ -234,8 +238,10 @@ class Runnable(traits.StateTraits):
 
     """
 
-    def __init__(self, *args, **kwargs):
-        super(Runnable, self).__init__(*args, **kwargs)
+    def __init__(self, **runopts):
+        super(Runnable, self).__init__()
+
+        self.runopts = runopts
 
         self.timers = {}
         self.timeit = make_timeit(self.timers, prefix=self.name, loglevel=logging.TRACE)
@@ -257,14 +263,14 @@ class Runnable(traits.StateTraits):
         """Return the :class:`Runnable` class name."""
         return self.__class__.__name__
 
-    def init(self, state):
+    def init(self, state, **runopts):
         """Run prior to the first next/run, with the first state received.
 
         Default to NOP.
         """
         pass
 
-    def next(self, state):
+    def next(self, state, **runopts):
         """Execute one blocking iteration of an instantiated :class:`Runnable` with a valid state as input.
 
         Args:
@@ -298,7 +304,7 @@ class Runnable(traits.StateTraits):
         """
         pass
 
-    def dispatch(self, future):
+    def dispatch(self, future, **kwargs):
         """Dispatch state from resolving `future` to either `next` or `error` methods.
 
         Args:
@@ -319,19 +325,19 @@ class Runnable(traits.StateTraits):
 
         if not getattr(self, '_initialized', False):
             with self.timeit('dispatch.init'):
-                self.init(state)
+                self.init(state, **kwargs)
             setattr(self, '_initialized', True)
 
         self.validate_input_state_traits(state)
 
         with self.timeit('dispatch.next'):
-            new_state = self.next(state)
+            new_state = self.next(state, **kwargs)
 
         self.validate_output_state_traits(new_state)
 
         return new_state
 
-    def run(self, state, executor=None):
+    def run(self, state, **kwargs):
         """Execute the next step/iteration of an instantiated :class:`Runnable`.
 
         Accepts a state in a :class:`~concurrent.futures.Future`-like object and
@@ -356,6 +362,12 @@ class Runnable(traits.StateTraits):
             <Present at 0x20ca68cd2b0 state=finished returned State>
         """
 
+        # merge deferred local runopts with explicit kwarg options
+        runopts = self.runopts.copy()
+        runopts.update(kwargs)
+
+        # based on merged runopts, decide on the executor
+        executor = runopts.pop('executor', None)
         if executor is None:
             executor = thread_executor
 
@@ -363,7 +375,7 @@ class Runnable(traits.StateTraits):
             raise TypeError("expecting 'concurrent.futures.Executor' subclass instance for 'executor'")
 
         with self.timeit('dispatch'):
-            return executor.submit(self.dispatch, state)
+            return executor.submit(self.dispatch, state, **runopts)
 
     def stop(self):
         """Terminate an iteration of an instantiated :class:`Runnable`."""
@@ -469,7 +481,7 @@ class HybridRunnable(Runnable):
     """
 
     def __init__(self, sampler, fields, **sample_kwargs):
-        super(HybridRunnable, self).__init__()
+        super(HybridRunnable, self).__init__(**sample_kwargs)
 
         if not isinstance(sampler, dimod.Sampler):
             raise TypeError("'sampler' should be 'dimod.Sampler'")
@@ -480,14 +492,13 @@ class HybridRunnable(Runnable):
 
         self.sampler = sampler
         self.input, self.output = fields
-        self.sample_kwargs = sample_kwargs
 
         # manually add traits
         self.inputs.add(self.input)
         self.outputs.add(self.output)
 
-    def next(self, state):
-        response = self.sampler.sample(state[self.input], **self.sample_kwargs)
+    def next(self, state, **sample_kwargs):
+        response = self.sampler.sample(state[self.input], **sample_kwargs)
         return state.updated(**{self.output: response})
 
 
