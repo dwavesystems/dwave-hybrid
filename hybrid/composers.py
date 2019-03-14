@@ -50,7 +50,7 @@ class SplatComposer(Runnable, traits.SubsamplesComposer):
 
 
 class GreedyPathMerge(Runnable, traits.MISO, traits.SamplesIntaking, traits.SamplesProducing):
-    """Dialectic-search merge operatio [KS]_. Generates a path from one input state,
+    """Dialectic-search merge operation [KS]_. Generates a path from one input state,
     representing the thesis, to another input state, representing the antithesis,
     using a greedy method of single bit flips selected by decreasing energy.
 
