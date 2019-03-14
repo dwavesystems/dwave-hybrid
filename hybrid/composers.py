@@ -50,7 +50,7 @@ class SplatComposer(Runnable, traits.SubsamplesComposer):
 
 
 class GreedyPathMerge(Runnable, traits.MISO, traits.SamplesIntaking, traits.SamplesProducing):
-    """Dialectic search merge operation [1]. Generates a path from one input state,
+    """Dialectic-search merge operation [KS]_. Generates a path from one input state,
     representing the thesis, to another input state, representing the antithesis,
     using a greedy method of single bit flips selected by decreasing energy.
 
@@ -58,7 +58,13 @@ class GreedyPathMerge(Runnable, traits.MISO, traits.SamplesIntaking, traits.Samp
 
     Note: only the lowest-energy sample, is considered from either input state.
 
-    [1] Kadioglu S., Sellmann M. (2009) Dialectic Search. In: Gent I.P. (eds)
+    Examples:
+        See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/composers.html#examples.
+
+    References
+    ----------
+
+    .. [KS] Kadioglu S., Sellmann M. (2009) Dialectic Search. In: Gent I.P. (eds)
         Principles and Practice of Constraint Programming - CP 2009. CP 2009.
         Lecture Notes in Computer Science, vol 5732. Springer, Berlin, Heidelberg
     """
