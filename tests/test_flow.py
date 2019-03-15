@@ -29,6 +29,7 @@ from hybrid.core import State, States, Runnable, Present
 from hybrid.utils import min_sample, max_sample
 from hybrid.profiling import tictoc
 from hybrid.exceptions import EndOfStream
+from hybrid.testing import mock
 from hybrid import traits
 
 
@@ -278,7 +279,7 @@ class TestTrackMin(unittest.TestCase):
 
 class TestLoopUntilNoImprovement(unittest.TestCase):
 
-    def test_basic_max_iter(self):
+    def test_max_iter(self):
         class Inc(Runnable):
             def next(self, state):
                 return state.updated(cnt=state.cnt + 1)
@@ -298,7 +299,7 @@ class TestLoopUntilNoImprovement(unittest.TestCase):
         s = it.run(State(cnt=0)).result()
         self.assertEqual(s.cnt, 100)
 
-    def test_basic_convergence(self):
+    def test_convergence(self):
         class Inc(Runnable):
             def next(self, state):
                 return state.updated(cnt=state.cnt + 1)
@@ -307,6 +308,23 @@ class TestLoopUntilNoImprovement(unittest.TestCase):
         s = it.run(State(cnt=0)).result()
 
         self.assertEqual(s.cnt, 100)
+
+    def test_timeout(self):
+        class Inc(Runnable):
+            def next(self, state):
+                return state.updated(cnt=state.cnt + 1)
+
+        # timeout after exactly two runs
+        with mock.patch('time.time', side_effect=itertools.count(), create=True):
+            loop = LoopUntilNoImprovement(Inc(), max_time=2)
+            state = loop.run(State(cnt=0)).result()
+            self.assertEqual(state.cnt, 2)
+
+        # timeout after the second run
+        with mock.patch('time.time', side_effect=itertools.count(), create=True):
+            loop = LoopUntilNoImprovement(Inc(), max_time=2.5)
+            state = loop.run(State(cnt=0)).result()
+            self.assertEqual(state.cnt, 3)
 
     def test_finite_loop(self):
         class Inc(Runnable):
