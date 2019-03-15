@@ -30,6 +30,7 @@ from tabu import TabuSampler
 from neal import SimulatedAnnealingSampler
 
 from hybrid.core import Runnable, SampleSet
+from hybrid.flow import Loop
 from hybrid.utils import random_sample
 from hybrid import traits
 
@@ -322,7 +323,7 @@ class TabuProblemSampler(Runnable, traits.ProblemSampler):
         return state.updated(samples=sampleset)
 
 
-class InterruptableTabuSampler(TabuProblemSampler):
+class InterruptableTabuSampler(Loop):
     """An interruptable tabu sampler for a binary quadratic problem.
 
     Args:
@@ -332,44 +333,21 @@ class InterruptableTabuSampler(TabuProblemSampler):
             Tabu tenure, which is the length of the tabu list, or number of recently
             explored solutions kept in memory. Default is a quarter of the number
             of problem variables up to a maximum value of 20.
-        quantum_timeout (int, optional, default=20):
+        timeout (int, optional, default=20):
             Timeout for non-interruptable operation of tabu search. At the completion of
             each loop of tabu search through its problem variables, if this time interval
             has been exceeded, the search can be stopped by an interrupt signal or
             expiration of the `timeout` parameter.
-        timeout (int, optional, default=20):
+        max_time (float, optional, default=None):
             Total running time in milliseconds.
 
     Examples:
         See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/samplers.html#examples.
     """
 
-    def __init__(self, quantum_timeout=20, timeout=None, **runopts):
-        self.quantum_timeout = runopts['timeout'] = quantum_timeout
-        super(InterruptableTabuSampler, self).__init__(**runopts)
-        self.max_timeout = timeout
-        self._stop_event = threading.Event()
-
-    def __repr__(self):
-        return ("{self}(quantum_timeout={self.quantum_timeout!r}, "
-                       "timeout={self.timeout!r})").format(self=self)
-
-    def next(self, state, **runopts):
-        start = time.time()
-        iterno = 1
-        self._stop_event.clear()
-        while True:
-            state = super(InterruptableTabuSampler, self).next(state, **runopts)
-            runtime = time.time() - start
-            timeout = self.max_timeout is not None and runtime >= self.max_timeout
-            if self._stop_event.is_set() or timeout:
-                break
-            iterno += 1
-        # TODO: store iterno in local counter
-        return state
-
-    def halt(self):
-        self._stop_event.set()
+    def __init__(self, max_time=None, **tabu):
+        super(InterruptableTabuSampler, self).__init__(
+            TabuProblemSampler(**tabu), max_time=max_time)
 
 
 class RandomSubproblemSampler(Runnable, traits.SubproblemSampler):

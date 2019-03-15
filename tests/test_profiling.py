@@ -62,7 +62,6 @@ class TestCoreRunnablesIterable(unittest.TestCase):
         self.assertEqual(self.children(QPUSubproblemAutoEmbeddingSampler(qpu_sampler=MockDWaveSampler())), [])
         self.assertEqual(self.children(SimulatedAnnealingSubproblemSampler()), [])
         self.assertEqual(self.children(TabuProblemSampler()), [])
-        self.assertEqual(self.children(InterruptableTabuSampler()), [])
         # sample of decomposers
         self.assertEqual(self.children(IdentityDecomposer()), [])
         self.assertEqual(self.children(EnergyImpactDecomposer(size=1)), [])
