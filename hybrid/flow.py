@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
 import logging
 import threading
 import warnings
@@ -685,6 +686,9 @@ class LoopUntilNoImprovement(Runnable):
             termination criteria is defined with `max_iter`. Setting neither
             creates an infinite loop.
 
+        max_time (float/None, optional, default=None):
+            Wall clock runtime termination criterion. Unlimited by default.
+
         key (callable/str):
             Best state is judged according to a metric defined with a `key`.
             `key` can be a `callable` with a signature::
@@ -699,10 +703,12 @@ class LoopUntilNoImprovement(Runnable):
 
     """
 
-    def __init__(self, runnable, max_iter=None, convergence=None, key=None, **runopts):
+    def __init__(self, runnable, max_iter=None, convergence=None,
+                 max_time=None, key=None, **runopts):
         super(LoopUntilNoImprovement, self).__init__(**runopts)
         self.runnable = runnable
         self.max_iter = max_iter
+        self.max_time = max_time
         self.convergence = convergence
         if key is None:
             key = attrgetter('samples.first.energy')
@@ -766,6 +772,7 @@ class LoopUntilNoImprovement(Runnable):
         cnt = self.convergence or 0
         input_state = state
         output_state = input_state
+        start = time.time()
 
         runopts['executor'] = immediate_executor
 
@@ -774,7 +781,11 @@ class LoopUntilNoImprovement(Runnable):
 
             iterno, cnt, input_state = self.iteration_update(iterno, cnt, input_state, output_state)
 
+            runtime = time.time() - start
+
             if self.max_iter is not None and iterno >= self.max_iter:
+                break
+            if self.max_time is not None and runtime >= self.max_time:
                 break
             if self.convergence is not None and cnt <= 0:
                 break
@@ -826,6 +837,9 @@ class LoopWhileNoImprovement(LoopUntilNoImprovement):
             input state, and the try/trial counter is reset. Defaults to an
             infinite loop (unbounded number of tries).
 
+        max_time (float/None, optional, default=None):
+            Wall clock runtime termination criterion. Unlimited by default.
+
         key (callable/str):
             Best state is judged according to a metric defined with a `key`.
             `key` can be a `callable` with a signature::
@@ -840,10 +854,11 @@ class LoopWhileNoImprovement(LoopUntilNoImprovement):
 
     """
 
-    def __init__(self, runnable, max_iter=None, max_tries=None, key=None, **runopts):
+    def __init__(self, runnable, max_iter=None, max_tries=None,
+                 max_time=None, key=None, **runopts):
         super(LoopWhileNoImprovement, self).__init__(
             runnable=runnable, max_iter=max_iter, convergence=max_tries,
-            key=key, **runopts)
+            max_time=max_time, key=key, **runopts)
 
     def iteration_update(self, iterno, cnt, input_state, output_state):
         """Implement "no-improvement count-down" behavior:
