@@ -13,3 +13,4 @@ Reference Documentation
    flow
    utilities
    conversion
+   traits
