@@ -345,9 +345,9 @@ class TestLoopUntilNoImprovement(unittest.TestCase):
 
         loop = Loop(Inc())
         loop.stop()
-        s = loop.run(State(cnt=0))
+        state = loop.run(State(cnt=0))
 
-        self.assertEqual(s.result().cnt, 0)
+        self.assertEqual(state.result().cnt, 0)
 
     def test_infinite_loop_stops(self):
         """An infinite loop can be stopped after at least one iteration."""
@@ -362,13 +362,47 @@ class TestLoopUntilNoImprovement(unittest.TestCase):
                 return state.updated(cnt=state.cnt + 1)
 
         loop = Loop(Inc())
-        s = loop.run(State(cnt=0))
+        state = loop.run(State(cnt=0))
 
         # make sure loop body runnable is run at least once, then issue stop
         loop.runnable.first_run.wait(timeout=1)
         loop.stop()
 
-        self.assertTrue(s.result().cnt >= 1)
+        self.assertTrue(state.result().cnt >= 1)
+
+    def test_infinite_loop_runs_after_stop(self):
+        """An infinite loop can be started again after being stopped."""
+
+        class Inc(Runnable):
+            def __init__(self):
+                super(Inc, self).__init__()
+                self.first_run = threading.Event()
+
+            def next(self, state):
+                self.first_run.set()
+                return state.updated(cnt=state.cnt + 1)
+
+        loop = Loop(Inc())
+        state1 = loop.run(State(cnt=0))
+
+        # make sure loop body runnable is run at least once, then issue stop
+        loop.runnable.first_run.wait(timeout=1)
+        loop.stop()
+
+        # check the state AND make sure next() finishes (see #111)
+        self.assertTrue(state1.result().cnt >= 1)
+
+        # reset our test event object
+        loop.runnable.first_run.clear()
+
+        # run loop again
+        state2 = loop.run(State(cnt=0))
+
+        # make sure loop body runnable is run at least once, then issue stop
+        loop.runnable.first_run.wait(timeout=1)
+        loop.stop()
+
+        self.assertTrue(state2.result().cnt >= 1)
 
     def test_infinite_loop_over_interruptable_runnable(self):
         """Stop signal must propagate to child runnable."""
