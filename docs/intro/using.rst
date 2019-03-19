@@ -59,10 +59,9 @@ iteration of the `TabuProblemSampler` :class:`.Runnable`.
 >>> # Sample the problem
 >>> new_state = sampler.run(state).result()
 >>> print(new_state.samples)                     # doctest: +SKIP
-       a   b   c  energy  num_occ.
-   0  +1  -1  -1    -0.5         1
-
-   [ 1 rows, 3 variables ]
+    a   b   c  energy  num_occ.
+0  +1  -1  -1    -0.5         1
+['SPIN', 1 rows, 1 samples, 3 variables]
 
 Flow Structuring
 ----------------
@@ -86,11 +85,10 @@ is set using the utility function :meth:`~hybrid.utils.min_sample`.
 ...           SplatComposer())
 >>> new_state = branch.next(State.from_sample(min_sample(bqm), bqm))
 >>> print(new_state.subsamples)      # doctest: +SKIP
-       4   5   6   7   8   9  energy  num_occ.
-   0  +1  -1  -1  +1  -1  +1    -5.0         1
-   1  +1  -1  -1  +1  -1  +1    -5.0         1
-
-   [ 2 rows, 6 variables ]
+    4   5   6   7   8   9  energy  num_occ.
+0  +1  -1  -1  +1  -1  +1    -5.0         1
+1  +1  -1  -1  +1  -1  +1    -5.0         1
+['SPIN', 2 rows, 2 samples, 6 variables]
 
 Such :class:`.Branch` classes can be run in parallel using the :class:`.RacingBranches` class.
 From the outputs of these parallel branches, :class:`.ArgMin` selects a new current sample.
@@ -107,6 +105,15 @@ decomposition and parallel running of branches.
 .. include:: ../../README.rst
   :start-after: example-start-marker
   :end-before: example-end-marker
+
+Flow: Refining
+--------------
+
+Changing your initial work flow produces different solution performance. Components
+often overlap in functionality and one can be quickly replaced with others, and parameters
+and flow controls can be tuned.
+
+
 
 Additional Examples
 ===================
