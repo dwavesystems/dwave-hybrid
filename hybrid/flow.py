@@ -790,6 +790,9 @@ class LoopUntilNoImprovement(Runnable):
             if self.convergence is not None and cnt <= 0:
                 break
 
+        # reset the stop flag, so next .run() works
+        self._stop_event.clear()
+
         return output_state
 
     def halt(self):
