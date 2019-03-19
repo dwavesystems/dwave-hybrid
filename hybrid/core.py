@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import os
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 from copy import deepcopy
 import operator
 import logging
@@ -243,10 +243,10 @@ class Runnable(traits.StateTraits):
 
         self.runopts = runopts
 
-        self.timers = {}
+        self.timers = defaultdict(list)
         self.timeit = make_timeit(self.timers, prefix=self.name, loglevel=logging.TRACE)
 
-        self.counters = {}
+        self.counters = defaultdict(int)
         self.count = make_count(self.counters, prefix=self.name, loglevel=logging.TRACE)
 
     def __str__(self):
