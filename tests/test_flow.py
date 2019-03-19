@@ -383,23 +383,26 @@ class TestLoopUntilNoImprovement(unittest.TestCase):
                 return state.updated(cnt=state.cnt + 1)
 
         loop = Loop(Inc())
-        loop.run(State(cnt=0))
+        state1 = loop.run(State(cnt=0))
 
         # make sure loop body runnable is run at least once, then issue stop
         loop.runnable.first_run.wait(timeout=1)
         loop.stop()
+
+        # check the state AND make sure next() finishes (see #111)
+        self.assertTrue(state1.result().cnt >= 1)
 
         # reset our test event object
         loop.runnable.first_run.clear()
 
         # run loop again
-        state = loop.run(State(cnt=0))
+        state2 = loop.run(State(cnt=0))
 
         # make sure loop body runnable is run at least once, then issue stop
         loop.runnable.first_run.wait(timeout=1)
         loop.stop()
 
-        self.assertTrue(state.result().cnt >= 1)
+        self.assertTrue(state2.result().cnt >= 1)
 
     def test_infinite_loop_over_interruptable_runnable(self):
         """Stop signal must propagate to child runnable."""
