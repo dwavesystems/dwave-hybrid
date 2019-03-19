@@ -139,6 +139,8 @@ class TestTimers(unittest.TestCase):
 
         self.assertEqual(len(r.timers['my-timer']), 1)
 
+    def test_runnable_default_timer_value(self):
+        self.assertEqual(Runnable().timers['my-timer'], [])
 
 class TestCounters(unittest.TestCase):
 
@@ -170,3 +172,6 @@ class TestCounters(unittest.TestCase):
 
         self.assertEqual(r.counters['my-counter'], 3)
         self.assertEqual(r.counters['your-counter'], 1)
+
+    def test_runnable_default_counter_value(self):
+        self.assertEqual(Runnable().counters['my-counter'], 0)
