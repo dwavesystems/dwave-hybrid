@@ -95,23 +95,66 @@ From the outputs of these parallel branches, :class:`.ArgMin` selects a new curr
 And instead of a single iteration on the sample set, you can use the :class:`.Loop`
 to iterate a set number of times or until a convergence criteria is met.
 
-This next example solves a binary quadratic model by iteratively producing best samples.
+This example of :ref:`racingBranches1` solves a binary quadratic model by iteratively producing best samples.
 Similar to :std:doc:`qbsolv <qbsolv:index>`, it employs both tabu search on the entire
 problem and a D-Wave system on subproblems. In addition to building-block components
 such as employed above, this example also uses infrastructure classes to manage the
 decomposition and parallel running of branches.
 
+.. figure:: ../_static/racing_branches_1.png
+  :name: racingBranches1
+  :scale: 90 %
+  :alt: Racing Branches
+
+  Racing Branches
 
 .. include:: ../../README.rst
   :start-after: example-start-marker
   :end-before: example-end-marker
 
-Flow: Refining
---------------
+Flow Refining
+-------------
 
-Changing your initial work flow produces different solution performance. Components
-often overlap in functionality and one can be quickly replaced with others, and parameters
-and flow controls can be tuned.
+The framework enables quick modification of work flows to improve solutions and performance.
+For example, the :ref:`racingBranches1` workflow above is modified by the code below to
+better fit problems with large numbers of variables: setting `rolling_history` moves a
+decomposition window along a fraction of problem variables as ordered by energy impact.
+
+.. code-block:: python
+
+    # Redefine the workflow: a rolling decomposition window
+    subproblem = hybrid.EnergyImpactDecomposer(size=50, rolling_history=0.15)
+    subsampler = hybrid.QPUSubproblemAutoEmbeddingSampler()
+                 | hybrid.SplatComposer()
+
+    iteration = hybrid.RacingBranches(
+        hybrid.InterruptableTabuSampler(),
+        subproblem | subsampler
+    ) | hybrid.ArgMin()
+
+    workflow = hybrid.LoopUntilNoImprovement(iteration, max_iter=1000, convergence=3)
+
+The modification above produces a sample for each subproblem; the following modification,
+which also decomposes 15% of the problem's variables with highest energy impact into subproblems,
+processes all the subproblems in parallel and merges the samples.
+
+.. code-block:: python
+
+    # Redefine the workflow: parallel subproblem solving for a single sample
+
+    subproblem = hybrid.Unwind(
+                 hybrid.EnergyImpactDecomposer(size=50, rolling_history=0.15, silent_rewind=False))
+    subsampler = hybrid.Map(hybrid.QPUSubproblemAutoEmbeddingSampler()
+                 | hybrid.Reduce(hybrid.Lambda(hybrid.merge_substates))
+                 | hybrid.SplatComposer()
+
+    iteration = hybrid.RacingBranches(
+        hybrid.InterruptableTabuSampler(),
+        subproblem | subsampler
+    ) | hybrid.ArgMin()
+
+    workflow = hybrid.LoopUntilNoImprovement(iteration, max_iter=1000, convergence=3)
+
 
 
 
@@ -122,18 +165,14 @@ Tailoring State Selection
 -------------------------
 
 The next example tailors a state selector for a sampler that does some post-processing
-and can alert upon suspect samples. In the sampler output shown below, the first of three
-:class:`~hybrid.core.State` classes is flagged as problematic using the `info` field::
+and can alert upon suspect samples. Sampler output modified by ellipses ("...") for readability
+is shown below for an Ising model of a triangle problem with zero biases
+and interactions all equal to 0.5. The first of three :class:`~hybrid.core.State` classes is
+flagged as problematic using the `info` field::
 
-    [{'problem': BinaryQuadraticModel({'a': 0.0, 'b': 0.0, 'c': 0.0}, {('a', 'b'): 0.5, ('b', 'c'): 0.5, ('c', 'a'): 0.5},
-    0.0, Vartype.SPIN),'samples': SampleSet(rec.array([([0, 1, 0], 0., 1)],
-    dtype=[('sample', 'i1', (3,)), ('energy', '<f8'), ('num_occurrences', '<i4')]), ['a', 'b', 'c'], {'Postprocessor': 'Excessive chain breaks'}, 'SPIN')},
-    {'problem': BinaryQuadraticModel({'a': 0.0, 'b': 0.0, 'c': 0.0}, {('a', 'b'): 0.5, ('b', 'c'): 0.5, ('c', 'a'): 0.5},
-    0.0, Vartype.SPIN),'samples': SampleSet(rec.array([([1, 1, 1], 1.5, 1)],
-    dtype=[('sample', 'i1', (3,)), ('energy', '<f8'), ('num_occurrences', '<i4')]), ['a', 'b', 'c'], {}, 'SPIN')},
-    {'problem': BinaryQuadraticModel({'a': 0.0, 'b': 0.0, 'c': 0.0}, {('a', 'b'): 0.5, ('b', 'c'): 0.5, ('c', 'a'): 0.5},
-    0.0, Vartype.SPIN),'samples': SampleSet(rec.array([([0, 0, 0], 0., 1)],
-    dtype=[('sample', 'i1', (3,)), ('energy', '<f8'), ('num_occurrences', '<i4')]), ['a', 'b', 'c'], {}, 'SPIN')}]
+    [{...,'samples': SampleSet(rec.array([([0, 1, 0], 0., 1)], ..., ['a', 'b', 'c'], {'Postprocessor': 'Excessive chain breaks'}, 'SPIN')},
+    {...,'samples': SampleSet(rec.array([([1, 1, 1], 1.5, 1)], ..., ['a', 'b', 'c'], {}, 'SPIN')},
+    {...,'samples': SampleSet(rec.array([([0, 0, 0], 0., 1)], ..., ['a', 'b', 'c'], {}, 'SPIN')}]
 
 This code snippet defines a metric for the key argument in :class:`~hybrid.flow.ArgMin`::
 
@@ -144,7 +183,7 @@ This code snippet defines a metric for the key argument in :class:`~hybrid.flow.
             return(si.samples.first.energy)
 
 Using the defined key on the above input, :class:`~hybrid.flow.ArgMin` finds the state
-with the lowest energy excluding the flagged state:
+with the lowest energy (zero) excluding the flagged state (which also has energy of zero):
 
 >>> ArgMin(key=preempt).next(states)     # doctest: +SKIP
 {'problem': BinaryQuadraticModel({'a': 0.0, 'b': 0.0, 'c': 0.0}, {('a', 'b'): 0.5, ('b', 'c'): 0.5, ('c', 'a'): 0.5},
