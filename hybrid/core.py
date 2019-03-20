@@ -203,11 +203,11 @@ class State(PliableDict):
             samples = min_sample
 
         if callable(samples):
-            sampleset = samples(bqm)
+            samples_like = samples(bqm)
         else:
-            sampleset = samples
+            samples_like = samples
 
-        return cls.from_samples(sampleset, bqm)
+        return cls.from_samples(samples_like, bqm)
 
     @classmethod
     def from_subproblem(cls, bqm, subsamples=None):
@@ -217,11 +217,11 @@ class State(PliableDict):
             subsamples = min_sample
 
         if callable(subsamples):
-            sampleset = subsamples(bqm)
+            subsamples_like = subsamples(bqm)
         else:
-            sampleset = subsamples
+            subsamples_like = subsamples
 
-        return cls.from_subsamples(sampleset, bqm)
+        return cls.from_subsamples(subsamples_like, bqm)
 
 
 class States(list):

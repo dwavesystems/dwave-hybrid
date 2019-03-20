@@ -115,6 +115,22 @@ class TestState(unittest.TestCase):
         self.assertEqual(State.from_subsamples([s2, s2], bqm).subsamples.first.energy, 1.0)
         self.assertEqual(State.from_subsamples([sample_as_dict(s1), s2], bqm).subsamples.first.energy, 1.0)
 
+    def test_from_problem(self):
+        sample = {0: 1, 1: 0}
+        bqm = dimod.BinaryQuadraticModel({0: 1, 1: 2}, {}, 0.0, 'BINARY')
+        self.assertEqual(State.from_problem(bqm).samples.first.energy, 0.0)
+        self.assertEqual(State.from_problem(bqm, samples=hybrid.utils.max_sample).samples.first.energy, 3.0)
+        self.assertEqual(State.from_problem(bqm, samples=sample), State.from_samples(sample, bqm))
+        self.assertEqual(State.from_problem(bqm, samples=[sample]), State.from_samples([sample], bqm))
+
+    def test_from_subproblem(self):
+        subsample = {0: 1, 1: 0}
+        bqm = dimod.BinaryQuadraticModel({0: 1, 1: 2}, {}, 0.0, 'BINARY')
+        self.assertEqual(State.from_subproblem(bqm).subsamples.first.energy, 0.0)
+        self.assertEqual(State.from_subproblem(bqm, subsamples=hybrid.utils.max_sample).subsamples.first.energy, 3.0)
+        self.assertEqual(State.from_subproblem(bqm, subsamples=subsample), State.from_subsamples(subsample, bqm))
+        self.assertEqual(State.from_subproblem(bqm, subsamples=[subsample]), State.from_subsamples([subsample], bqm))
+
     def test_updated(self):
         a = SampleSet.from_samples([1,0,1], 'SPIN', 0)
         b = SampleSet.from_samples([0,1,0], 'SPIN', 0)
