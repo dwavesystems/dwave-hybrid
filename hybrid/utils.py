@@ -475,20 +475,20 @@ def random_sample(bqm):
 
 
 def min_sample(bqm):
-    """Return a sample with minimal values for a binary quadratic model.
+    """Return a sample with all variables set to the minimal value for a binary quadratic model.
 
     Args:
         bqm (:obj:`.BinaryQuadraticModel`):
             Binary quadratic model (BQM).
 
     Returns:
-        dict: A sample with minimal values for the BQM.
+        dict: A sample with minimal values for all variables of the BQM.
 
     Examples:
         >>> import dimod
         >>> bqm = dimod.BinaryQuadraticModel({},
         ...             {('a', 'b'): -1, ('b', 'c'): -1, ('c', 'a'): -1}, 0, 'BINARY')
-        >>> random_sample(bqm)     # doctest: +SKIP
+        >>> min_sample(bqm)     # doctest: +SKIP
         {'a': 0, 'b': 0, 'c': 0}
 
     """
@@ -497,20 +497,20 @@ def min_sample(bqm):
 
 
 def max_sample(bqm):
-    """Return a sample with maximal values for a binary quadratic model.
+    """Return a sample with all variables set to the maximal value for a binary quadratic model.
 
     Args:
         bqm (:obj:`.BinaryQuadraticModel`):
             Binary quadratic model (BQM).
 
     Returns:
-        dict: A sample with maximal values for the BQM.
+        dict: A sample with maximal values for all variables of the BQM.
 
     Examples:
         >>> import dimod
         >>> bqm = dimod.BinaryQuadraticModel({},
         ...             {('a', 'b'): -1, ('b', 'c'): -1, ('c', 'a'): -1}, 0, 'BINARY')
-        >>> random_sample(bqm)     # doctest: +SKIP
+        >>> max_sample(bqm)     # doctest: +SKIP
         {'a': 1, 'b': 1, 'c': 1}
 
     """
