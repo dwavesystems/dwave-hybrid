@@ -195,6 +195,34 @@ class State(PliableDict):
         """Similar to :meth:`.from_samples`, but initializes `subproblem` and `subsamples`."""
         return cls(subproblem=bqm, subsamples=SampleSet.from_samples_bqm(subsamples, bqm))
 
+    @classmethod
+    def from_problem(cls, bqm, samples=None):
+        """Convenience method for constructing a state from (possibly only) a BQM."""
+
+        if samples is None:
+            samples = min_sample
+
+        if callable(samples):
+            sampleset = samples(bqm)
+        else:
+            sampleset = samples
+
+        return cls.from_samples(sampleset, bqm)
+
+    @classmethod
+    def from_subproblem(cls, bqm, subsamples=None):
+        """Convenience method for constructing a state from (possibly only) a subproblem BQM."""
+
+        if subsamples is None:
+            subsamples = min_sample
+
+        if callable(subsamples):
+            sampleset = subsamples(bqm)
+        else:
+            sampleset = subsamples
+
+        return cls.from_subsamples(sampleset, bqm)
+
 
 class States(list):
     """List of states."""
