@@ -14,3 +14,4 @@ Reference Documentation
    utilities
    conversion
    traits
+   exceptions

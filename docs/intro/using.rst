@@ -103,7 +103,7 @@ decomposition and parallel running of branches.
 
 .. figure:: ../_static/racing_branches_1.png
   :name: racingBranches1
-  :scale: 90 %
+  :scale: 70 %
   :alt: Racing Branches
 
   Racing Branches
@@ -116,47 +116,42 @@ Flow Refining
 -------------
 
 The framework enables quick modification of work flows to improve solutions and performance.
-For example, the :ref:`racingBranches1` workflow above is modified by the code below to
-better fit problems with large numbers of variables: setting `rolling_history` moves a
-decomposition window along a fraction of problem variables as ordered by energy impact.
+For example, after verifying the :ref:`racingBranches1` workflow above on its small problem,
+you might make a series of modifications such as the examples below to better fit it to problems
+with large numbers of variables.
+
+1. Configure a decomposition window that moves down a fraction of problem variables,
+   ordered from highest to lower energy impact, and submit those subproblems to the D-Wave system
+   while tabu searches globally. This example submits 50-variable subproblems on
+   up to 15% of the total variables.
 
 .. code-block:: python
 
     # Redefine the workflow: a rolling decomposition window
     subproblem = hybrid.EnergyImpactDecomposer(size=50, rolling_history=0.15)
-    subsampler = hybrid.QPUSubproblemAutoEmbeddingSampler()
-                 | hybrid.SplatComposer()
+    subsampler = hybrid.QPUSubproblemAutoEmbeddingSampler() | hybrid.SplatComposer()
 
     iteration = hybrid.RacingBranches(
         hybrid.InterruptableTabuSampler(),
         subproblem | subsampler
     ) | hybrid.ArgMin()
+    workflow = hybrid.LoopUntilNoImprovement(iteration, convergence=3)
 
-    workflow = hybrid.LoopUntilNoImprovement(iteration, max_iter=1000, convergence=3)
-
-The modification above produces a sample for each subproblem; the following modification,
-which also decomposes 15% of the problem's variables with highest energy impact into subproblems,
-processes all the subproblems in parallel and merges the samples.
+2. Instead of sequentially producing a sample per subproblem, a further modification might be to
+   process all the subproblems in parallel and merge the returned samples. Here the
+   :class:`~hybrid.decomposers.EnergyImpactDecomposer` is iterated until it raises a
+   :meth:`~hybrid.exceptions.EndOfStream` exception when it reaches 15% of the variables. 
 
 .. code-block:: python
 
     # Redefine the workflow: parallel subproblem solving for a single sample
-
     subproblem = hybrid.Unwind(
                  hybrid.EnergyImpactDecomposer(size=50, rolling_history=0.15, silent_rewind=False))
-    subsampler = hybrid.Map(hybrid.QPUSubproblemAutoEmbeddingSampler()
-                 | hybrid.Reduce(hybrid.Lambda(hybrid.merge_substates))
-                 | hybrid.SplatComposer()
+    subsampler = (hybrid.Map(hybrid.QPUSubproblemAutoEmbeddingSampler()
+    )             | hybrid.Reduce(hybrid.Lambda(merge_substates)
+    )             | hybrid.SplatComposer())
 
-    iteration = hybrid.RacingBranches(
-        hybrid.InterruptableTabuSampler(),
-        subproblem | subsampler
-    ) | hybrid.ArgMin()
-
-    workflow = hybrid.LoopUntilNoImprovement(iteration, max_iter=1000, convergence=3)
-
-
-
+3. Change the variable transversal modes
 
 Additional Examples
 ===================

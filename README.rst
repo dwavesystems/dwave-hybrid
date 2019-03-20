@@ -65,6 +65,7 @@ Example
 .. code-block:: python
 
     import dimod
+    import hybrid
 
     # Construct a problem
     bqm = dimod.BinaryQuadraticModel({}, {'ab': 1, 'bc': -1, 'ca': 1}, 0, dimod.SPIN)

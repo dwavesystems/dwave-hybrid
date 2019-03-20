@@ -22,15 +22,26 @@ The :ref:`racingBranches1` graphic below shows the top-down composition (tree st
 
 .. figure:: ../_static/tree.png
   :name: Tree
-  :scale: 90 %
+  :scale: 65 %
   :alt: Top-Down Composition
 
   Top-Down Composition
 
-Your code should enforce trait verification on :class:`~hybrid.core.State` objects, at a minimum
-verify correct inputs and outputs (full verification on some branches may be overly complex).
-Note that if you define an :code:`__init__` method, you must inherit from the
-:class:`~hybrid.traits.StateTraits` class to implement traits.
+.. Some trait verification is applied to :class:`~hybrid.core.Runnable` objects, at a minimum
+   verifying correct inputs and outputs (full verification on some branches may be overly complex
+   to implement). If you develop advanced flow-control classes, and override an :code:`__init__` method,
+   call the parent class's :code:`__init__` with a `super` construct as done in the subclasses
+   of the :class:`~hybrid.traits.StateTraits` class.
+
+<Unedited> State traits verification is done for all :class:`~hybrid.core.Runnable` objects that inherit 
+from :class:`~hybrid.traits.StateTraits` or its subclasses:
+(1) Minimal checks at workflow (composition of runnables) construction
+(2) Definite checks at run time.
+Constructing composite traits when composing runnables might not be trivial. The parent runnable
+must express child's traits and modify them at construction time.
+All built-in runnables declare state traits requirements which are either independent (for simple runnables)
+or derived from the child workflow. It's recommended that developers declare state traits requirements,
+but, especially for advanced flow-control runnables, that might be too burdensome.
 
 The :ref:`conversion` section describes the :class:`~hybrid.core.HybridRunnable`
 class you can use to produce a :class:`~hybrid.core.Runnable` sampler based on
