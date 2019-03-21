@@ -518,14 +518,30 @@ def max_sample(bqm):
     return {i: value for i in bqm.variables}
 
 
-def meld_samplesets(base, *others):
-    """Combine the first sample in this SampleSet with first samples in all
-    other SampleSets. Energy is reset to zero, and vartype are cast to the
-    local vartype.
+def join_samplesets(base, *others, bqm=None):
+    """Vertically combine the first sample in `base` sampleset with first
+    samples in all other samplesets provided in `*others`.
+
+    Set of variables in the resulting sampleset is union of all variables in
+    all joined samplesets.
+
+    Resulting sampleset inherits vartype from `bqm` (or `base` sampleset if
+    `bqm` is undefined), it contains only one sample, and has energy calculated
+    on `bqm` (or zero if `bqm` is undefined).
     """
 
-    sample = dict(base.first.sample)
-    for sampleset in others:
-        sample.update(sampleset.change_vartype(base.vartype).first.sample)
+    if bqm is None:
+        vartype = base.vartype
+    else:
+        vartype = bqm.vartype
 
-    return dimod.SampleSet.from_samples(sample, vartype=base.vartype, energy=0)
+    sample = dict(base.change_vartype(vartype).first.sample)
+    for sampleset in others:
+        sample.update(sampleset.change_vartype(vartype).first.sample)
+
+    if bqm is None:
+        energies = 0
+    else:
+        energies = bqm.energies(sample)
+
+    return dimod.SampleSet.from_samples(sample, energy=energies, vartype=vartype)

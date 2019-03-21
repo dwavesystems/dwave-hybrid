@@ -22,7 +22,7 @@ from plucky import merge
 import dimod
 
 from hybrid import traits
-from hybrid.utils import min_sample, sample_as_dict, meld_samplesets, cpu_count
+from hybrid.utils import min_sample, sample_as_dict, join_samplesets, cpu_count
 from hybrid.profiling import make_timeit, make_count
 from hybrid.concurrency import Future, Present, Executor, immediate_executor, thread_executor
 
@@ -82,12 +82,12 @@ class SampleSet(dimod.SampleSet):
     def empty(cls):
         return cls.from_samples([], vartype=dimod.SPIN, energy=0)
 
-    def melded(self, *others):
+    def joined_with(self, *others):
         """Combine the first sample in this SampleSet with first samples in all
-        other SampleSets. Energy is reset to zero, and vartype are cast to the
-        local vartype.
+        other SampleSets. Energy is reset to zero, and vartype is cast to the
+        local vartype (first sampleset's vartype).
         """
-        return meld_samplesets(self, *others)
+        return join_samplesets(self, *others)
 
 
 class State(PliableDict):

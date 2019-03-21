@@ -32,7 +32,7 @@ with open(problem) as fp:
 def merge_substates(component, substates):
     a, b = substates
     return a.updated(
-        subsamples=hybrid.utils.meld_samplesets(a.subsamples, b.subsamples)
+        subsamples=hybrid.utils.join_samplesets(a.subsamples, b.subsamples)
     )
 
 subproblems = hybrid.Unwind(
