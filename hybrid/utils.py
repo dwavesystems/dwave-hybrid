@@ -518,7 +518,7 @@ def max_sample(bqm):
     return {i: value for i in bqm.variables}
 
 
-def hstack_samplesets(base, *others, bqm=None):
+def hstack_samplesets(base, *others, **kwargs):
     """Horizontally combine the first sample in `base` sampleset with first
     samples in all other samplesets provided in `*others`.
 
@@ -530,6 +530,8 @@ def hstack_samplesets(base, *others, bqm=None):
     on `bqm` (or zero if `bqm` is undefined).
     """
     # TODO: support multiple samples per sampleset, not just the first!
+
+    bqm = kwargs.pop('bqm', None)
 
     if bqm is None:
         vartype = base.vartype
