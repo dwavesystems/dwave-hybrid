@@ -29,11 +29,9 @@ with open(problem) as fp:
 
 
 # define a qbsolv-like workflow
-def merge_substates(component, substates):
+def merge_substates(_, substates):
     a, b = substates
-    return a.updated(
-        subsamples=hybrid.utils.join_samplesets(a.subsamples, b.subsamples)
-    )
+    return a.updated(subsamples=a.subsamples.joined_with(b.subsamples))
 
 subproblems = hybrid.Unwind(
     hybrid.EnergyImpactDecomposer(size=50, silent_rewind=False, rolling_history=0.15)
