@@ -22,7 +22,7 @@ from plucky import merge
 import dimod
 
 from hybrid import traits
-from hybrid.utils import min_sample, sample_as_dict, meld_samplesets, cpu_count
+from hybrid.utils import min_sample, sample_as_dict, hstack_samplesets, vstack_samplesets, cpu_count
 from hybrid.profiling import make_timeit, make_count
 from hybrid.concurrency import Future, Present, Executor, immediate_executor, thread_executor
 
@@ -82,12 +82,15 @@ class SampleSet(dimod.SampleSet):
     def empty(cls):
         return cls.from_samples([], vartype=dimod.SPIN, energy=0)
 
-    def melded(self, *others):
+    def hstack(self, *others):
         """Combine the first sample in this SampleSet with first samples in all
-        other SampleSets. Energy is reset to zero, and vartype are cast to the
-        local vartype.
+        other SampleSets. Energy is reset to zero, and vartype is cast to the
+        local vartype (first sampleset's vartype).
         """
-        return meld_samplesets(self, *others)
+        return hstack_samplesets(self, *others)
+
+    def vstack(self, *others):
+        return vstack_samplesets(self, *others)
 
 
 class State(PliableDict):
@@ -194,6 +197,34 @@ class State(PliableDict):
     def from_subsamples(cls, subsamples, bqm):
         """Similar to :meth:`.from_samples`, but initializes `subproblem` and `subsamples`."""
         return cls(subproblem=bqm, subsamples=SampleSet.from_samples_bqm(subsamples, bqm))
+
+    @classmethod
+    def from_problem(cls, bqm, samples=None):
+        """Convenience method for constructing a state from (possibly only) a BQM."""
+
+        if samples is None:
+            samples = min_sample
+
+        if callable(samples):
+            samples_like = samples(bqm)
+        else:
+            samples_like = samples
+
+        return cls.from_samples(samples_like, bqm)
+
+    @classmethod
+    def from_subproblem(cls, bqm, subsamples=None):
+        """Convenience method for constructing a state from (possibly only) a subproblem BQM."""
+
+        if subsamples is None:
+            subsamples = min_sample
+
+        if callable(subsamples):
+            subsamples_like = subsamples(bqm)
+        else:
+            subsamples_like = subsamples
+
+        return cls.from_subsamples(subsamples_like, bqm)
 
 
 class States(list):

@@ -226,6 +226,9 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
         self._rolling_sample = state.sample
 
     def next(self, state, **runopts):
+        # run time options override
+        silent_rewind = runopts.get('silent_rewind', self.silent_rewind)
+
         bqm = state.problem
         sample = state.samples.change_vartype(bqm.vartype).first.sample
 
@@ -254,7 +257,7 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
                              len(self._unrolled_vars))
                 self._rewind_rolling(state)
                 # reset before exception, to be ready on a subsequent call
-                if not self.silent_rewind:
+                if not silent_rewind:
                     raise EndOfStream
 
         # pick variables for the next subproblem

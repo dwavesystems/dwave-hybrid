@@ -73,18 +73,40 @@ class TestSampleSet(unittest.TestCase):
         ss = SampleSet.from_samples_bqm({'a': 1, 'b': -1}, bqm)
         self.assertEqual(ss.first.energy, -1)
 
-    def test_melded(self):
+    def test_hstack(self):
         a = SampleSet.from_samples(
-            [{'a': 0, 'b': 1, 'c': 0}, {'a': 1, 'b': 0, 'c': 1}], vartype='BINARY', energy=[0, 1])
+                [{'a': 0, 'b': 1, 'c': 0}, {'a': 1, 'b': 0, 'c': 1}], vartype='BINARY', energy=[0, 1])
         b = SampleSet.from_samples(
-            [{'d': 1, 'e': 0, 'f': 1}, {'d': 0, 'e': 1, 'f': 0}], vartype='BINARY', energy=[1, 0])
+                [{'d': 1, 'e': 0, 'f': 1}, {'d': 0, 'e': 1, 'f': 0}], vartype='BINARY', energy=[1, 0])
         c = SampleSet.from_samples(
-            [{'d': -1, 'e': 1, 'f': 1}], vartype='SPIN', energy=0)
+                [{'d': -1, 'e': 1, 'f': 1}], vartype='SPIN', energy=0)
 
-        m = a.melded(b, c)
+        m = a.hstack(b, c)
 
         self.assertEqual(len(m), 1)
         self.assertDictEqual(dict(m.first.sample), {'a': 0, 'b': 1, 'c': 0, 'd': 0, 'e': 1, 'f': 1})
+
+    def test_vstack(self):
+        a = SampleSet.from_samples(
+                [{'a': 1, 'b': 0, 'c': 0}, {'a': 0, 'b': 1, 'c': 0}], vartype='BINARY', energy=[3, 1])
+        b = SampleSet.from_samples(
+                [{'a': 0, 'b': 0, 'c': 1}, {'a': 1, 'b': 0, 'c': 1}], vartype='BINARY', energy=[2, 0])
+        c = SampleSet.from_samples(
+                [{'a': -1, 'b': 1, 'c': -1}], vartype='SPIN', energy=4)
+
+        m = a.vstack(b, c)
+
+        self.assertEqual(len(m), 5)
+        self.assertEqual(
+            list(m.samples()),
+            [
+                {'a': 1, 'b': 0, 'c': 1},   # b[1], en=0
+                {'a': 0, 'b': 1, 'c': 0},   # a[1], en=1
+                {'a': 0, 'b': 0, 'c': 1},   # b[0], en=2
+                {'a': 1, 'b': 0, 'c': 0},   # a[0], en=3
+                {'a': 0, 'b': 1, 'c': 0}    # c[0] in BINARY, en=4
+            ]
+        )
 
 
 class TestState(unittest.TestCase):
@@ -114,6 +136,22 @@ class TestState(unittest.TestCase):
         self.assertEqual(State.from_subsamples([s1, s1], bqm).subsamples.first.energy, 2.0)
         self.assertEqual(State.from_subsamples([s2, s2], bqm).subsamples.first.energy, 1.0)
         self.assertEqual(State.from_subsamples([sample_as_dict(s1), s2], bqm).subsamples.first.energy, 1.0)
+
+    def test_from_problem(self):
+        sample = {0: 1, 1: 0}
+        bqm = dimod.BinaryQuadraticModel({0: 1, 1: 2}, {}, 0.0, 'BINARY')
+        self.assertEqual(State.from_problem(bqm).samples.first.energy, 0.0)
+        self.assertEqual(State.from_problem(bqm, samples=hybrid.utils.max_sample).samples.first.energy, 3.0)
+        self.assertEqual(State.from_problem(bqm, samples=sample), State.from_samples(sample, bqm))
+        self.assertEqual(State.from_problem(bqm, samples=[sample]), State.from_samples([sample], bqm))
+
+    def test_from_subproblem(self):
+        subsample = {0: 1, 1: 0}
+        bqm = dimod.BinaryQuadraticModel({0: 1, 1: 2}, {}, 0.0, 'BINARY')
+        self.assertEqual(State.from_subproblem(bqm).subsamples.first.energy, 0.0)
+        self.assertEqual(State.from_subproblem(bqm, subsamples=hybrid.utils.max_sample).subsamples.first.energy, 3.0)
+        self.assertEqual(State.from_subproblem(bqm, subsamples=subsample), State.from_subsamples(subsample, bqm))
+        self.assertEqual(State.from_subproblem(bqm, subsamples=[subsample]), State.from_subsamples([subsample], bqm))
 
     def test_updated(self):
         a = SampleSet.from_samples([1,0,1], 'SPIN', 0)

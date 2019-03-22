@@ -31,7 +31,8 @@ from hybrid import traits
 __all__ = [
     'Branch', 'RacingBranches', 'Race', 'ParallelBranches', 'Parallel',
     'Map', 'Reduce', 'Lambda', 'ArgMin', 'Unwind', 'TrackMin',
-    'Loop', 'LoopUntilNoImprovement', 'LoopWhileNoImprovement'
+    'Loop', 'LoopUntilNoImprovement', 'LoopWhileNoImprovement',
+    'Identity'
 ]
 
 logger = logging.getLogger(__name__)
@@ -929,7 +930,7 @@ class Unwind(Runnable, traits.SIMO):
 
     def next(self, state, **runopts):
         output = States()
-        runopts['executor'] = immediate_executor
+        runopts.update(executor=immediate_executor, silent_rewind=False)
 
         while True:
             try:
@@ -939,3 +940,10 @@ class Unwind(Runnable, traits.SIMO):
                 break
 
         return output
+
+
+class Identity(Runnable):
+    """Trivial identity runnable. The output is a direct copy of the input."""
+
+    def next(self, state):
+        return state.updated()

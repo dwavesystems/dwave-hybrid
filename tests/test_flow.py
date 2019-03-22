@@ -17,13 +17,15 @@ import itertools
 import unittest
 import threading
 import operator
+import copy
 
 import dimod
 
 from hybrid.flow import (
     Branch, RacingBranches, ParallelBranches,
     ArgMin, Map, Reduce, Lambda, Unwind, TrackMin,
-    LoopUntilNoImprovement, LoopWhileNoImprovement, SimpleIterator, Loop
+    LoopUntilNoImprovement, LoopWhileNoImprovement, SimpleIterator, Loop,
+    Identity
 )
 from hybrid.core import State, States, Runnable, Present
 from hybrid.utils import min_sample, max_sample
@@ -633,7 +635,7 @@ class TestUnwind(unittest.TestCase):
 
     def test_basic(self):
         class Streamer(Runnable):
-            def next(self, state):
+            def next(self, state, **runopts):
                 if state.cnt <= 0:
                     raise EndOfStream
                 return state.updated(cnt=state.cnt - 1)
@@ -653,3 +655,16 @@ class TestUnwind(unittest.TestCase):
 
         with self.assertRaises(TypeError):
             Unwind(simo())
+
+
+class TestIdentity(unittest.TestCase):
+
+    def test_basic(self):
+        ident = Identity()
+        state = State(x=1, y='a', z=[1,2,3])
+
+        inp = copy.deepcopy(state)
+        out = ident.run(state).result()
+
+        self.assertEqual(inp, out)
+        self.assertFalse(out is inp)
