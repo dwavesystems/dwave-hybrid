@@ -518,8 +518,8 @@ def max_sample(bqm):
     return {i: value for i in bqm.variables}
 
 
-def join_samplesets(base, *others, bqm=None):
-    """Vertically combine the first sample in `base` sampleset with first
+def hstack_samplesets(base, *others, bqm=None):
+    """Horizontally combine the first sample in `base` sampleset with first
     samples in all other samplesets provided in `*others`.
 
     Set of variables in the resulting sampleset is union of all variables in
