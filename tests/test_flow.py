@@ -635,7 +635,7 @@ class TestUnwind(unittest.TestCase):
 
     def test_basic(self):
         class Streamer(Runnable):
-            def next(self, state):
+            def next(self, state, **runopts):
                 if state.cnt <= 0:
                     raise EndOfStream
                 return state.updated(cnt=state.cnt - 1)

@@ -930,7 +930,7 @@ class Unwind(Runnable, traits.SIMO):
 
     def next(self, state, **runopts):
         output = States()
-        runopts['executor'] = immediate_executor
+        runopts.update(executor=immediate_executor, silent_rewind=False)
 
         while True:
             try:

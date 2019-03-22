@@ -31,10 +31,10 @@ with open(problem) as fp:
 # define a qbsolv-like workflow
 def merge_substates(_, substates):
     a, b = substates
-    return a.updated(subsamples=a.subsamples.hstack(b.subsamples))
+    return a.updated(subsamples=hybrid.hstack_samplesets(a.subsamples, b.subsamples))
 
 subproblems = hybrid.Unwind(
-    hybrid.EnergyImpactDecomposer(size=50, silent_rewind=False, rolling_history=0.15)
+    hybrid.EnergyImpactDecomposer(size=50, rolling_history=0.15)
 )
 
 qpu = hybrid.Map(
