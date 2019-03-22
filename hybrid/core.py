@@ -22,7 +22,7 @@ from plucky import merge
 import dimod
 
 from hybrid import traits
-from hybrid.utils import min_sample, sample_as_dict, hstack_samplesets, cpu_count
+from hybrid.utils import min_sample, sample_as_dict, hstack_samplesets, vstack_samplesets, cpu_count
 from hybrid.profiling import make_timeit, make_count
 from hybrid.concurrency import Future, Present, Executor, immediate_executor, thread_executor
 
@@ -88,6 +88,9 @@ class SampleSet(dimod.SampleSet):
         local vartype (first sampleset's vartype).
         """
         return hstack_samplesets(self, *others)
+
+    def vstack(self, *others):
+        return vstack_samplesets(self, *others)
 
 
 class State(PliableDict):

@@ -75,16 +75,38 @@ class TestSampleSet(unittest.TestCase):
 
     def test_hstack(self):
         a = SampleSet.from_samples(
-            [{'a': 0, 'b': 1, 'c': 0}, {'a': 1, 'b': 0, 'c': 1}], vartype='BINARY', energy=[0, 1])
+                [{'a': 0, 'b': 1, 'c': 0}, {'a': 1, 'b': 0, 'c': 1}], vartype='BINARY', energy=[0, 1])
         b = SampleSet.from_samples(
-            [{'d': 1, 'e': 0, 'f': 1}, {'d': 0, 'e': 1, 'f': 0}], vartype='BINARY', energy=[1, 0])
+                [{'d': 1, 'e': 0, 'f': 1}, {'d': 0, 'e': 1, 'f': 0}], vartype='BINARY', energy=[1, 0])
         c = SampleSet.from_samples(
-            [{'d': -1, 'e': 1, 'f': 1}], vartype='SPIN', energy=0)
+                [{'d': -1, 'e': 1, 'f': 1}], vartype='SPIN', energy=0)
 
         m = a.hstack(b, c)
 
         self.assertEqual(len(m), 1)
         self.assertDictEqual(dict(m.first.sample), {'a': 0, 'b': 1, 'c': 0, 'd': 0, 'e': 1, 'f': 1})
+
+    def test_vstack(self):
+        a = SampleSet.from_samples(
+                [{'a': 1, 'b': 0, 'c': 0}, {'a': 0, 'b': 1, 'c': 0}], vartype='BINARY', energy=[3, 1])
+        b = SampleSet.from_samples(
+                [{'a': 0, 'b': 0, 'c': 1}, {'a': 1, 'b': 0, 'c': 1}], vartype='BINARY', energy=[2, 0])
+        c = SampleSet.from_samples(
+                [{'a': -1, 'b': 1, 'c': -1}], vartype='SPIN', energy=4)
+
+        m = a.vstack(b, c)
+
+        self.assertEqual(len(m), 5)
+        self.assertEqual(
+            list(m.samples()),
+            [
+                {'a': 1, 'b': 0, 'c': 1},   # b[1], en=0
+                {'a': 0, 'b': 1, 'c': 0},   # a[1], en=1
+                {'a': 0, 'b': 0, 'c': 1},   # b[0], en=2
+                {'a': 1, 'b': 0, 'c': 0},   # a[0], en=3
+                {'a': 0, 'b': 1, 'c': 0}    # c[0] in BINARY, en=4
+            ]
+        )
 
 
 class TestState(unittest.TestCase):

@@ -529,6 +529,7 @@ def hstack_samplesets(base, *others, bqm=None):
     `bqm` is undefined), it contains only one sample, and has energy calculated
     on `bqm` (or zero if `bqm` is undefined).
     """
+    # TODO: support multiple samples per sampleset, not just the first!
 
     if bqm is None:
         vartype = base.vartype
@@ -545,3 +546,10 @@ def hstack_samplesets(base, *others, bqm=None):
         energies = bqm.energies(sample)
 
     return dimod.SampleSet.from_samples(sample, energy=energies, vartype=vartype)
+
+
+def vstack_samplesets(*samplesets):
+    """Vertically combine `*samplesets`. All samples must be over the same set
+    of variables.
+    """
+    return dimod.sampleset.concatenate(samplesets)
