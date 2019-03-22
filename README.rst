@@ -80,7 +80,7 @@ Example
     workflow = hybrid.LoopUntilNoImprovement(iteration, convergence=3)
 
     # Solve the problem
-    init_state = hybrid.State.from_sample(hybrid.utils.min_sample(bqm), bqm)
+    init_state = hybrid.State.from_problem(bqm)
     final_state = workflow.run(init_state).result()
 
     # Print results
