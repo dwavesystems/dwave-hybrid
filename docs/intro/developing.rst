@@ -27,21 +27,22 @@ The :ref:`racingBranches1` graphic below shows the top-down composition (tree st
 
   Top-Down Composition
 
-.. Some trait verification is applied to :class:`~hybrid.core.Runnable` objects, at a minimum
-   verifying correct inputs and outputs (full verification on some branches may be overly complex
-   to implement). If you develop advanced flow-control classes, and override an :code:`__init__` method,
-   call the parent class's :code:`__init__` with a `super` construct as done in the subclasses
-   of the :class:`~hybrid.traits.StateTraits` class.
+.. traits-start-marker
 
-<Unedited> State traits verification is done for all :class:`~hybrid.core.Runnable` objects that inherit 
-from :class:`~hybrid.traits.StateTraits` or its subclasses:
-(1) Minimal checks at workflow (composition of runnables) construction
-(2) Definite checks at run time.
-Constructing composite traits when composing runnables might not be trivial. The parent runnable
-must express child's traits and modify them at construction time.
-All built-in runnables declare state traits requirements which are either independent (for simple runnables)
-or derived from the child workflow. It's recommended that developers declare state traits requirements,
-but, especially for advanced flow-control runnables, that might be too burdensome.
+State traits are verified for all :class:`~hybrid.core.Runnable` objects that inherit
+from :class:`~hybrid.traits.StateTraits` or its subclasses. Verification includes:
+
+(1) Minimal checks of workflow construction (composition of :class:`~hybrid.core.Runnable` classes)
+(2) Runtime checks
+
+All built-in :class:`~hybrid.core.Runnable` classes declare state traits requirements that are
+either independent (for simple ones) or derived from a child workflow. Traits of a new
+:class:`~hybrid.core.Runnable` must be expressed and modified at construction time by its parent.
+When developing new :class:`~hybrid.core.Runnable` classes, constructing composite traits can be nontrivial.
+It's recommended that developers declare state traits requirements but recognized that the work might be
+too burdensome for some advanced flow-control runnables.
+
+.. traits-end-marker
 
 The :ref:`conversion` section describes the :class:`~hybrid.core.HybridRunnable`
 class you can use to produce a :class:`~hybrid.core.Runnable` sampler based on

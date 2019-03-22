@@ -4,9 +4,9 @@
 Traits
 ========
 
-Some trait verification is applied to :class:`~hybrid.core.Runnable` objects, at a minimum
-verifying correct inputs and outputs (full verification on some branches may be overly complex
-to implement). See the code for examples.
+.. include:: ../intro/developing.rst
+  :start-after: traits-start-marker
+  :end-before: traits-end-marker
 
 .. automodule:: hybrid.traits
    :members:

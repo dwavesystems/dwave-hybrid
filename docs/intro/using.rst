@@ -140,7 +140,8 @@ with large numbers of variables.
 2. Instead of sequentially producing a sample per subproblem, a further modification might be to
    process all the subproblems in parallel and merge the returned samples. Here the
    :class:`~hybrid.decomposers.EnergyImpactDecomposer` is iterated until it raises a
-   :meth:`~hybrid.exceptions.EndOfStream` exception when it reaches 15% of the variables. 
+   :meth:`~hybrid.exceptions.EndOfStream` exception when it reaches 15% of the variables,
+   and then all the 50-variable subproblems are submitted to the D-Wave system.
 
 .. code-block:: python
 
@@ -151,7 +152,44 @@ with large numbers of variables.
     )             | hybrid.Reduce(hybrid.Lambda(merge_substates)
     )             | hybrid.SplatComposer())
 
-3. Change the variable transversal modes
+3. Change the criterion for selecting subproblems. By default, the variables are selected by maximal
+   energy impact but selection can be better tailored to a problem's structure.
+
+   For example, for binary quadratic model representing the problem graph shown in the
+   :ref:`eidEnergy` graphic, if you select a subproblem size of four, these nodes selected by
+   descending energy impact are not directly connected (no shared edges, and might not represent
+   a local structure of the problem).
+
+.. figure:: ../_static/eid_energy.png
+  :name: eidEnergy
+  :scale: 70 %
+  :alt: EID energy
+
+  Traversal by Energy Impact
+
+   Configuring a mode of traversal such as breadth-first (BFS) or priority-first selection (PFS)
+   can capture features that represent local structures within a problem.
+
+    .. code-block:: python
+
+        # Redefine the workflow: subproblem selection
+        subproblem = hybrid.Unwind(
+                     hybrid.EnergyImpactDecomposer(size=50, rolling_history=0.15, silent_rewind=False,
+                     traversal=bfs))
+
+   These two selection modes are shown in the :ref:`eidBfsPfs` graphic. BFS starts with
+   the node with maximal energy impact, from which its graph traversal proceeds to directly connected
+   nodes, then nodes directly connected to those, and so on, with graph traversal 
+   ordered by node index. In PFS, graph traversal is ordered by descending energy impact
+   (during breadth traversal among directly connected nodes, with the same order repeated
+   in selecting points of descent for subsequent breadth traversals).
+
+.. figure:: ../_static/eid_bfs_pfs.png
+  :name: eidBfsPfs
+  :scale: 70 %
+  :alt: EID BFS
+
+  Traversal by BFS or PFS
 
 Additional Examples
 ===================
