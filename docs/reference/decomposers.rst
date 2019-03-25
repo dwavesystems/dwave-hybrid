@@ -46,11 +46,11 @@ in the first iteration to the first 4 variables shown in the output of
     >>> flip_energy_gains(bqm, state0.samples.first.sample)
     [(0, 9), (0, 8), (0, 7), (0, 6), (0, 5), (0, 4), (0, 3), (0, 2), (0, 1), (0, 0)]
     >>> state1 = decomposer.run(state0).result()
-    >>> print(state1.subproblem)
-    BinaryQuadraticModel({8: 0, 9: 0, 6: 0, 7: 0}, {(8, 9): 1.0, (6, 7): 1.0, (8, 7): 1.0}, 0.0, Vartype.BINARY)
+    >>> list(state1.subproblem.variables)
+    [8, 7, 9, 6]
     >>> state2 = decomposer.run(state1).result()
-    >>> print(state2.subproblem)
-    BinaryQuadraticModel({2: 0, 3: 0, 4: 0, 5: 0}, {(4, 5): 1.0, (3, 4): 1.0, (2, 3): 1.0}, 0.0, Vartype.BINARY)
+    >>> list(state2.subproblem.variables)
+    [2, 3, 4, 5]
 
 
 RandomSubproblemDecomposer

@@ -13,3 +13,5 @@ Reference Documentation
    flow
    utilities
    conversion
+   traits
+   exceptions
