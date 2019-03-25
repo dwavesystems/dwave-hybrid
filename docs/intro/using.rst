@@ -147,7 +147,7 @@ with large numbers of variables.
 
     # Redefine the workflow: parallel subproblem solving for a single sample
     subproblem = hybrid.Unwind(
-                 hybrid.EnergyImpactDecomposer(size=50, rolling_history=0.15, silent_rewind=False))
+                 hybrid.EnergyImpactDecomposer(size=50, rolling_history=0.15))
     subsampler = (hybrid.Map(hybrid.QPUSubproblemAutoEmbeddingSampler()
     )             | hybrid.Reduce(hybrid.Lambda(merge_substates)
     )             | hybrid.SplatComposer())
@@ -174,15 +174,14 @@ with large numbers of variables.
 
         # Redefine the workflow: subproblem selection
         subproblem = hybrid.Unwind(
-                     hybrid.EnergyImpactDecomposer(size=50, rolling_history=0.15, silent_rewind=False,
-                     traversal=bfs))
+                     hybrid.EnergyImpactDecomposer(size=50, rolling_history=0.15,
+                     traversal='bfs'))
 
    These two selection modes are shown in the :ref:`eidBfsPfs` graphic. BFS starts with
    the node with maximal energy impact, from which its graph traversal proceeds to directly connected
-   nodes, then nodes directly connected to those, and so on, with graph traversal 
-   ordered by node index. In PFS, graph traversal is ordered by descending energy impact
-   (during breadth traversal among directly connected nodes, with the same order repeated
-   in selecting points of descent for subsequent breadth traversals).
+   nodes, then nodes directly connected to those, and so on, with graph traversal
+   ordered by node index. In PFS, graph traversal selects the node with highest
+   energy impact among unselected nodes directly connected to any already selected node.
 
 .. figure:: ../_static/eid_bfs_pfs.png
   :name: eidBfsPfs

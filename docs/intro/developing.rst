@@ -38,9 +38,8 @@ from :class:`~hybrid.traits.StateTraits` or its subclasses. Verification include
 All built-in :class:`~hybrid.core.Runnable` classes declare state traits requirements that are
 either independent (for simple ones) or derived from a child workflow. Traits of a new
 :class:`~hybrid.core.Runnable` must be expressed and modified at construction time by its parent.
-When developing new :class:`~hybrid.core.Runnable` classes, constructing composite traits can be nontrivial.
-It's recommended that developers declare state traits requirements but recognized that the work might be
-too burdensome for some advanced flow-control runnables.
+When developing new :class:`~hybrid.core.Runnable` classes, constructing composite traits can be
+nontrivial for some advanced flow-control runnables.
 
 .. traits-end-marker
 
