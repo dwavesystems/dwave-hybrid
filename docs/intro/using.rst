@@ -135,6 +135,7 @@ with large numbers of variables.
         hybrid.InterruptableTabuSampler(),
         subproblem | subsampler
     ) | hybrid.ArgMin()
+
     workflow = hybrid.LoopUntilNoImprovement(iteration, convergence=3)
 
 2. Instead of sequentially producing a sample per subproblem, a further modification might be to
@@ -147,10 +148,14 @@ with large numbers of variables.
 
     # Redefine the workflow: parallel subproblem solving for a single sample
     subproblem = hybrid.Unwind(
-                 hybrid.EnergyImpactDecomposer(size=50, rolling_history=0.15))
-    subsampler = (hybrid.Map(hybrid.QPUSubproblemAutoEmbeddingSampler()
-    )             | hybrid.Reduce(hybrid.Lambda(merge_substates)
-    )             | hybrid.SplatComposer())
+        hybrid.EnergyImpactDecomposer(size=50, rolling_history=0.15)
+    )
+
+    subsampler = hybrid.Map(
+        hybrid.QPUSubproblemAutoEmbeddingSampler()
+    ) | hybrid.Reduce(
+        hybrid.Lambda(merge_substates)
+    ) | hybrid.SplatComposer()
 
 3. Change the criterion for selecting subproblems. By default, the variables are selected by maximal
    energy impact but selection can be better tailored to a problem's structure.
@@ -174,8 +179,7 @@ with large numbers of variables.
 
         # Redefine the workflow: subproblem selection
         subproblem = hybrid.Unwind(
-                     hybrid.EnergyImpactDecomposer(size=50, rolling_history=0.15,
-                     traversal='bfs'))
+            hybrid.EnergyImpactDecomposer(size=50, rolling_history=0.15, traversal='bfs'))
 
    These two selection modes are shown in the :ref:`eidBfsPfs` graphic. BFS starts with
    the node with maximal energy impact, from which its graph traversal proceeds to directly connected
