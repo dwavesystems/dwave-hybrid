@@ -21,7 +21,7 @@ results from QPU sampling a subproblem.
 import dimod
 from hybrid.samplers import (
     QPUSubproblemAutoEmbeddingSampler,
-    SimulatedAnnealingSubproblemSampler,
+    InterruptableSimulatedAnnealingProblemSampler,
     InterruptableTabuSampler)
 from hybrid.decomposers import IdentityDecomposer, EnergyImpactDecomposer
 from hybrid.composers import SplatComposer
@@ -110,10 +110,8 @@ class KerberosSampler(dimod.Sampler):
 
         iteration = RacingBranches(
             InterruptableTabuSampler(),
-            IdentityDecomposer()
-                | SimulatedAnnealingSubproblemSampler(num_reads=sa_reads, sweeps=sa_sweeps)
-                | SplatComposer(),
-            EnergyImpactDecomposer(size=subproblem_size, rolling=True, rolling_history=0.2)
+            InterruptableSimulatedAnnealingProblemSampler(num_reads=sa_reads, sweeps=sa_sweeps),
+            EnergyImpactDecomposer(size=subproblem_size, rolling=True, rolling_history=0.3, traversal='bfs')
                 | QPUSubproblemAutoEmbeddingSampler(num_reads=qpu_reads, qpu_sampler=qpu_sampler)
                 | SplatComposer(),
         ) | ArgMin()
