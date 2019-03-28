@@ -41,8 +41,8 @@ class SplatComposer(Runnable, traits.SubsamplesComposer):
         # update the first sample in `state.sampleset`, inplace
         # XXX: assume one global sample, one subsample
         # TODO: generalize
-        sample = next(state.samples.change_vartype(state.subsamples.vartype).samples())
-        subsample = next(state.subsamples.samples())
+        sample = next(iter(state.samples.change_vartype(state.subsamples.vartype).samples()))
+        subsample = next(iter(state.subsamples.samples()))
         composed_sample = updated_sample(sample, subsample)
         composed_energy = state.problem.energy(composed_sample)
         return state.updated(
