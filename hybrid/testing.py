@@ -17,6 +17,8 @@
 import os
 import contextlib
 
+from hybrid.profiling import perf_counter
+
 __all__ = ['mock', 'isolated_environ']
 
 
@@ -73,3 +75,40 @@ def isolated_environ(add=None, remove=None, remove_dwave=False, empty=False):
                 os.environ.pop(key, None)
 
         yield os.environ
+
+
+class RunTimeAssertionMixin(object):
+    """unittest.TestCase mixin that adds min/max/range run-time assert."""
+
+    class assertRuntimeWithin(object):
+
+        def __init__(self, low, high):
+            """Min/max runtime in milliseconds."""
+            self.limits = (low, high)
+
+        def __enter__(self):
+            self.tick = perf_counter()
+            return self
+
+        def __exit__(self, exc_type, exc_value, traceback):
+            self.dt = (perf_counter() - self.tick) * 1000.0
+            self.test()
+
+        def test(self):
+            low, high = self.limits
+            if low is not None and self.dt < low:
+                raise AssertionError("Min runtime unreached: %g ms < %g ms" % (self.dt, low))
+            if high is not None and self.dt > high:
+                raise AssertionError("Max runtime exceeded: %g ms > %g ms" % (self.dt, high))
+
+    class assertMinRuntime(assertRuntimeWithin):
+
+        def __init__(self, t):
+            """Min runtime in milliseconds."""
+            self.limits = (t, None)
+
+    class assertMaxRuntime(assertRuntimeWithin):
+
+        def __init__(self, t):
+            """Max runtime in milliseconds."""
+            self.limits = (None, t)
