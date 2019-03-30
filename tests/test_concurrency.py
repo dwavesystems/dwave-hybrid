@@ -15,8 +15,11 @@
 import os
 import unittest
 
+import dimod
+import hybrid
 from hybrid.core import State
 from hybrid.concurrency import Present, Future, ImmediateExecutor, immediate_executor
+from hybrid.testing import RunTimeAssertionMixin
 
 
 class TestPresent(unittest.TestCase):
@@ -54,3 +57,17 @@ class TestImmediateExecutor(unittest.TestCase):
         self.assertIsInstance(f, Present)
         self.assertIsInstance(f, Future)
         self.assertRaises(ZeroDivisionError, f.result)
+
+
+class TestMultithreading(unittest.TestCase, RunTimeAssertionMixin):
+
+    def test_concurrent_tabu_samples(self):
+        t1 = hybrid.TabuProblemSampler(timeout=1000)
+        t2 = hybrid.TabuProblemSampler(timeout=2000)
+        workflow = hybrid.Parallel(t1, t2)
+
+        bqm = dimod.BinaryQuadraticModel({'a': 1}, {}, 0, 'BINARY')
+        state = hybrid.State.from_problem(bqm)
+
+        with self.assertRuntimeWithin(2000, 2500):
+            workflow.run(state).result()
