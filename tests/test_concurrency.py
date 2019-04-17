@@ -71,3 +71,24 @@ class TestMultithreading(unittest.TestCase, RunTimeAssertionMixin):
 
         with self.assertRuntimeWithin(2000, 2500):
             workflow.run(state).result()
+
+    def test_concurrent_sa_samples(self):
+        s1 = hybrid.SimulatedAnnealingProblemSampler(num_reads=1000, sweeps=10000)
+        s2 = hybrid.SimulatedAnnealingProblemSampler(num_reads=1000, sweeps=10000)
+        p = hybrid.Parallel(s1, s2)
+
+        bqm = dimod.BinaryQuadraticModel({'a': 1}, {}, 0, 'BINARY')
+        state = hybrid.State.from_problem(bqm)
+
+        def time_runnable(runnable, init):
+            runnable.run(init).result()
+            return sum(runnable.timers['dispatch.next'])
+
+        t_s1 = time_runnable(s1, state)
+        t_s2 = time_runnable(s2, state)
+        t_p = time_runnable(p, state)
+
+        # parallel execution must not be slower than the longest running branch + 30%
+        t_expected_max = max(t_s1, t_s2) * 1.3
+
+        self.assertLess(t_p, t_expected_max)
