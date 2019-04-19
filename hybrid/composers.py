@@ -15,10 +15,10 @@
 import logging
 
 from hybrid.core import Runnable, SampleSet
-from hybrid.utils import updated_sample, flip_energy_gains
+from hybrid.utils import updated_sample, flip_energy_gains, vstack_samplesets
 from hybrid import traits
 
-__all__ = ['IdentityComposer', 'SplatComposer', 'GreedyPathMerge']
+__all__ = ['IdentityComposer', 'SplatComposer', 'GreedyPathMerge', 'MergeSamples']
 
 logger = logging.getLogger(__name__)
 
@@ -107,3 +107,49 @@ class GreedyPathMerge(Runnable, traits.MISO, traits.SamplesIntaking, traits.Samp
         assert synthesis_samples.first.energy == synthesis_en
 
         return state_thesis.updated(samples=synthesis_samples)
+
+
+class MergeSamples(Runnable, traits.MISO, traits.SamplesIntaking, traits.SamplesProducing):
+    """Merges multiple input states by concatenating samples from all the states
+    in to the first state.
+
+    Args:
+        aggregate (bool, default=False):
+            Aggregate samples after merging.
+
+    Example:
+        This example runs two branches, a classical simulated annealing and a
+        tabu search, acquiring one sample per branch. It then merges the samples,
+        producing the final state with a sampleset of size two.
+
+        >>> import dimod
+        >>> import hybrid
+
+        >>> workflow = hybrid.Parallel(
+        ...     hybrid.SimulatedAnnealingProblemSampler(num_reads=1),
+        ...     hybrid.TabuProblemSampler(num_reads=1),
+        ...     endomorphic=False
+        ... ) | hybrid.MergeSamples()
+
+        >>> state = hybrid.State.from_problem(
+        ...    dimod.BinaryQuadraticModel.from_ising({}, {'ab': 1}))
+
+        >>> result = workflow.run(state).result()
+        >>> len(result.samples)
+        2
+    """
+
+    def __init__(self, aggregate=False, **runopts):
+        super(MergeSamples, self).__init__(**runopts)
+        self.aggregate = aggregate
+
+    def next(self, states, **runopts):
+        if len(states) < 1:
+            raise ValueError("no input states")
+
+        samples = vstack_samplesets(*[s.samples for s in states])
+
+        if runopts.pop('aggregate', self.aggregate):
+            samples = samples.aggregate()
+
+        return states.first.updated(samples=samples)

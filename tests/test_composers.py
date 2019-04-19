@@ -19,7 +19,7 @@ import dimod
 
 from hybrid.core import State, States, SampleSet
 from hybrid import traits
-from hybrid.composers import IdentityComposer, SplatComposer, GreedyPathMerge
+from hybrid.composers import IdentityComposer, SplatComposer, GreedyPathMerge, MergeSamples
 from hybrid.utils import min_sample, max_sample
 
 
@@ -93,3 +93,42 @@ class TestGreedyPathMerge(unittest.TestCase):
         result = GreedyPathMerge().run(States(state, antistate)).result()
 
         self.assertEqual(result.samples.first.energy, -3.0)
+
+
+class TestMergeSamples(unittest.TestCase):
+
+    def test_single(self):
+        bqm = dimod.BinaryQuadraticModel({}, {'ab': 1}, 0, dimod.SPIN)
+
+        states = States(State.from_sample({'a': 1, 'b': -1}, bqm))
+
+        state = MergeSamples().run(states).result()
+
+        self.assertEqual(state, states[0])
+
+    def test_multiple(self):
+        bqm = dimod.BinaryQuadraticModel({}, {'ab': 1}, 0, dimod.SPIN)
+
+        states = States(State.from_sample({'a': 1, 'b': -1}, bqm),
+                        State.from_sample({'a': -1, 'b': 1}, bqm))
+
+        expected = State.from_samples([{'a': 1, 'b': -1}, {'a': -1, 'b': 1}], bqm)
+
+        state = MergeSamples().run(states).result()
+
+        self.assertEqual(state, expected)
+
+    def test_aggregation(self):
+        bqm = dimod.BinaryQuadraticModel({}, {'ab': 1}, 0, dimod.SPIN)
+
+        states = States(State.from_sample({'a': 1, 'b': -1}, bqm),
+                        State.from_sample({'a': 1, 'b': -1}, bqm))
+
+        expected = State(
+            problem=bqm,
+            samples=dimod.SampleSet.from_samples_bqm(
+                {'a': 1, 'b': -1}, bqm, num_occurrences=[2]))
+
+        state = MergeSamples(aggregate=True).run(states).result()
+
+        self.assertEqual(state, expected)
