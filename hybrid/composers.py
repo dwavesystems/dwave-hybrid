@@ -15,7 +15,7 @@
 import logging
 
 from hybrid.core import Runnable, SampleSet
-from hybrid.utils import updated_sample, flip_energy_gains
+from hybrid.utils import updated_sample, flip_energy_gains, vstack_samplesets
 from hybrid import traits
 
 __all__ = ['IdentityComposer', 'SplatComposer', 'GreedyPathMerge']
@@ -107,3 +107,19 @@ class GreedyPathMerge(Runnable, traits.MISO, traits.SamplesIntaking, traits.Samp
         assert synthesis_samples.first.energy == synthesis_en
 
         return state_thesis.updated(samples=synthesis_samples)
+
+
+class MergeSamples(Runnable, traits.MISO, traits.SamplesIntaking, traits.SamplesProducing):
+    """Merges multiple input States by concatenating samples from all to the first.
+    """
+
+    def next(self, states, aggregate=True, **runopts):
+        if len(states) < 1:
+            raise ValueError("no input states")
+
+        samples = vstack_samplesets(*[s.samples for s in states])
+
+        if aggregate:
+            samples.aggregate()
+
+        return states.first.updated(samples=samples)
