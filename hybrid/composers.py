@@ -18,7 +18,7 @@ from hybrid.core import Runnable, SampleSet
 from hybrid.utils import updated_sample, flip_energy_gains, vstack_samplesets
 from hybrid import traits
 
-__all__ = ['IdentityComposer', 'SplatComposer', 'GreedyPathMerge', 'MergeSamples']
+__all__ = ['IdentityComposer', 'SplatComposer', 'GreedyPathMerge', 'MergeSamples', 'SliceSamples']
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +108,8 @@ class GreedyPathMerge(Runnable, traits.MISO, traits.SamplesIntaking, traits.Samp
 
         return state_thesis.updated(samples=synthesis_samples)
 
+
+# TODO: move MergeSamples and SliceSamples to `ops` module?
 
 class MergeSamples(Runnable, traits.MISO, traits.SamplesIntaking, traits.SamplesProducing):
     """Merge multiple input states by concatenating samples from all the states
