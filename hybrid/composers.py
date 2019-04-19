@@ -137,16 +137,19 @@ class MergeSamples(Runnable, traits.MISO, traits.SamplesIntaking, traits.Samples
         >>> result = workflow.run(state).result()
         >>> len(result.samples)
         2
-
     """
 
-    def next(self, states, aggregate=False, **runopts):
+    def __init__(self, aggregate=False, **runopts):
+        super(MergeSamples, self).__init__(**runopts)
+        self.aggregate = aggregate
+
+    def next(self, states, **runopts):
         if len(states) < 1:
             raise ValueError("no input states")
 
         samples = vstack_samplesets(*[s.samples for s in states])
 
-        if aggregate:
+        if runopts.pop('aggregate', self.aggregate):
             samples = samples.aggregate()
 
         return states.first.updated(samples=samples)
