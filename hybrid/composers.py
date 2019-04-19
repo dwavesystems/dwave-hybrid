@@ -110,7 +110,7 @@ class GreedyPathMerge(Runnable, traits.MISO, traits.SamplesIntaking, traits.Samp
 
 
 class MergeSamples(Runnable, traits.MISO, traits.SamplesIntaking, traits.SamplesProducing):
-    """Merges multiple input states by concatenating samples from all the states
+    """Merge multiple input states by concatenating samples from all the states
     in to the first state.
 
     Args:
@@ -153,3 +153,50 @@ class MergeSamples(Runnable, traits.MISO, traits.SamplesIntaking, traits.Samples
             samples = samples.aggregate()
 
         return states.first.updated(samples=samples)
+
+
+class SliceSamples(Runnable, traits.SISO, traits.SamplesIntaking, traits.SamplesProducing):
+    """Slice input sampleset acting on samples in a selected order.
+
+    Args:
+        start (int, optional, default=None):
+            Start index for `slice`.
+
+        stop (int):
+            Stop index for `slice`.
+
+        step (int, optional, default=None):
+            Step value for `slice`.
+
+        sorted_by (str/None, optional, default='energy'):
+            Selects the record field used to sort the samples before slicing.
+
+    Examples:
+        >>> five_with_lowest_energy = SliceSamples(5)
+
+        >>> five_with_highest_num_occurrences = SliceSamples(-5, None, sorted_by='num_occurrences')
+
+        >>> odd = SliceSamples(None, None, 2)
+    """
+
+    def __init__(self, *slice_args, sorted_by='energy', **runopts):
+        super(SliceSamples, self).__init__(**runopts)
+
+        # follow the Python slice syntax
+        if slice_args:
+            self.slice = slice(*slice_args)
+        else:
+            self.slice = slice(None)
+
+        # but also allow extension via kwargs
+        start = runopts.pop('start', self.slice.start)
+        stop = runopts.pop('stop', self.slice.stop)
+        step = runopts.pop('step', self.slice.step)
+        self.slice = slice(start, stop, step)
+
+        self.sorted_by = sorted_by
+
+    def next(self, state):
+        sliced = state.samples.slice(self.slice.start, self.slice.stop,
+                                     self.slice.step, sorted_by=self.sorted_by)
+        return state.updated(samples=sliced)
