@@ -174,11 +174,22 @@ class SliceSamples(Runnable, traits.SISO, traits.SamplesIntaking, traits.Samples
             Selects the record field used to sort the samples before slicing.
 
     Examples:
-        >>> five_with_lowest_energy = SliceSamples(5)
+        Truncate to 5 with lowest energy:
+
+        >>> top5 = SliceSamples(5)
+
+        Truncate to 5 with highest energy:
+
+        >>> bottom5 = SliceSamples(-5, None)
+
+        Slice the sample set ordered by `num_occurrences`, instead by `energy`:
 
         >>> five_with_highest_num_occurrences = SliceSamples(-5, None, sorted_by='num_occurrences')
 
+        Halve the sample set by selecting only every other sample:
+
         >>> odd = SliceSamples(None, None, 2)
+
     """
 
     def __init__(self, *slice_args, sorted_by='energy', **runopts):
