@@ -192,24 +192,31 @@ class SliceSamples(Runnable, traits.SISO, traits.SamplesIntaking, traits.Samples
 
     """
 
-    def __init__(self, *slice_args, sorted_by='energy', **runopts):
-        super(SliceSamples, self).__init__(**runopts)
+    def __init__(self, *slice_args, **runopts):
+        sorted_by = runopts.pop('sorted_by', 'energy')
 
         # follow the Python slice syntax
         if slice_args:
-            self.slice = slice(*slice_args)
+            slicer = slice(*slice_args)
         else:
-            self.slice = slice(None)
+            slicer = slice(None)
 
         # but also allow extension via kwargs
+        start = runopts.pop('start', slicer.start)
+        stop = runopts.pop('stop', slicer.stop)
+        step = runopts.pop('step', slicer.step)
+
+        super(SliceSamples, self).__init__(**runopts)
+
+        self.slice = slice(start, stop, step)
+        self.sorted_by = sorted_by
+
+    def next(self, state, **runopts):
+        # allow slice override via runopts
         start = runopts.pop('start', self.slice.start)
         stop = runopts.pop('stop', self.slice.stop)
         step = runopts.pop('step', self.slice.step)
-        self.slice = slice(start, stop, step)
+        sorted_by = runopts.pop('sorted_by', self.sorted_by)
 
-        self.sorted_by = sorted_by
-
-    def next(self, state):
-        sliced = state.samples.slice(self.slice.start, self.slice.stop,
-                                     self.slice.step, sorted_by=self.sorted_by)
+        sliced = state.samples.slice(start, stop, step, sorted_by=sorted_by)
         return state.updated(samples=sliced)

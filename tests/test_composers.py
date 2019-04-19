@@ -145,7 +145,9 @@ class TestSliceSamples(unittest.TestCase):
         state = State(samples=sampleset)
 
         bottom = SliceSamples(3).run(state).result()
+        self.assertEqual(bottom.samples, sampleset.truncate(3))
 
+        bottom = SliceSamples().run(state, stop=3).result()
         self.assertEqual(bottom.samples, sampleset.truncate(3))
 
     def test_top_n(self):
@@ -154,7 +156,9 @@ class TestSliceSamples(unittest.TestCase):
         state = State(samples=sampleset)
 
         top = SliceSamples(-3, None).run(state).result()
+        self.assertTrue((top.samples.record.energy == energies[-3:]).all())
 
+        top = SliceSamples().run(state, start=-3).result()
         self.assertTrue((top.samples.record.energy == energies[-3:]).all())
 
     def test_middle_n(self):
@@ -163,5 +167,7 @@ class TestSliceSamples(unittest.TestCase):
         state = State(samples=sampleset)
 
         mid = SliceSamples(3, -3).run(state).result()
+        self.assertTrue((mid.samples.record.energy == energies[3:-3]).all())
 
+        mid = SliceSamples(1, -1).run(state, start=3, stop=-3).result()
         self.assertTrue((mid.samples.record.energy == energies[3:-3]).all())
