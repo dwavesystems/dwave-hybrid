@@ -24,7 +24,7 @@ from tabu import TabuSampler
 
 import hybrid
 from hybrid.core import (
-    PliableDict, State, SampleSet, Runnable, Branch,
+    PliableDict, State, States, SampleSet, Runnable, Branch,
     HybridSampler, HybridRunnable, HybridProblemRunnable, HybridSubproblemRunnable
 )
 from hybrid.concurrency import Present, Future, immediate_executor
@@ -189,6 +189,18 @@ class TestState(unittest.TestCase):
         self.assertNotEqual(id(s1), id(s2))
         self.assertEqual(s1.a.x, 2)
         self.assertEqual(s2.a.x, 1)
+
+
+class TestStates(unittest.TestCase):
+
+    def test_construction(self):
+        self.assertEqual(States(1, 2), [1, 2])
+
+    def test_state_api(self):
+        states = States(State(x=1), State(y=1))
+
+        self.assertEqual(states.result(), states)
+        self.assertEqual(states.updated(x=2), States(State(x=2), State(x=2, y=1)))
 
 
 class TestRunnable(unittest.TestCase):
