@@ -202,6 +202,12 @@ class TestStates(unittest.TestCase):
         self.assertEqual(states.result(), states)
         self.assertEqual(states.updated(x=2), States(State(x=2), State(x=2, y=1)))
 
+    def test_first(self):
+        self.assertEqual(States(1).first, 1)
+        self.assertEqual(States(1, 2).first, 1)
+        with self.assertRaises(IndexError):
+            States().first
+
 
 class TestRunnable(unittest.TestCase):
 
