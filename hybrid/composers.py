@@ -113,13 +113,13 @@ class MergeSamples(Runnable, traits.MISO, traits.SamplesIntaking, traits.Samples
     """Merges multiple input States by concatenating samples from all to the first.
     """
 
-    def next(self, states, aggregate=True, **runopts):
+    def next(self, states, aggregate=False, **runopts):
         if len(states) < 1:
             raise ValueError("no input states")
 
         samples = vstack_samplesets(*[s.samples for s in states])
 
         if aggregate:
-            samples.aggregate()
+            samples = samples.aggregate()
 
         return states.first.updated(samples=samples)
