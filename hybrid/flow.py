@@ -286,8 +286,8 @@ class ParallelBranches(Runnable, traits.SIMO):
         `ParallelBranches` is also available as `Parallel`.
 
     Examples:
-        This example runs two branches, a classical tabu search and a random sampler, until
-        both terminate.
+        This example runs two branches, a classical tabu search and a random
+        sampler, until both terminate.
 
         >>> Parallel(                     # doctest: +SKIP
                 TabuSubproblemSampler(),
