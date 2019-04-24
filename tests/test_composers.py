@@ -15,11 +15,14 @@
 import itertools
 import unittest
 
+import numpy as np
 import dimod
 
 from hybrid.core import State, States, SampleSet
 from hybrid import traits
-from hybrid.composers import IdentityComposer, SplatComposer, GreedyPathMerge, MergeSamples
+from hybrid.composers import (
+    IdentityComposer, SplatComposer, GreedyPathMerge,
+    MergeSamples, SliceSamples)
 from hybrid.utils import min_sample, max_sample
 
 
@@ -132,3 +135,39 @@ class TestMergeSamples(unittest.TestCase):
         state = MergeSamples(aggregate=True).run(states).result()
 
         self.assertEqual(state, expected)
+
+
+class TestSliceSamples(unittest.TestCase):
+
+    def test_bottom_n(self):
+        energies = list(range(10))
+        sampleset = dimod.SampleSet.from_samples(np.ones((10, 1)), dimod.SPIN, energy=energies)
+        state = State(samples=sampleset)
+
+        bottom = SliceSamples(3).run(state).result()
+        self.assertEqual(bottom.samples, sampleset.truncate(3))
+
+        bottom = SliceSamples().run(state, stop=3).result()
+        self.assertEqual(bottom.samples, sampleset.truncate(3))
+
+    def test_top_n(self):
+        energies = list(range(10))
+        sampleset = dimod.SampleSet.from_samples(np.ones((10, 1)), dimod.SPIN, energy=energies)
+        state = State(samples=sampleset)
+
+        top = SliceSamples(-3, None).run(state).result()
+        self.assertTrue((top.samples.record.energy == energies[-3:]).all())
+
+        top = SliceSamples().run(state, start=-3).result()
+        self.assertTrue((top.samples.record.energy == energies[-3:]).all())
+
+    def test_middle_n(self):
+        energies = list(range(10))
+        sampleset = dimod.SampleSet.from_samples(np.ones((10, 1)), dimod.SPIN, energy=energies)
+        state = State(samples=sampleset)
+
+        mid = SliceSamples(3, -3).run(state).result()
+        self.assertTrue((mid.samples.record.energy == energies[3:-3]).all())
+
+        mid = SliceSamples(1, -1).run(state, start=3, stop=-3).result()
+        self.assertTrue((mid.samples.record.energy == energies[3:-3]).all())
