@@ -70,7 +70,7 @@ class TestMultithreading(unittest.TestCase, RunTimeAssertionMixin):
         bqm = dimod.BinaryQuadraticModel({'a': 1}, {}, 0, 'BINARY')
         state = hybrid.State.from_problem(bqm)
 
-        with self.assertRuntimeWithin(2000, 2500):
+        with self.assertRuntimeWithin(1900, 2500):
             workflow.run(state).result()
 
     @unittest.skipUnless(cpu_count() >= 2, "at least two threads required")
