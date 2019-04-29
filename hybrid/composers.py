@@ -15,10 +15,10 @@
 import logging
 
 from hybrid.core import Runnable, SampleSet
-from hybrid.utils import updated_sample, flip_energy_gains
+from hybrid.utils import updated_sample, flip_energy_gains, vstack_samplesets
 from hybrid import traits
 
-__all__ = ['IdentityComposer', 'SplatComposer', 'GreedyPathMerge']
+__all__ = ['IdentityComposer', 'SplatComposer', 'GreedyPathMerge', 'MergeSamples', 'SliceSamples']
 
 logger = logging.getLogger(__name__)
 
@@ -107,3 +107,116 @@ class GreedyPathMerge(Runnable, traits.MISO, traits.SamplesIntaking, traits.Samp
         assert synthesis_samples.first.energy == synthesis_en
 
         return state_thesis.updated(samples=synthesis_samples)
+
+
+# TODO: move MergeSamples and SliceSamples to `ops` module?
+
+class MergeSamples(Runnable, traits.MISO, traits.SamplesIntaking, traits.SamplesProducing):
+    """Merge multiple input states by concatenating samples from all the states
+    in to the first state.
+
+    Args:
+        aggregate (bool, default=False):
+            Aggregate samples after merging.
+
+    Example:
+        This example runs two branches, a classical simulated annealing and a
+        tabu search, acquiring one sample per branch. It then merges the samples,
+        producing the final state with a sampleset of size two.
+
+        >>> import dimod
+        >>> import hybrid
+
+        >>> workflow = hybrid.Parallel(
+        ...     hybrid.SimulatedAnnealingProblemSampler(num_reads=1),
+        ...     hybrid.TabuProblemSampler(num_reads=1),
+        ...     endomorphic=False
+        ... ) | hybrid.MergeSamples()
+
+        >>> state = hybrid.State.from_problem(
+        ...    dimod.BinaryQuadraticModel.from_ising({}, {'ab': 1}))
+
+        >>> result = workflow.run(state).result()
+        >>> len(result.samples)
+        2
+    """
+
+    def __init__(self, aggregate=False, **runopts):
+        super(MergeSamples, self).__init__(**runopts)
+        self.aggregate = aggregate
+
+    def next(self, states, **runopts):
+        if len(states) < 1:
+            raise ValueError("no input states")
+
+        samples = vstack_samplesets(*[s.samples for s in states])
+
+        if runopts.pop('aggregate', self.aggregate):
+            samples = samples.aggregate()
+
+        return states.first.updated(samples=samples)
+
+
+class SliceSamples(Runnable, traits.SISO, traits.SamplesIntaking, traits.SamplesProducing):
+    """Slice input sampleset acting on samples in a selected order.
+
+    Args:
+        start (int, optional, default=None):
+            Start index for `slice`.
+
+        stop (int):
+            Stop index for `slice`.
+
+        step (int, optional, default=None):
+            Step value for `slice`.
+
+        sorted_by (str/None, optional, default='energy'):
+            Selects the record field used to sort the samples before slicing.
+
+    Examples:
+        Truncate to 5 with lowest energy:
+
+        >>> top5 = SliceSamples(5)
+
+        Truncate to 5 with highest energy:
+
+        >>> bottom5 = SliceSamples(-5, None)
+
+        Slice the sample set ordered by `num_occurrences`, instead by `energy`:
+
+        >>> five_with_highest_num_occurrences = SliceSamples(-5, None, sorted_by='num_occurrences')
+
+        Halve the sample set by selecting only every other sample:
+
+        >>> odd = SliceSamples(None, None, 2)
+
+    """
+
+    def __init__(self, *slice_args, **runopts):
+        sorted_by = runopts.pop('sorted_by', 'energy')
+
+        # follow the Python slice syntax
+        if slice_args:
+            slicer = slice(*slice_args)
+        else:
+            slicer = slice(None)
+
+        # but also allow extension via kwargs
+        start = runopts.pop('start', slicer.start)
+        stop = runopts.pop('stop', slicer.stop)
+        step = runopts.pop('step', slicer.step)
+
+        super(SliceSamples, self).__init__(**runopts)
+
+        self.slice = slice(start, stop, step)
+        self.sorted_by = sorted_by
+
+    def next(self, state, **runopts):
+        # allow slice override via runopts
+        start = runopts.pop('start', self.slice.start)
+        stop = runopts.pop('stop', self.slice.stop)
+        step = runopts.pop('step', self.slice.step)
+        sorted_by = runopts.pop('sorted_by', self.sorted_by)
+
+        sliced = state.samples.slice(start, stop, step, sorted_by=sorted_by)
+        return state.updated(samples=sliced)

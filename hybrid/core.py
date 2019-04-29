@@ -235,6 +235,10 @@ class States(list):
     def result(self):
         return self
 
+    @property
+    def first(self):
+        return self[0]
+
     def updated(self, **kwargs):
         """Return a (deep) copy of the states, updated from `kwargs`."""
         return States(*(state.updated(**kwargs) for state in self))

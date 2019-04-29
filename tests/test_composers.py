@@ -15,11 +15,14 @@
 import itertools
 import unittest
 
+import numpy as np
 import dimod
 
 from hybrid.core import State, States, SampleSet
 from hybrid import traits
-from hybrid.composers import IdentityComposer, SplatComposer, GreedyPathMerge
+from hybrid.composers import (
+    IdentityComposer, SplatComposer, GreedyPathMerge,
+    MergeSamples, SliceSamples)
 from hybrid.utils import min_sample, max_sample
 
 
@@ -93,3 +96,78 @@ class TestGreedyPathMerge(unittest.TestCase):
         result = GreedyPathMerge().run(States(state, antistate)).result()
 
         self.assertEqual(result.samples.first.energy, -3.0)
+
+
+class TestMergeSamples(unittest.TestCase):
+
+    def test_single(self):
+        bqm = dimod.BinaryQuadraticModel({}, {'ab': 1}, 0, dimod.SPIN)
+
+        states = States(State.from_sample({'a': 1, 'b': -1}, bqm))
+
+        state = MergeSamples().run(states).result()
+
+        self.assertEqual(state, states[0])
+
+    def test_multiple(self):
+        bqm = dimod.BinaryQuadraticModel({}, {'ab': 1}, 0, dimod.SPIN)
+
+        states = States(State.from_sample({'a': 1, 'b': -1}, bqm),
+                        State.from_sample({'a': -1, 'b': 1}, bqm))
+
+        expected = State.from_samples([{'a': 1, 'b': -1}, {'a': -1, 'b': 1}], bqm)
+
+        state = MergeSamples().run(states).result()
+
+        self.assertEqual(state, expected)
+
+    def test_aggregation(self):
+        bqm = dimod.BinaryQuadraticModel({}, {'ab': 1}, 0, dimod.SPIN)
+
+        states = States(State.from_sample({'a': 1, 'b': -1}, bqm),
+                        State.from_sample({'a': 1, 'b': -1}, bqm))
+
+        expected = State(
+            problem=bqm,
+            samples=dimod.SampleSet.from_samples_bqm(
+                {'a': 1, 'b': -1}, bqm, num_occurrences=[2]))
+
+        state = MergeSamples(aggregate=True).run(states).result()
+
+        self.assertEqual(state, expected)
+
+
+class TestSliceSamples(unittest.TestCase):
+
+    def test_bottom_n(self):
+        energies = list(range(10))
+        sampleset = dimod.SampleSet.from_samples(np.ones((10, 1)), dimod.SPIN, energy=energies)
+        state = State(samples=sampleset)
+
+        bottom = SliceSamples(3).run(state).result()
+        self.assertEqual(bottom.samples, sampleset.truncate(3))
+
+        bottom = SliceSamples().run(state, stop=3).result()
+        self.assertEqual(bottom.samples, sampleset.truncate(3))
+
+    def test_top_n(self):
+        energies = list(range(10))
+        sampleset = dimod.SampleSet.from_samples(np.ones((10, 1)), dimod.SPIN, energy=energies)
+        state = State(samples=sampleset)
+
+        top = SliceSamples(-3, None).run(state).result()
+        self.assertTrue((top.samples.record.energy == energies[-3:]).all())
+
+        top = SliceSamples().run(state, start=-3).result()
+        self.assertTrue((top.samples.record.energy == energies[-3:]).all())
+
+    def test_middle_n(self):
+        energies = list(range(10))
+        sampleset = dimod.SampleSet.from_samples(np.ones((10, 1)), dimod.SPIN, energy=energies)
+        state = State(samples=sampleset)
+
+        mid = SliceSamples(3, -3).run(state).result()
+        self.assertTrue((mid.samples.record.energy == energies[3:-3]).all())
+
+        mid = SliceSamples(1, -1).run(state, start=3, stop=-3).result()
+        self.assertTrue((mid.samples.record.energy == energies[3:-3]).all())
