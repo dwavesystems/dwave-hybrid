@@ -88,7 +88,9 @@ class TestMultithreading(unittest.TestCase, RunTimeAssertionMixin):
         t_s2 = time_runnable(s2, state)
         t_p = time_runnable(p, state)
 
-        # parallel execution must not be slower than the longest running branch + 30%
-        t_expected_max = max(t_s1, t_s2) * 1.3
+        # parallel execution must not be slower than the longest running branch + 75%
+        # NOTE: the extremely weak upper bound was chosen so we don't fail on the
+        # unreliable/inconsistent CI VMs, and yet to show some concurrency does exist
+        t_expected_max = max(t_s1, t_s2) * 1.75
 
         self.assertLess(t_p, t_expected_max)
