@@ -20,6 +20,7 @@ import hybrid
 from hybrid.core import State
 from hybrid.concurrency import Present, Future, ImmediateExecutor, immediate_executor
 from hybrid.testing import RunTimeAssertionMixin
+from hybrid.utils import cpu_count
 
 
 class TestPresent(unittest.TestCase):
@@ -72,6 +73,7 @@ class TestMultithreading(unittest.TestCase, RunTimeAssertionMixin):
         with self.assertRuntimeWithin(2000, 2500):
             workflow.run(state).result()
 
+    @unittest.skipUnless(cpu_count() >= 2, "at least two threads required")
     def test_concurrent_sa_samples(self):
         s1 = hybrid.SimulatedAnnealingProblemSampler(num_reads=1000, sweeps=10000)
         s2 = hybrid.SimulatedAnnealingProblemSampler(num_reads=1000, sweeps=10000)
