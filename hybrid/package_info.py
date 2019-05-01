@@ -14,7 +14,7 @@
 
 __packagename__ = 'dwave-hybrid'
 __title__ = 'D-Wave Hybrid'
-__version__ = '0.2.0'
+__version__ = '0.2.1'
 __author__ = 'D-Wave Systems Inc.'
 __authoremail__ = 'radomir@dwavesys.com'
 __description__ = 'Hybrid Asynchronous Decomposition Solver Framework'
