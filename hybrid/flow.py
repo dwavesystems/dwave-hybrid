@@ -42,19 +42,21 @@ class Branch(Runnable):
     """Sequentially executed :class:`~hybrid.core.Runnable` components.
 
     Args:
-        components (iterable of :class:`~hybrid.core.Runnable`): Complete processing sequence to
-            update a current set of samples, such as: :code:`decomposer | sampler | composer`.
+        components (iterable of :class:`~hybrid.core.Runnable`):
+            Complete processing sequence to update a current set of samples,
+            such as: :code:`decomposer | sampler | composer`.
 
     Examples:
-        This example runs one iteration of a branch comprising a decomposer, local Tabu solver,
-        and a composer. A 10-variable binary quadratic model is decomposed by the energy
-        impact of its variables into a 6-variable subproblem to be sampled twice
-        with a manually set initial state of all -1 values.
+        This example runs one iteration of a branch comprising a decomposer,
+        local Tabu solver, and a composer. A 10-variable binary quadratic model
+        is decomposed by the energy impact of its variables into a 6-variable
+        subproblem to be sampled twice with a manually set initial state of
+        all -1 values.
 
         >>> import dimod           # Create a binary quadratic model
-        >>> bqm = dimod.BinaryQuadraticModel({t: 0 for t in range(10)},
-        ...                                  {(t, (t+1) % 10): 1 for t in range(10)},
-        ...                                  0, 'SPIN')
+        >>> bqm = dimod.BQM({t: 0 for t in range(10)},
+        ...                 {(t, (t+1) % 10): 1 for t in range(10)},
+        ...                 0, 'SPIN')
         >>> # Run one iteration on a branch
         >>> branch = (EnergyImpactDecomposer(size=6, min_gain=-10) |
         ...           TabuSubproblemSampler(num_reads=2) |
@@ -64,7 +66,6 @@ class Branch(Runnable):
                4   5   6   7   8   9  energy  num_occ.
            0  +1  -1  -1  +1  -1  +1    -5.0         1
            1  +1  -1  -1  +1  -1  +1    -5.0         1
-
            [ 2 rows, 6 variables ]
 
     """
@@ -164,16 +165,18 @@ class Branch(Runnable):
 
 
 class RacingBranches(Runnable, traits.SIMO):
-    """Runs (races) multiple workflows of type :class:`~hybrid.core.Runnable` in parallel, stopping all
-    once the first finishes. Returns the results of all, in the specified order.
+    """Runs (races) multiple workflows of type :class:`~hybrid.core.Runnable`
+    in parallel, stopping all once the first finishes. Returns the results of
+    all, in the specified order.
 
     Args:
         *branches ([:class:`~hybrid.core.Runnable`]):
             Comma-separated branches.
+
         endomorphic (bool):
-            Set to ``False`` if you are not sure that the codomain of all branches
-            is the domain; for example, if there might be a mix of subproblems
-            and problems moving between components.
+            Set to ``False`` if you are not sure that the codomain of all
+            branches is the domain; for example, if there might be a mix of
+            subproblems and problems moving between components.
 
     Note:
         `RacingBranches` is also available as `Race`.
@@ -196,6 +199,7 @@ class RacingBranches(Runnable, traits.SIMO):
         can safely be mixed in with branches' results. Otherwise set
         `endomorphic=False`.
         """
+
         self.branches = branches
         self.endomorphic = runopts.pop('endomorphic', True)
         super(RacingBranches, self).__init__(**runopts)
@@ -267,8 +271,8 @@ Race = RacingBranches
 
 
 class ParallelBranches(Runnable, traits.SIMO):
-    """Runs multiple multiple workflows of type :class:`~hybrid.core.Runnable` in parallel,
-    blocking until all finish.
+    """Runs multiple multiple workflows of type :class:`~hybrid.core.Runnable`
+    in parallel, blocking until all finish.
 
     Args:
         *branches ([:class:`~hybrid.core.Runnable`]):
@@ -278,9 +282,9 @@ class ParallelBranches(Runnable, traits.SIMO):
             Include an implicit "identity branch", resulting in the input state
             being copied (prepended) to the output States list.
 
-            Set to ``False`` if you are not sure that the codomain of all branches
-            is the domain; for example, if there might be a mix of subproblems
-            and problems moving between components.
+            Set to ``False`` if you are not sure that the codomain of all
+            branches is the domain; for example, if there might be a mix of
+            subproblems and problems moving between components.
 
     Note:
         `ParallelBranches` is also available as `Parallel`.
@@ -359,7 +363,8 @@ Parallel = ParallelBranches
 
 
 class Map(Runnable, traits.MIMO):
-    """Runs a specified :class:`~hybrid.core.Runnable` in parallel on all input states.
+    """Runs a specified :class:`~hybrid.core.Runnable` in parallel on all input
+    states.
 
     Args:
         runnable (:class:`~hybrid.core.Runnable`):
@@ -369,7 +374,8 @@ class Map(Runnable, traits.MIMO):
         This example runs `TabuProblemSampler` on two input states in parallel,
         returning when both are done.
 
-        >>> Map(TabuProblemSampler()).run([State(problem=bqm1), State(problem=bqm2)])    # doctest: +SKIP
+        >>> states = States(State(problem=bqm1), State(problem=bqm2))   # doctest: +SKIP
+        >>> Map(TabuProblemSampler()).run(states).result()              # doctest: +SKIP
         [<state_1_with_solution>, <state_2_with_solution>]
 
     """
@@ -412,8 +418,8 @@ class Map(Runnable, traits.MIMO):
 
 
 class Reduce(Runnable, traits.MISO):
-    """Fold-left using the specified :class:`~hybrid.core.Runnable` on a sequence of input states,
-    producing a single output state.
+    """Fold-left using the specified :class:`~hybrid.core.Runnable` on a
+    sequence of input states, producing a single output state.
 
     Args:
         runnable (:class:`~hybrid.core.Runnable`):
@@ -483,13 +489,18 @@ class Lambda(Runnable, traits.NotValidated):
     Args:
         next (callable):
             Implementation of runnable's `next` method, provided as a callable
-            (usually a lambda expression for simple operations). Signature of the
-            callable has to match the signature of :meth:`~hybrid.core.Runnable.next()`; i.e.,
-            it accepts two arguments: runnable instance and state instance.
+            (usually a lambda expression for simple operations). Signature of
+            the callable has to match the signature of
+            :meth:`~hybrid.core.Runnable.next()`; i.e., it accepts two
+            arguments: runnable instance and state instance.
+
         error (callable):
-            Implementation of runnable's `error` method. See :meth:`~hybrid.core.Runnable.error`.
+            Implementation of runnable's `error` method.
+            See :meth:`~hybrid.core.Runnable.error`.
+
         init (callable):
-            Implementation of runnable's `init` method. See :meth:`~hybrid.core.Runnable.init`.
+            Implementation of runnable's `init` method.
+            See :meth:`~hybrid.core.Runnable.init`.
 
     Note:
         Traits are not enforced, apart from the SISO requirement. Also, note
@@ -601,8 +612,8 @@ class ArgMin(Runnable, traits.MISO):
 
 
 class TrackMin(Runnable, traits.SISO):
-    """Tracks and records the best :class:`~hybrid.core.State` according to a metric defined
-    with a `key` function; typically this is the minimal state.
+    """Tracks and records the best :class:`~hybrid.core.State` according to a
+    metric defined with a `key` function; typically this is the minimal state.
 
     Args:
         key (callable/str, optional, default=None):
@@ -668,9 +679,9 @@ class TrackMin(Runnable, traits.SISO):
 
 
 class LoopUntilNoImprovement(Runnable):
-    """Iterates :class:`~hybrid.core.Runnable` for up to `max_iter` times, or until a state quality
-    metric, defined by the `key` function, shows no improvement for at least
-    `convergence` number of iterations.
+    """Iterates :class:`~hybrid.core.Runnable` for up to `max_iter` times, or
+    until a state quality metric, defined by the `key` function, shows no
+    improvement for at least `convergence` number of iterations.
 
     Args:
         runnable (:class:`~hybrid.core.Runnable`):
@@ -816,9 +827,9 @@ class SimpleIterator(LoopUntilNoImprovement):
 
 
 class LoopWhileNoImprovement(LoopUntilNoImprovement):
-    """Iterates :class:`~hybrid.core.Runnable` until a state quality metric, defined by the `key`
-    function, shows no improvement for at least `max_tries` number of
-    iterations or until `max_iter` number of iterations is exceeded.
+    """Iterates :class:`~hybrid.core.Runnable` until a state quality metric,
+    defined by the `key` function, shows no improvement for at least `max_tries`
+    number of iterations or until `max_iter` number of iterations is exceeded.
 
     Note:
         Unlike `LoopUntilNoImprovement`/`Loop`, `LoopWhileNoImprovement` will
@@ -899,8 +910,8 @@ class LoopWhileNoImprovement(LoopUntilNoImprovement):
 
 
 class Unwind(Runnable, traits.SIMO):
-    """Iterates :class:`~hybrid.core.Runnable` until :exc:`EndOfStream` is raised, collecting all
-    output states along the way.
+    """Iterates :class:`~hybrid.core.Runnable` until :exc:`EndOfStream` is
+    raised, collecting all output states along the way.
     """
 
     def __init__(self, runnable, **runopts):

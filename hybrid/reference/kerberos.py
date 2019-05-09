@@ -71,24 +71,33 @@ class KerberosSampler(dimod.Sampler):
         Args:
             bqm (:obj:`~dimod.BinaryQuadraticModel`):
                 Binary quadratic model to be sampled from.
+
             init_sample (:class:`~dimod.SampleSet`, callable, ``None``):
                 Initial sample set (or sample generator) used for each "read".
                 Use a random sample for each read by default.
+
             max_iter (int):
                 Number of iterations in the hybrid algorithm.
+
             convergence (int):
                 Number of iterations with no improvement that terminates sampling.
+
             num_reads (int):
                 Number of reads. Each sample is the result of a single run of the
                 hybrid algorithm.
+
             sa_reads (int):
                 Number of reads in the simulated annealing branch.
+
             sa_sweeps (int):
                 Number of sweeps in the simulated annealing branch.
+
             qpu_reads (int):
                 Number of reads in the QPU branch.
+
             qpu_sampler (:class:`dimod.Sampler`, optional, default=DWaveSampler()):
                 Quantum sampler such as a D-Wave system.
+
             max_subproblem_size (int):
                 Maximum size of the subproblem selected in the QPU branch.
 

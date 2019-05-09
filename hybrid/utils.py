@@ -50,12 +50,18 @@ def bqm_reduced_to(bqm, variables, sample, keep_offset=True):
     Args:
         bqm (:class:`dimod.BinaryQuadraticModel`):
             Binary quadratic model (BQM).
+
         variables (list/set);
             Subset of variables to keep in the reduced BQM.
-        sample (dict/list): Mapping of variable labels to values or a list when labels
-            are sequential integers. Must include all variables not specified in `variables`.
-        keep_offset (bool, optional, default=True): If false, set the reduced binary quadratic
-            model's offset to zero; otherwise, uses the caluclated energy offset.
+
+        sample (dict/list):
+            Mapping of variable labels to values or a list when labels are
+            sequential integers. Must include all variables not specified in
+            `variables`.
+
+        keep_offset (bool, optional, default=True):
+            If false, set the reduced binary quadratic model's offset to zero;
+            otherwise, uses the caluclated energy offset.
 
     Returns:
             :class:`dimod.BinaryQuadraticModel`: A reduced BQM.
@@ -63,11 +69,11 @@ def bqm_reduced_to(bqm, variables, sample, keep_offset=True):
     Examples:
         This example reduces a 3-variable BQM to two variables.
 
-        >>> import dimod           # Create a binary quadratic model
-        >>> bqm = dimod.BinaryQuadraticModel({}, {('a', 'b'): -1.0, ('b', 'c'): -1.0, ('c', 'a'): -1.0}, 0.0, 'BINARY')
+        >>> import dimod
+        >>> bqm = dimod.BQM({}, {'ab': -1, 'bc': -1, 'ca': -1}, 0, 'BINARY')
         >>> sample = {'a': 1, 'b': 1, 'c': 0}
         >>> bqm_reduced_to(bqm, ['a', 'b'], sample)
-        BinaryQuadraticModel({'a': 0.0, 'b': 0.0}, {('a', 'b'): -1.0}, 0.0, Vartype.BINARY)
+        BinaryQuadraticModel({'a': 0, 'b': 0}, {('a', 'b'): -1}, 0, Vartype.BINARY)
 
     """
 
@@ -86,33 +92,38 @@ def bqm_reduced_to(bqm, variables, sample, keep_offset=True):
 def bqm_induced_by(bqm, variables, sample):
     """Induce a binary quadratic model by fixing values of boundary variables.
 
-    The function is optimized for ``len(variables) << len(bqm)``, that is, for fixing
-    the majority of variables.
+    The function is optimized for ``len(variables) << len(bqm)``, that is, for
+    fixing the majority of variables.
 
     Args:
         bqm (:class:`dimod.BinaryQuadraticModel`):
             Binary quadratic model (BQM).
+
         variables (list/set);
-            Subset of variables to keep in the reduced BQM, typically a subgraph.
+            Subset of variables to keep in the reduced BQM, typically a
+            subgraph.
+
         sample (dict/list):
             Mapping of variable labels to values or a list when labels
-            are sequential integers. Values are required only for boundary variables,
-            that is, for variables with interactions with `variables` (having edges
-            with non-zero quadratic biases connected to the subgraph).
+            are sequential integers. Values are required only for boundary
+            variables, that is, for variables with interactions with `variables`
+            (having edges with non-zero quadratic biases connected to the
+            subgraph).
 
     Returns:
         :class:`dimod.BinaryQuadraticModel`: A BQM induced by fixing values of
-        those variables adjacent to its subset of variables and setting the energy offset
-        to zero.
+        those variables adjacent to its subset of variables and setting the
+        energy offset to zero.
 
     Examples:
-        This example induces a 2-variable BQM from a 6-variable path graph---the subset
-        of nodes 2 and 3 of nodes 0 to 5---by fixing values of boundary variables 1 and 4.
+        This example induces a 2-variable BQM from a 6-variable path
+        graph---the subset of nodes 2 and 3 of nodes 0 to 5---by fixing values
+        of boundary variables 1 and 4.
 
-        >>> import dimod           # Create a binary quadratic model from a path graph
+        >>> import dimod
         >>> import networkx as nx
         >>> bqm = dimod.BinaryQuadraticModel({},
-        ...             {edge: edge[0] + 0.5 for edge in set(nx.path_graph(6).edges)}, 0, 'BINARY')
+        ...     {edge: edge[0] + 0.5 for edge in set(nx.path_graph(6).edges)}, 0, 'BINARY')
         >>> sample = {1: 3, 4: 3}
         >>> bqm_induced_by(bqm, [2, 3], sample)
         BinaryQuadraticModel({2: 4.5, 3: 10.5}, {(2, 3): 2.5}, 0.0, Vartype.BINARY)
@@ -145,44 +156,50 @@ def bqm_edges_between_variables(bqm, variables):
     Args:
         bqm (:class:`dimod.BinaryQuadraticModel`):
             Binary quadratic model (BQM).
+
         variables (list/set):
             Subset of variables in the BQM.
 
     Returns:
-        list: All edges connecting `variables` as tuples plus the variables themselves
-        as tuples (v, v).
+        list: All edges connecting `variables` as tuples plus the variables
+        themselves as tuples (v, v).
 
     Examples:
-        This example returns connecting edges between 3 nodes of a BQM based on a 4-variable
-        path graph.
+        This example returns connecting edges between 3 nodes of a BQM based on
+        a 4-variable path graph.
 
-        >>> import dimod           # Create a binary quadratic model
-        >>> bqm = dimod.BinaryQuadraticModel({}, {(0, 1): 1, (1, 2): 1, (2, 3): 1}, 0, 'BINARY')
+        >>> import dimod
+        >>> bqm = dimod.BQM({}, {(0, 1): 1, (1, 2): 1, (2, 3): 1}, 0, 'BINARY')
         >>> bqm_edges_between_variables(bqm, {0, 1, 3})
         [(0, 1), (0, 0), (1, 1), (3, 3)]
 
     """
     variables = set(variables)
-    edges = [(start, end) for (start, end), coupling in bqm.quadratic.items() if start in variables and end in variables]
+    edges = [(start, end) for (start, end), coupling in bqm.quadratic.items()
+                if start in variables and end in variables]
     edges.extend((v, v) for v in bqm.linear if v in variables)
     return edges
 
 
 def flip_energy_gains(bqm, sample, variables=None, min_gain=None):
-    """Order variable flips by descending contribution to energy changes in a BQM.
+    """Order variable flips by descending contribution to energy changes in a
+    BQM.
 
     Args:
         bqm (:class:`dimod.BinaryQuadraticModel`):
             Binary quadratic model (BQM).
+
         sample (list/dict):
-            Sample values as returned by dimod samplers (0 or 1 values for dimod.BINARY
-            and -1 or +1 for dimod.SPIN)
+            Sample values as returned by dimod samplers (0 or 1 values for
+            `dimod.BINARY` and -1 or +1 for `dimod.SPIN`)
+
         variables (sequence, optional, default=None):
             Consider only flips of these variables. If undefined, consider all
             variables in `sample`.
+
         min_gain (float, optional, default=None):
-            Minimum required energy increase from flipping a sample value to return
-            its corresponding variable.
+            Minimum required energy increase from flipping a sample value to
+            return its corresponding variable.
 
     Returns:
         list: Energy changes in descending order, in the format of tuples
@@ -190,13 +207,13 @@ def flip_energy_gains(bqm, sample, variables=None, min_gain=None):
             for each variable.
 
     Examples:
-        This example returns connecting edges between 3 nodes of a BQM based on a 4-variable
-        path graph.
+        This example returns connecting edges between 3 nodes of a BQM based on
+        a 4-variable path graph.
 
         >>> import dimod
-        >>> bqm = dimod.BinaryQuadraticModel({}, {'ab': 0.0, 'bc': 1.0, 'cd': 2.0}, 0, 'SPIN')
+        >>> bqm = dimod.BQM({}, {'ab': 0, 'bc': 1, 'cd': 2}, 0, 'SPIN')
         >>> flip_energy_gains(bqm, {'a': -1, 'b': 1, 'c': 1, 'd': -1})
-        [(4.0, 'd'), (2.0, 'c'), (0.0, 'a'), (-2.0, 'b')]
+        [(4, 'd'), (2, 'c'), (0, 'a'), (-2, 'b')]
 
     """
 
@@ -236,30 +253,34 @@ def select_localsearch_adversaries(bqm, sample, max_n=None, min_gain=None):
     Args:
         bqm (:class:`dimod.BinaryQuadraticModel`):
             Binary quadratic model (BQM).
+
         sample (list/dict):
-            Sample values as returned by dimod samplers (0 or 1 values for dimod.BINARY
-            and -1 or +1 for dimod.SPIN)
+            Sample values as returned by dimod samplers (0 or 1 values for
+            `dimod.BINARY` and -1 or +1 for `dimod.SPIN`)
+
         max_n (int, optional, default=None):
-            Maximum contributing variables to return. By default, returns any variable
-            for which flipping its sample value results in an energy gain of `min_gain`.
+            Maximum contributing variables to return. By default, returns any
+            variable for which flipping its sample value results in an energy
+            gain of `min_gain`.
+
         min_gain (float, optional, default=None):
-            Minimum required energy increase from flipping a sample value to return
-            its corresponding variable.
+            Minimum required energy increase from flipping a sample value to
+            return its corresponding variable.
 
     Returns:
-        list: Up to `max_n` variables for which flipping the corresponding sample value
-        increases the BQM energy by at least `min_gain`.
+        list: Up to `max_n` variables for which flipping the corresponding
+        sample value increases the BQM energy by at least `min_gain`.
 
     Examples:
-        This example returns 2 variables (out of up to 3 allowed) for which flipping
-        sample values changes BQM energy by 1 or more. The BQM has energy gains
-        of  0, -2, 2, 4 for variables a, b, c, d respectively for the given sample.
+        This example returns 2 variables (out of up to 3 allowed) for which
+        flipping sample values changes BQM energy by 1 or more. The BQM has
+        energy gains of  0, -2, 2, 4 for variables a, b, c, d respectively for
+        the given sample.
 
-        >>> import dimod           # Create a binary quadratic model
-        >>> bqm = dimod.BinaryQuadraticModel({},
-        ...             {('a', 'b'): 0, ('b', 'c'): 1, ('c', 'd'): 2}, 0, 'SPIN')
-        >>> select_localsearch_adversaries(bqm, {'a': -1, 'b': 1, 'c': 1, 'd': -1},
-        ...                                max_n=3, min_gain=1)
+        >>> import dimod
+        >>> bqm = dimod.BQM({}, {'ab': 0, 'bc': 1, 'cd': 2}, 0, 'SPIN')
+        >>> select_localsearch_adversaries(
+        ...     bqm, {'a': -1, 'b': 1, 'c': 1, 'd': -1}, max_n=3, min_gain=1)
         ['d', 'c']
 
     """
@@ -279,6 +300,7 @@ def select_random_subgraph(bqm, n):
     Args:
         bqm (:class:`dimod.BinaryQuadraticModel`):
             Binary quadratic model (BQM).
+
         n (int):
             Number of requested variables. Must be between 0 and `len(bqm)`.
 
@@ -288,8 +310,8 @@ def select_random_subgraph(bqm, n):
     Examples:
         This example returns 2 variables of a 4-variable BQM.
 
-        >>> import dimod           # Create a binary quadratic model
-        >>> bqm = dimod.BinaryQuadraticModel({}, {'ab': 0, 'bc': 1, 'cd': 2}, 0, 'BINARY')
+        >>> import dimod
+        >>> bqm = dimod.BQM({}, {'ab': 0, 'bc': 1, 'cd': 2}, 0, 'BINARY')
         >>> select_random_subgraph(bqm, 2)      # doctest: +SKIP
         ['d', 'b']
 
@@ -300,20 +322,20 @@ def select_random_subgraph(bqm, n):
 def chimera_tiles(bqm, m, n, t):
     """Map a binary quadratic model to a set of Chimera tiles.
 
-    A Chimera lattice is an m-by-n grid of Chimera tiles, where each tile is a bipartite graph
-    with shores of size t.
+    A Chimera lattice is an m-by-n grid of Chimera tiles, where each tile is a
+    bipartite graph with shores of size t.
 
     Args:
-        bqm (:obj:`.BinaryQuadraticModel`):
-            Binary quadratic model (BQM).
+        bqm (:obj:`.BinaryQuadraticModel`): Binary quadratic model (BQM).
         m (int): Rows.
         n (int): Columns.
         t (int): Size of shore.
 
     Returns:
-        dict: Map as a dict where keys are tile coordinates (row, column, aisle) and values
-        are partial embeddings of part of the BQM to a Chimera tile. Embeddings are
-        those that would be generated by dwave_networkx's chimera_graph() function.
+        dict: Map as a dict where keys are tile coordinates (row, column, aisle)
+        and values are partial embeddings of part of the BQM to a Chimera tile.
+        Embeddings are those that would be generated by dwave_networkx's
+        chimera_graph() function.
 
     Examples:
         This example maps a 1-by-2 Chimera-derived BQM to 2 side-by-side tiles.
@@ -325,8 +347,8 @@ def chimera_tiles(bqm, m, n, t):
         >>> chimera_tiles(bqm, 1, 1, 4)     # doctest: +SKIP
         {(0, 0, 0): {0: [0], 1: [1], 2: [2], 3: [3], 4: [4], 5: [5], 6: [6], 7: [7]},
          (0, 1, 0): {8: [0], 9: [1], 10: [2], 11: [3], 12: [4], 13: [5], 14: [6], 15: [7]}}
-
     """
+
     try:
         chimera_indices = canonical_chimera_labeling(bqm)
     except AssertionError:
@@ -364,8 +386,11 @@ def updated_sample(sample, replacements):
     """Update a copy of a sample with replacement values.
 
     Args:
-        sample (list/dict): Sample values as returned by dimod samplers to be copied.
-        replacements (list/dict): Sample values to replace in the copied `sample`.
+        sample (list/dict):
+            Sample values as returned by dimod samplers to be copied.
+
+        replacements (list/dict):
+            Sample values to replace in the copied `sample`.
 
     Returns:
         list/dict: Copy of `sample` overwritten by specified values.
@@ -437,8 +462,11 @@ def random_sample_seq(size, vartype):
     """Return a random sample.
 
     Args:
-        size (int): Sample size (number of variables).
-        vartype (Vartype): Variable type; for example, `Vartype.SPIN`, `BINARY`, or {-1, 1}.
+        size (int):
+            Sample size (number of variables).
+
+        vartype (:class:`dimod.Vartype`):
+            Variable type; for example, `Vartype.SPIN`, `BINARY`, or `{-1, 1}`.
 
     Returns:
         dict: Random sample of `size` in length, with values from `vartype`.
@@ -464,8 +492,7 @@ def random_sample(bqm):
 
     Examples:
         >>> import dimod
-        >>> bqm = dimod.BinaryQuadraticModel({},
-        ...             {('a', 'b'): -1, ('b', 'c'): -1, ('c', 'a'): -1}, 0, 'BINARY')
+        >>> bqm = dimod.BQM({}, {'ab': -1, 'bc': -1, 'ca': -1}, 0, 'BINARY')
         >>> random_sample(bqm)     # doctest: +SKIP
         {'a': 0, 'b': 1, 'c': 1}
 
@@ -475,7 +502,8 @@ def random_sample(bqm):
 
 
 def min_sample(bqm):
-    """Return a sample with all variables set to the minimal value for a binary quadratic model.
+    """Return a sample with all variables set to the minimal value for a binary
+    quadratic model.
 
     Args:
         bqm (:obj:`.BinaryQuadraticModel`):
@@ -486,8 +514,7 @@ def min_sample(bqm):
 
     Examples:
         >>> import dimod
-        >>> bqm = dimod.BinaryQuadraticModel({},
-        ...             {('a', 'b'): -1, ('b', 'c'): -1, ('c', 'a'): -1}, 0, 'BINARY')
+        >>> bqm = dimod.BQM({}, {'ab': -1, 'bc': -1, 'ca': -1}, 0, 'BINARY')
         >>> min_sample(bqm)     # doctest: +SKIP
         {'a': 0, 'b': 0, 'c': 0}
 
@@ -497,7 +524,8 @@ def min_sample(bqm):
 
 
 def max_sample(bqm):
-    """Return a sample with all variables set to the maximal value for a binary quadratic model.
+    """Return a sample with all variables set to the maximal value for a binary
+    quadratic model.
 
     Args:
         bqm (:obj:`.BinaryQuadraticModel`):
@@ -508,8 +536,7 @@ def max_sample(bqm):
 
     Examples:
         >>> import dimod
-        >>> bqm = dimod.BinaryQuadraticModel({},
-        ...             {('a', 'b'): -1, ('b', 'c'): -1, ('c', 'a'): -1}, 0, 'BINARY')
+        >>> bqm = dimod.BQM({}, {'ab': -1, 'bc': -1, 'ca': -1}, 0, 'BINARY')
         >>> max_sample(bqm)     # doctest: +SKIP
         {'a': 1, 'b': 1, 'c': 1}
 

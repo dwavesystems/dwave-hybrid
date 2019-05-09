@@ -95,8 +95,8 @@ class trace(tictoc):
 
 
 class make_count(object):
-    """Generate counter increment callable object specialized for handling (bound to)
-    counters in the provided `counters` dictionary.
+    """Generate counter increment callable object specialized for handling
+    (bound to) counters in the provided `counters` dictionary.
 
     Args:
         counters (dict): Counters storage.
@@ -126,8 +126,8 @@ class make_count(object):
 
 
 class make_timeit(object):
-    """Generate timer increment context manager specialized for handling (bound to)
-    timers in the provided `timers` dictionary.
+    """Generate timer increment context manager specialized for handling
+    (bound to) timers in the provided `timers` dictionary.
 
     Args:
         timers (dict): Timers storage.
@@ -164,7 +164,8 @@ class make_timeit(object):
         self.loglevel = loglevel
 
     def __call__(self, timer_name):
-        return make_timeit._local_timer_mgr(self.timers, timer_name, self.prefix, self.loglevel)
+        return make_timeit._local_timer_mgr(
+            self.timers, timer_name, self.prefix, self.loglevel)
 
 
 def iter_inorder(runnable):

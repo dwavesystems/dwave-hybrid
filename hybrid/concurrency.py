@@ -27,9 +27,9 @@ logger = logging.getLogger(__name__)
 class Present(Future):
     """Already resolved :class:`~concurrent.futures.Future` object.
 
-    Users should treat this class as just another :class:`~concurrent.futures.Future`,
-    the difference being an implementation detail: :class:`Present` is "resolved" at
-    construction time.
+    Users should treat this class as just another
+    :class:`~concurrent.futures.Future`, the difference being an implementation
+    detail: :class:`Present` is "resolved" at construction time.
 
     See the example of the :meth:`~hybrid.core.Runnable.run` method.
     """
@@ -47,7 +47,10 @@ class Present(Future):
 class ImmediateExecutor(Executor):
 
     def submit(self, fn, *args, **kwargs):
-        """Blocking version of `Executor.submit()`. Returns resolved `Future`."""
+        """Blocking version of `Executor.submit()`. Returns a resolved
+        `Future`.
+        """
+
         try:
             return Present(result=fn(*args, **kwargs))
         except Exception as exc:

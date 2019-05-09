@@ -82,5 +82,4 @@ these two samples that contains the ground state shown on the right of the top f
     >>> print(synthesis.samples)
            a   b   c   d  energy  num_occ.
        0  +1  +1  +1  +1    -4.0         1
-
        [ 1 rows, 4 variables ]

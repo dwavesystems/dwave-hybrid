@@ -124,9 +124,9 @@ class State(PliableDict):
     def updated(self, **kwargs):
         """Return a (deep) copy of the state, updated from `kwargs`.
 
-        This method has `dict.update` semantics with immutability of `sorted`. Currently an
-        exception is the `debug` key, if it exists, for which a depth-unlimited
-        recursive merge is executed.
+        This method has `dict.update` semantics with immutability of `sorted`.
+        Currently an exception is the `debug` key, if it exists, for which a
+        depth-unlimited recursive merge is executed.
 
         Example:
 
@@ -160,13 +160,13 @@ class State(PliableDict):
     def from_sample(cls, sample, bqm):
         """Convenience method for constructing a state from a raw (dict) sample.
 
-        Energy is calculated from the binary quadratic model (BQM), and `State.problem`
-        is also set to that BQM.
+        Energy is calculated from the binary quadratic model (BQM), and
+        `State.problem` is also set to that BQM.
 
         Example:
 
             >>> import dimod
-            >>> bqm = dimod.BinaryQuadraticModel.from_ising({}, {'ab': 0.5, 'bc': 0.5, 'ca': 0.5})
+            >>> bqm = dimod.BQM.from_ising({}, {'ab': 0.5, 'bc': 0.5, 'ca': 0.5})
             >>> state = State.from_sample({'a': -1, 'b': -1, 'c': -1}, bqm)
 
         """
@@ -176,31 +176,37 @@ class State(PliableDict):
     def from_samples(cls, samples, bqm):
         """Convenience method for constructing a state from raw (dict) samples.
 
-        Per-sample energy is calculated from the binary quadratic model (BQM), and
-        `State.problem` is set to the BQM.
+        Per-sample energy is calculated from the binary quadratic model (BQM),
+        and `State.problem` is set to the BQM.
 
         Example:
 
             >>> import dimod
-            >>> bqm = dimod.BinaryQuadraticModel.from_ising({}, {'ab': 0.5, 'bc': 0.5, 'ca': 0.5})
+            >>> bqm = dimod.BQM.from_ising({}, {'ab': 0.5, 'bc': 0.5, 'ca': 0.5})
             >>> state = State.from_samples([{'a': -1, 'b': -1, 'c': -1},
-            ...                            {'a': -1, 'b': -1, 'c': 1}], bqm)
+            ...                             {'a': -1, 'b': -1, 'c': 1}], bqm)
         """
         return cls(problem=bqm, samples=SampleSet.from_samples_bqm(samples, bqm))
 
     @classmethod
     def from_subsample(cls, subsample, bqm):
-        """Similar to :meth:`.from_sample`, but initializes `subproblem` and `subsamples`."""
+        """Similar to :meth:`.from_sample`, but initializes `subproblem` and
+        `subsamples`.
+        """
         return cls.from_subsamples([subsample], bqm)
 
     @classmethod
     def from_subsamples(cls, subsamples, bqm):
-        """Similar to :meth:`.from_samples`, but initializes `subproblem` and `subsamples`."""
+        """Similar to :meth:`.from_samples`, but initializes `subproblem` and
+        `subsamples`.
+        """
         return cls(subproblem=bqm, subsamples=SampleSet.from_samples_bqm(subsamples, bqm))
 
     @classmethod
     def from_problem(cls, bqm, samples=None):
-        """Convenience method for constructing a state from (possibly only) a BQM."""
+        """Convenience method for constructing a state from (possibly only)
+        a BQM.
+        """
 
         if samples is None:
             samples = min_sample
@@ -214,7 +220,9 @@ class State(PliableDict):
 
     @classmethod
     def from_subproblem(cls, bqm, subsamples=None):
-        """Convenience method for constructing a state from (possibly only) a subproblem BQM."""
+        """Convenience method for constructing a state from (possibly only)
+        a subproblem BQM.
+        """
 
         if subsamples is None:
             subsamples = min_sample
@@ -229,6 +237,7 @@ class State(PliableDict):
 
 class States(list):
     """List of states."""
+
     def __init__(self, *args):
         super(States, self).__init__(args)
 
@@ -252,8 +261,8 @@ class Runnable(traits.StateTraits):
             Keyword arguments passed down to each `Runnable.run` call.
 
     Examples:
-        This example runs a tabu search on a binary quadratic model. An initial state is
-        manually set to :math:`x=y=0, z=1; a=b=1, c=0` and an updated
+        This example runs a tabu search on a binary quadratic model. An initial
+        state is manually set to :math:`x=y=0, z=1; a=b=1, c=0` and an updated
         state is created by running the sampler for one iteration.
 
         >>> import dimod           # Create a binary quadratic model
@@ -268,7 +277,6 @@ class Runnable(traits.StateTraits):
         >>> print(new_state.samples)      # doctest: +SKIP
               a  b  c  x  y  z  energy  num_occ.
            0  1  1  1  1  1  1    -1.0         1
-
            [ 1 rows, 6 variables ]
 
     """
@@ -306,16 +314,19 @@ class Runnable(traits.StateTraits):
         pass
 
     def next(self, state, **runopts):
-        """Execute one blocking iteration of an instantiated :class:`Runnable` with a valid state as input.
+        """Execute one blocking iteration of an instantiated :class:`Runnable`
+        with a valid state as input.
 
         Args:
-            state (:class:`State`): Computation state passed between connected components.
+            state (:class:`State`):
+                Computation state passed between connected components.
 
         Returns:
             :class:`State`: The new state.
 
         Examples:
-            This code snippet runs one iteration of a sampler to produce a new state::
+            This code snippet runs one iteration of a sampler to produce a new
+            state::
 
                 new_state = sampler.next(core.State.from_sample({'x': 0, 'y': 0}, bqm))
 
@@ -323,32 +334,36 @@ class Runnable(traits.StateTraits):
         raise NotImplementedError
 
     def error(self, exc):
-        """Execute one blocking iteration of an instantiated :class:`Runnable` with an exception as input.
+        """Execute one blocking iteration of an instantiated :class:`Runnable`
+        with an exception as input.
 
-        Called when the previous component raised an exception instead of generating a
-        new state.
+        Called when the previous component raised an exception instead of
+        generating a new state.
 
-        The default implementation raises again the input exception. Runnable errors
-        must be explicitly silenced.
+        The default implementation raises again the input exception. Runnable
+        errors must be explicitly silenced.
         """
         raise exc
 
     def halt(self):
-        """Called by `stop()`. Override this method (instead of `stop`) to handle
-        stopping of one blocking call of `next`. Defaults to NOP.
+        """Called by `stop()`. Override this method (instead of `stop`) to
+        handle stopping of one blocking call of `next`. Defaults to NOP.
         """
         pass
 
     def dispatch(self, future, **kwargs):
-        """Dispatch state from resolving `future` to either `next` or `error` methods.
+        """Dispatch state from resolving `future` to either `next` or `error`
+        methods.
 
         Args:
-            state (:class:`concurrent.futures.Future`-like object): :class:`State` future.
+            state (:class:`concurrent.futures.Future`-like object):
+                :class:`State` future.
 
-        Returns state from :meth:`next` or :meth:`error`, or passes through an exception
-        raised there.
+        Returns state from :meth:`next` or :meth:`error`, or passes through an
+        exception raised there.
 
-        Blocks on state resolution and execution of :meth:`next` or :meth:`error`.
+        Blocks on state resolution and execution of :meth:`next` or
+        :meth:`error`.
         """
 
         with self.timeit('dispatch.resolve'):
@@ -380,20 +395,23 @@ class Runnable(traits.StateTraits):
 
         Args:
             state (:class:`State`):
-                Computation state future-like object passed between connected components.
+                Computation state future-like object passed between connected
+                components.
 
             executor (:class:`~concurrent.futures.Executor`, optional, default=None):
                 The Executor to which the execution of this block is scheduled.
                 By default `hybrid.concurrency.thread_executor` is used.
 
         Examples:
-            These two code snippets run one iteration of a sampler to produce a new state.
-            The first is an asynchronous call and the second a blocking call.
+            These two code snippets run one iteration of a sampler to produce a
+            new state. The first is an asynchronous call and the second a
+            blocking call.
 
             >>> sampler.run(State.from_sample(min_sample(bqm), bqm))   # doctest: +SKIP
             <Future at 0x20cbe22ea20 state=running>
 
-            >>> sampler.run(State.from_sample(min_sample(bqm), bqm), executor=hybrid.immediate_executor)   # doctest: +SKIP
+            >>> sampler.run(State.from_sample(min_sample(bqm), bqm),
+            ...             executor=hybrid.immediate_executor)   # doctest: +SKIP
             <Present at 0x20ca68cd2b0 state=finished returned State>
         """
 
@@ -407,7 +425,8 @@ class Runnable(traits.StateTraits):
             executor = thread_executor
 
         if not isinstance(executor, Executor):
-            raise TypeError("expecting 'concurrent.futures.Executor' subclass instance for 'executor'")
+            raise TypeError("expecting 'concurrent.futures.Executor' subclass "
+                            "instance for 'executor'")
 
         with self.timeit('dispatch'):
             return executor.submit(self.dispatch, state, **runopts)
@@ -417,7 +436,8 @@ class Runnable(traits.StateTraits):
         return self.halt()
 
     def __or__(self, other):
-        """Composition of runnable components (L-to-R) returns a new runnable Branch."""
+        """Composition of runnable components (L-to-R) returns a new
+        runnable Branch."""
         return Branch(components=(self, other))
 
 
@@ -486,23 +506,27 @@ class HybridSampler(dimod.Sampler):
 
 
 class HybridRunnable(Runnable):
-    """Produces a `hybrid.Runnable` from a `dimod.Sampler` (dual of `HybridSampler`).
+    """Produces a `hybrid.Runnable` from a `dimod.Sampler` (dual of
+    `HybridSampler`).
 
-    The runnable samples from a problem defined in a state field named `fields[0]`
-    and populates the state field referred to by `fields[1]`.
+    The runnable samples from a problem defined in a state field named
+    `fields[0]` and populates the state field referred to by `fields[1]`.
 
     Args:
         sampler (:class:`dimod.Sampler`):
-            dimod-compatible sampler which is run on every iteration of the runnable.
+            dimod-compatible sampler which is run on every iteration of the
+            runnable.
+
         fields (tuple(str, str)):
             Input and output state field names.
+
         **sample_kwargs (dict):
-            Sampler-specific parameters passed to sampler on every call/iteration.
+            Sampler-specific parameters passed to sampler on every call.
 
     Example:
         This example creates a :class:`Runnable` from dimod sampler
-        :std:doc:`TabuSampler <tabu:index>`, runs it on an Ising model, and finds
-        the lowest energy.
+        :std:doc:`TabuSampler <tabu:index>`, runs it on an Ising model, and
+        finds the lowest energy.
 
         >>> from tabu import TabuSampler
         >>> import dimod
@@ -538,13 +562,16 @@ class HybridRunnable(Runnable):
 
 
 class HybridProblemRunnable(HybridRunnable):
-    """Produces a `hybrid.Runnable` from a `dimod.Sampler` (dual of `HybridSampler`).
+    """Produces a `hybrid.Runnable` from a `dimod.Sampler` (dual of
+    `HybridSampler`).
 
-    The runnable samples from `state.problem` and populates `state.samples`.
+    The runnable that samples from `state.problem` and populates
+    `state.samples`.
 
-    See an example in :class:`hybrid.core.HybridRunnable`. An example of the duality
-    with `HybridSampler` is,
-    HybridProblemRunnable(HybridSampler(TabuProblemSampler())) == TabuProblemSampler()
+    See an example in :class:`hybrid.core.HybridRunnable`. An example of the
+    duality with `HybridSampler` is::
+
+        HybridProblemRunnable(HybridSampler(TabuProblemSampler())) == TabuProblemSampler()
     """
 
     def __init__(self, sampler, **sample_kwargs):
@@ -553,9 +580,11 @@ class HybridProblemRunnable(HybridRunnable):
 
 
 class HybridSubproblemRunnable(HybridRunnable):
-    """Produces a `hybrid.Runnable` from a `dimod.Sampler` (dual of `HybridSampler`).
+    """Produces a `hybrid.Runnable` from a `dimod.Sampler` (dual of
+    `HybridSampler`).
 
-    The runnable samplea from `state.subproblem` and populates `state.subsamples`.
+    The runnable that samples from `state.subproblem` and populates
+    `state.subsamples`.
 
     See an example in :class:`hybrid.core.HybridRunnable`.
     """
