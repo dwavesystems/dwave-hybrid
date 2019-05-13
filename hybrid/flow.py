@@ -179,6 +179,10 @@ class RacingBranches(Runnable, traits.SIMO):
             subproblems and problems moving between components.
 
     Note:
+        Each branch runnable is called with run option ``racing_context=True``,
+        so it can adapt its behaviour to the context.
+
+    Note:
         `RacingBranches` is also available as `Race`.
 
     Examples:
@@ -235,8 +239,7 @@ class RacingBranches(Runnable, traits.SIMO):
         return iter(self.branches)
 
     def next(self, state, **runopts):
-        """Execute one blocking iteration of an instantiated :class:`RacingBranches`."""
-
+        runopts.update(racing_context=True)
         futures = [branch.run(state.updated(), **runopts) for branch in self.branches]
 
         states = States()
@@ -912,6 +915,10 @@ class LoopWhileNoImprovement(LoopUntilNoImprovement):
 class Unwind(Runnable, traits.SIMO):
     """Iterates :class:`~hybrid.core.Runnable` until :exc:`EndOfStream` is
     raised, collecting all output states along the way.
+
+    Note:
+        the child runnable is called with run option ``silent_rewind=False``,
+        and it is expected to raise :exc:`EndOfStream` on unwind completion.
     """
 
     def __init__(self, runnable, **runopts):
@@ -956,5 +963,19 @@ class Unwind(Runnable, traits.SIMO):
 class Identity(Runnable):
     """Trivial identity runnable. The output is a direct copy of the input."""
 
-    def next(self, state):
+    def __init__(self, **runopts):
+        super(Identity, self).__init__(**runopts)
+
+        # optional stop flag
+        self._stop_event = threading.Event()
+
+    def next(self, state, racing_context=False, **runopts):
+        # in racing context, don't return immediately
+        if racing_context:
+            self._stop_event.wait()
+            self._stop_event.clear()
+
         return state.updated()
+
+    def halt(self):
+        self._stop_event.set()
