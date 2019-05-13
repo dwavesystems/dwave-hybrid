@@ -31,12 +31,12 @@ with open(problem) as fp:
 
 # construct a workflow that races Simulated Annealing against SA/Tabu on a subproblem
 iteration = hybrid.RacingBranches(
+    hybrid.Identity(),
     hybrid.SimulatedAnnealingProblemSampler(),
     hybrid.EnergyImpactDecomposer(size=50)
         | hybrid.RacingBranches(
             hybrid.SimulatedAnnealingSubproblemSampler(sweeps=1000),
-            hybrid.TabuSubproblemSampler(tenure=20, timeout=10),
-            endomorphic=False
+            hybrid.TabuSubproblemSampler(tenure=20, timeout=10)
         )
         | hybrid.ArgMin('subsamples.first.energy')
         | hybrid.SplatComposer()

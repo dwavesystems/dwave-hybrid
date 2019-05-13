@@ -72,6 +72,7 @@ Example
 
     # Define the workflow
     iteration = hybrid.RacingBranches(
+        hybrid.Identity(),
         hybrid.InterruptableTabuSampler(),
         hybrid.EnergyImpactDecomposer(size=2)
         | hybrid.QPUSubproblemAutoEmbeddingSampler()
