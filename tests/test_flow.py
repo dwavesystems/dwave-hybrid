@@ -666,3 +666,15 @@ class TestIdentity(unittest.TestCase):
 
         self.assertEqual(inp, out)
         self.assertFalse(out is inp)
+
+    def test_interruptable(self):
+        ident = Identity()
+        state = State(x=1)
+
+        with tictoc() as timer:
+            out = ident.run(state, racing_context=True)
+            time.sleep(0.1)
+            ident.stop()
+
+        self.assertEqual(out.result().x, 1)
+        self.assertGreaterEqual(timer.dt, 0.1)
