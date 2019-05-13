@@ -122,16 +122,15 @@ class MergeSamples(Runnable, traits.MISO, traits.SamplesIntaking, traits.Samples
 
     Example:
         This example runs two branches, a classical simulated annealing and a
-        tabu search, acquiring one sample per branch. It then merges the samples,
-        producing the final state with a sampleset of size two.
+        tabu search, acquiring one sample per branch. It then merges the
+        samples, producing the final state with a sampleset of size two.
 
         >>> import dimod
         >>> import hybrid
 
         >>> workflow = hybrid.Parallel(
         ...     hybrid.SimulatedAnnealingProblemSampler(num_reads=1),
-        ...     hybrid.TabuProblemSampler(num_reads=1),
-        ...     endomorphic=False
+        ...     hybrid.TabuProblemSampler(num_reads=1)
         ... ) | hybrid.MergeSamples()
 
         >>> state = hybrid.State.from_problem(

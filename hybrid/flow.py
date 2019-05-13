@@ -173,11 +173,6 @@ class RacingBranches(Runnable, traits.SIMO):
         *branches ([:class:`~hybrid.core.Runnable`]):
             Comma-separated branches.
 
-        endomorphic (bool):
-            Set to ``False`` if you are not sure that the codomain of all
-            branches is the domain; for example, if there might be a mix of
-            subproblems and problems moving between components.
-
     Note:
         Each branch runnable is called with run option ``racing_context=True``,
         so it can adapt its behaviour to the context.
@@ -199,13 +194,7 @@ class RacingBranches(Runnable, traits.SIMO):
     """
 
     def __init__(self, *branches, **runopts):
-        """If known upfront codomain for all branches equals domain, state
-        can safely be mixed in with branches' results. Otherwise set
-        `endomorphic=False`.
-        """
-
         self.branches = branches
-        self.endomorphic = runopts.pop('endomorphic', True)
         super(RacingBranches, self).__init__(**runopts)
 
         if not self.branches:
@@ -242,14 +231,12 @@ class RacingBranches(Runnable, traits.SIMO):
         runopts.update(racing_context=True)
         futures = [branch.run(state.updated(), **runopts) for branch in self.branches]
 
-        states = States()
-        if self.endomorphic:
-            states.append(state)
-
         # as soon as one is done, stop all others
         done, _ = concurrent.futures.wait(
             futures,
             return_when=concurrent.futures.FIRST_COMPLETED)
+
+        logger.trace("RacingBranches done set: {}. Stopping remaining.".format(done))
         self.stop()
 
         # debug info
@@ -259,6 +246,7 @@ class RacingBranches(Runnable, traits.SIMO):
             name=self.name, idx=idx, branch=branch))
 
         # collect resolved states (in original order, not completion order!)
+        states = States()
         for f in futures:
             states.append(f.result())
 
@@ -281,14 +269,6 @@ class ParallelBranches(Runnable, traits.SIMO):
         *branches ([:class:`~hybrid.core.Runnable`]):
             Comma-separated branches.
 
-        endomorphic (bool, optional, default=True):
-            Include an implicit "identity branch", resulting in the input state
-            being copied (prepended) to the output States list.
-
-            Set to ``False`` if you are not sure that the codomain of all
-            branches is the domain; for example, if there might be a mix of
-            subproblems and problems moving between components.
-
     Note:
         `ParallelBranches` is also available as `Parallel`.
 
@@ -305,7 +285,6 @@ class ParallelBranches(Runnable, traits.SIMO):
 
     def __init__(self, *branches, **runopts):
         self.branches = branches
-        self.endomorphic = runopts.pop('endomorphic', True)
         super(ParallelBranches, self).__init__(**runopts)
 
         if not self.branches:
@@ -341,16 +320,13 @@ class ParallelBranches(Runnable, traits.SIMO):
     def next(self, state, **runopts):
         futures = [branch.run(state.updated(), **runopts) for branch in self.branches]
 
-        states = States()
-        if self.endomorphic:
-            states.append(state)
-
         # wait for all branches to finish
         concurrent.futures.wait(
             futures,
             return_when=concurrent.futures.ALL_COMPLETED)
 
         # collect resolved states (in original order, not completion order)
+        states = States()
         for f in futures:
             states.append(f.result())
 
