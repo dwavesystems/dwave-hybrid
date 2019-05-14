@@ -18,6 +18,7 @@ import unittest
 import threading
 import operator
 import copy
+from concurrent import futures
 
 import dimod
 
@@ -120,31 +121,30 @@ class TestRacingBranches(unittest.TestCase):
 
     def test_stopped(self):
         class Fast(Runnable):
-            def next(self, state):
+            def next(self, state, **runopts):
                 time.sleep(0.1)
                 return state.updated(x=state.x + 1)
 
         class Slow(Runnable):
-            def init(self, state):
+            def init(self, state, **runopts):
                 self.time_to_stop = threading.Event()
 
-            def next(self, state):
+            def next(self, state, **runopts):
                 self.time_to_stop.wait()
                 return state.updated(x=state.x + 2)
 
             def halt(self):
                 self.time_to_stop.set()
 
-        # standard case
+        # default case
         rb = RacingBranches(Slow(), Fast(), Slow())
         res = rb.run(State(x=0)).result()
-        self.assertEqual([s.x for s in res], [0, 2, 1, 2])
-
-        # branches' outputs are of a different type that the inputs
-        # (i.e. non-endomorphic racing branches)
-        rb = RacingBranches(Slow(), Fast(), Slow(), endomorphic=False)
-        res = rb.run(State(x=0)).result()
         self.assertEqual([s.x for s in res], [2, 1, 2])
+
+        # "endomorphic case"
+        rb = RacingBranches(Identity(), Slow(), Fast(), Slow())
+        res = rb.run(State(x=0)).result()
+        self.assertEqual([s.x for s in res], [0, 2, 1, 2])
 
 
 class TestParallelBranches(unittest.TestCase):
@@ -168,14 +168,13 @@ class TestParallelBranches(unittest.TestCase):
                 time.sleep(0.2)
                 return state.updated(x=state.x + 2)
 
-        # standard case (endomorphic; first output state is the input state)
-        pb = ParallelBranches(Slow(), Fast(), Slow())
+        # "endomorphic case"
+        pb = ParallelBranches(Identity(), Slow(), Fast(), Slow())
         res = pb.run(State(x=0)).result()
         self.assertEqual([s.x for s in res], [0, 2, 1, 2])
 
-        # branches' outputs are of a different type that the inputs
-        # (i.e. non-endomorphic branches)
-        pb = ParallelBranches(Slow(), Fast(), Slow(), endomorphic=False)
+        # default case
+        pb = ParallelBranches(Slow(), Fast(), Slow())
         res = pb.run(State(x=0)).result()
         self.assertEqual([s.x for s in res], [2, 1, 2])
 
@@ -668,3 +667,22 @@ class TestIdentity(unittest.TestCase):
 
         self.assertEqual(inp, out)
         self.assertFalse(out is inp)
+
+    def test_interruptable(self):
+        ident = Identity()
+        state = State(x=1)
+        out = ident.run(state, racing_context=True)
+
+        # ident block should not finish
+        done, not_done = futures.wait({out}, timeout=0.1)
+        self.assertEqual(len(done), 0)
+        self.assertEqual(len(not_done), 1)
+
+        # until we stop it
+        ident.stop()
+
+        done, not_done = futures.wait({out}, timeout=0.1)
+        self.assertEqual(len(done), 1)
+        self.assertEqual(len(not_done), 0)
+
+        self.assertEqual(out.result().x, 1)

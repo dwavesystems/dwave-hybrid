@@ -52,6 +52,7 @@ class QPUSubproblemExternalEmbeddingSampler(Runnable, traits.SubproblemSampler, 
     Args:
         num_reads (int, optional, default=100):
             Number of states (output solutions) to read from the sampler.
+
         qpu_sampler (:class:`dimod.Sampler`, optional, default=DWaveSampler()):
             Quantum sampler such as a D-Wave system.
 
@@ -78,14 +79,17 @@ class QPUSubproblemExternalEmbeddingSampler(Runnable, traits.SubproblemSampler, 
 
 
 class QPUSubproblemAutoEmbeddingSampler(Runnable, traits.SubproblemSampler):
-    """A quantum sampler for a subproblem with automated heuristic minor-embedding.
+    """A quantum sampler for a subproblem with automated heuristic
+    minor-embedding.
 
     Args:
         num_reads (int, optional, default=100):
             Number of states (output solutions) to read from the sampler.
+
         qpu_sampler (:class:`dimod.Sampler`, optional, default=EmbeddingComposite(DWaveSampler())):
             Quantum sampler such as a D-Wave system. If sampler is structured,
-            it will be converted to unstructured via :class:`~dwave.system.composited.EmbeddingComposite`.
+            it will be converted to unstructured via
+            :class:`~dwave.system.composited.EmbeddingComposite`.
 
     Examples:
         See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/samplers.html#examples.
@@ -124,15 +128,17 @@ class ReverseAnnealingAutoEmbeddingSampler(Runnable, traits.SubproblemSampler):
 
         qpu_sampler (:class:`dimod.Sampler`, optional, default=EmbeddingComposite(DWaveSampler())):
             Quantum sampler such as a D-Wave system. If sampler is structured,
-            it will be converted to unstructured via :class:`~dwave.system.composited.EmbeddingComposite`.
+            it will be converted to unstructured via
+            :class:`~dwave.system.composited.EmbeddingComposite`.
 
         anneal_schedule (list(list), optional, default=[[0, 1], [0.5, 0.5], [1, 1]]):
-            An anneal schedule defined by a series of pairs of floating-point numbers
-            identifying points in the schedule at which to change slope. The first
-            element in the pair is time t in microseconds; the second, normalized
-            persistent current s in the range [0,1]. The resulting schedule is the
-            piecewise-linear curve that connects the provided points. For more
-            details, see :meth:`~dwave.system.DWaveSampler.validate_anneal_schedule`.
+            An anneal schedule defined by a series of pairs of floating-point
+            numbers identifying points in the schedule at which to change slope.
+            The first element in the pair is time t in microseconds; the second,
+            normalized persistent current s in the range [0,1]. The resulting
+            schedule is the piecewise-linear curve that connects the provided
+            points. For more details, see
+            :meth:`~dwave.system.DWaveSampler.validate_anneal_schedule`.
     """
 
     def __init__(self, num_reads=100, qpu_sampler=None, anneal_schedule=None, **runopts):
@@ -179,6 +185,7 @@ class SimulatedAnnealingSubproblemSampler(Runnable, traits.SubproblemSampler):
     Args:
         num_reads (int, optional, default=1):
             Number of states (output solutions) to read from the sampler.
+
         sweeps (int, optional, default=1000):
             Number of sweeps or steps.
 
@@ -219,6 +226,7 @@ class SimulatedAnnealingProblemSampler(Runnable, traits.ProblemSampler):
     Args:
         num_reads (int, optional, default=1):
             Number of states (output solutions) to read from the sampler.
+
         sweeps (int, optional, default=1000):
             Number of sweeps or steps.
 
@@ -257,10 +265,12 @@ class TabuSubproblemSampler(Runnable, traits.SubproblemSampler):
     Args:
         num_reads (int, optional, default=1):
             Number of states (output solutions) to read from the sampler.
+
         tenure (int, optional):
-            Tabu tenure, which is the length of the tabu list, or number of recently
-            explored solutions kept in memory. Default is a quarter of the number
-            of problem variables up to a maximum value of 20.
+            Tabu tenure, which is the length of the tabu list, or number of
+            recently explored solutions kept in memory. Default is a quarter of
+            the number of problem variables up to a maximum value of 20.
+
         timeout (int, optional, default=20):
             Total running time in milliseconds.
 
@@ -293,10 +303,12 @@ class TabuProblemSampler(Runnable, traits.ProblemSampler):
     Args:
         num_reads (int, optional, default=1):
             Number of states (output solutions) to read from the sampler.
+
         tenure (int, optional):
-            Tabu tenure, which is the length of the tabu list, or number of recently
-            explored solutions kept in memory. Default is a quarter of the number
-            of problem variables up to a maximum value of 20.
+            Tabu tenure, which is the length of the tabu list, or number of
+            recently explored solutions kept in memory. Default is a quarter of
+            the number of problem variables up to a maximum value of 20.
+
         timeout (int, optional, default=20):
             Total running time in milliseconds.
 
@@ -329,15 +341,19 @@ class InterruptableTabuSampler(Loop):
     Args:
         num_reads (int, optional, default=1):
             Number of states (output solutions) to read from the sampler.
+
         tenure (int, optional):
-            Tabu tenure, which is the length of the tabu list, or number of recently
-            explored solutions kept in memory. Default is a quarter of the number
-            of problem variables up to a maximum value of 20.
+            Tabu tenure, which is the length of the tabu list, or number of
+            recently explored solutions kept in memory. Default is a quarter of
+            the number of problem variables up to a maximum value of 20.
+
         timeout (int, optional, default=20):
-            Timeout for non-interruptable operation of tabu search. At the completion of
-            each loop of tabu search through its problem variables, if this time interval
-            has been exceeded, the search can be stopped by an interrupt signal or
-            expiration of the `timeout` parameter.
+            Timeout for non-interruptable operation of tabu search. At the
+            completion of each loop of tabu search through its problem
+            variables, if this time interval has been exceeded, the search can
+            be stopped by an interrupt signal or expiration of the `timeout`
+            parameter.
+
         max_time (float, optional, default=None):
             Total running time in milliseconds.
 

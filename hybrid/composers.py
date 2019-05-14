@@ -50,9 +50,10 @@ class SplatComposer(Runnable, traits.SubsamplesComposer):
 
 
 class GreedyPathMerge(Runnable, traits.MISO, traits.SamplesIntaking, traits.SamplesProducing):
-    """Dialectic-search merge operation [KS]_. Generates a path from one input state,
-    representing the thesis, to another input state, representing the antithesis,
-    using a greedy method of single bit flips selected by decreasing energy.
+    """Dialectic-search merge operation [KS]_. Generates a path from one input
+    state, representing the thesis, to another input state, representing the
+    antithesis, using a greedy method of single bit flips selected by decreasing
+    energy.
 
     Returns the best sample on the path, which represents the synthesis.
 
@@ -121,16 +122,15 @@ class MergeSamples(Runnable, traits.MISO, traits.SamplesIntaking, traits.Samples
 
     Example:
         This example runs two branches, a classical simulated annealing and a
-        tabu search, acquiring one sample per branch. It then merges the samples,
-        producing the final state with a sampleset of size two.
+        tabu search, acquiring one sample per branch. It then merges the
+        samples, producing the final state with a sampleset of size two.
 
         >>> import dimod
         >>> import hybrid
 
         >>> workflow = hybrid.Parallel(
         ...     hybrid.SimulatedAnnealingProblemSampler(num_reads=1),
-        ...     hybrid.TabuProblemSampler(num_reads=1),
-        ...     endomorphic=False
+        ...     hybrid.TabuProblemSampler(num_reads=1)
         ... ) | hybrid.MergeSamples()
 
         >>> state = hybrid.State.from_problem(

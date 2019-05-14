@@ -44,10 +44,11 @@ class IdentityDecomposer(Runnable, traits.ProblemDecomposer):
 
 
 class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
-    """Selects a subproblem of variables maximally contributing to the problem energy.
+    """Selects a subproblem of variables maximally contributing to the problem
+    energy.
 
-    The selection currently implemented does not ensure that the variables are connected
-    in the problem graph.
+    The selection currently implemented does not ensure that the variables are
+    connected in the problem graph.
 
     Args:
         size (int):
@@ -55,37 +56,41 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
             be smaller, depending on other parameters (e.g. `min_gain`).
 
         min_gain (int, optional, default=-inf):
-            Minimum reduction required to BQM energy, given the current sample. A variable
-            is included in the subproblem only if inverting its sample value reduces energy
-            by at least this amount.
+            Minimum reduction required to BQM energy, given the current sample.
+            A variable is included in the subproblem only if inverting its
+            sample value reduces energy by at least this amount.
 
         rolling (bool, optional, default=True):
-            If True, successive calls for the same problem (with possibly different samples)
-            produce subproblems on different variables, selected by rolling down the list of all
-            variables sorted by decreasing impact.
+            If True, successive calls for the same problem (with possibly
+            different samples) produce subproblems on different variables,
+            selected by rolling down the list of all variables sorted by
+            decreasing impact.
 
         rolling_history (float, optional, default=0.1):
-            Fraction of the problem size, as a float in range 0.0 to 1.0, that should participate
-            in the rolling selection. Once reached, subproblem unrolling is reset.
+            Fraction of the problem size, as a float in range 0.0 to 1.0, that
+            should participate in the rolling selection. Once reached,
+            subproblem unrolling is reset.
             
         silent_rewind (bool, optional, default=True):
-            If False, raises :exc:`EndOfStream` when resetting/rewinding the subproblem generator
-            upon the reset condition for unrolling.
+            If False, raises :exc:`EndOfStream` when resetting/rewinding the
+            subproblem generator upon the reset condition for unrolling.
 
         traversal (str, optional, default='energy'):
-            Traversal algorithm used to pick a subproblem of `size` variables. Options are:
+            Traversal algorithm used to pick a subproblem of `size` variables.
+            Options are:
 
             energy:
                 Use the next `size` variables in the list of variables ordered
                 by descending energy impact.
 
             bfs:
-                Breadth-first traversal seeded by the next variable in the energy impact list.
+                Breadth-first traversal seeded by the next variable in the
+                energy impact list.
 
             pfs:
-                Priority-first traversal seeded by variables from the energy impact list,
-                proceeding with the variable on the search boundary that has the highest
-                energy impact.
+                Priority-first traversal seeded by variables from the energy
+                impact list, proceeding with the variable on the search boundary
+                that has the highest energy impact.
 
     Examples:
         See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/decomposers.html#examples.
@@ -280,8 +285,8 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
 class RandomSubproblemDecomposer(Runnable, traits.ProblemDecomposer):
     """Selects a subproblem of `size` random variables.
 
-    The selection currently implemented does not ensure that the variables are connected
-    in the problem graph.
+    The selection currently implemented does not ensure that the variables are
+    connected in the problem graph.
 
     Args:
         size (int):
@@ -314,15 +319,17 @@ class RandomSubproblemDecomposer(Runnable, traits.ProblemDecomposer):
 class TilingChimeraDecomposer(Runnable, traits.ProblemDecomposer, traits.EmbeddingProducing):
     """Returns sequential Chimera lattices that tile the initial problem.
 
-    A Chimera lattice is an m-by-n grid of Chimera tiles, where each tile is a bipartite graph
-    with shores of size t. The problem is decomposed into a sequence of subproblems with variables
-    belonging to the Chimera lattices that tile the problem Chimera lattice. For example,
-    a 2x2 Chimera lattice could be tiled 64 times (8x8) on a fully-yielded D-Wave 2000Q system (16x16).
+    A Chimera lattice is an m-by-n grid of Chimera tiles, where each tile is a
+    bipartite graph with shores of size t. The problem is decomposed into a
+    sequence of subproblems with variables belonging to the Chimera lattices
+    that tile the problem Chimera lattice. For example, a 2x2 Chimera lattice
+    could be tiled 64 times (8x8) on a fully-yielded D-Wave 2000Q system
+    (16x16).
 
     Args:
         size (int, optional, default=(4,4,4)):
-            Size of the Chimera lattice as (m, n, t), where m is the number of rows,
-            n the columns, and t the size of shore in the Chimera lattice.
+            Size of the Chimera lattice as (m, n, t), where m is the number of
+            rows, n the columns, and t the size of shore in the Chimera lattice.
 
         loop (Bool, optional, default=True):
             Cycle continually through the tiles.
@@ -359,16 +366,17 @@ class TilingChimeraDecomposer(Runnable, traits.ProblemDecomposer, traits.Embeddi
 class RandomConstraintDecomposer(Runnable, traits.ProblemDecomposer):
     """Selects variables randomly as constrained by groupings.
 
-    By grouping related variables, the problem's structure can guide the random selection
-    of variables so subproblems are related to the problem's constraints.
+    By grouping related variables, the problem's structure can guide the random
+    selection of variables so subproblems are related to the problem's
+    constraints.
 
     Args:
         size (int):
             Number of variables in the subproblem.
 
         constraints (list[set]):
-            Groups of variables in the BQM, as a list of sets, where each set is associated
-            with a constraint.
+            Groups of variables in the BQM, as a list of sets, where each set is
+            associated with a constraint.
 
     Examples:
         See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/decomposers.html#examples.
