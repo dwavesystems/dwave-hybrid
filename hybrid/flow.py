@@ -14,7 +14,6 @@
 
 import time
 import logging
-import threading
 import warnings
 import concurrent.futures
 from operator import attrgetter
@@ -23,7 +22,7 @@ from itertools import chain
 
 import six
 
-from hybrid.core import Runnable, State, States
+from hybrid.core import Runnable, State, States, stoppable
 from hybrid.concurrency import Present, immediate_executor
 from hybrid.exceptions import EndOfStream
 from hybrid import traits
@@ -657,6 +656,7 @@ class TrackMin(Runnable, traits.SISO):
         return state
 
 
+@stoppable
 class LoopUntilNoImprovement(Runnable):
     """Iterates :class:`~hybrid.core.Runnable` for up to `max_iter` times, or
     until a state quality metric, defined by the `key` function, shows no
@@ -717,9 +717,6 @@ class LoopUntilNoImprovement(Runnable):
         self.outputs = self.runnable.outputs
         self.multi_output = self.runnable.multi_output
 
-        # stop flag
-        self._stop_event = threading.Event()
-
     def __str__(self):
         return "Loop over {}".format(self.runnable)
 
@@ -767,7 +764,7 @@ class LoopUntilNoImprovement(Runnable):
 
         runopts['executor'] = immediate_executor
 
-        while not self._stop_event.is_set():
+        while not self.stop_signal.is_set():
             output_state = self.runnable.run(input_state, **runopts).result()
 
             iterno, cnt, input_state = self.iteration_update(iterno, cnt, input_state, output_state)
@@ -781,14 +778,10 @@ class LoopUntilNoImprovement(Runnable):
             if self.convergence is not None and cnt <= 0:
                 break
 
-        # reset the stop flag, so next .run() works
-        self._stop_event.clear()
-
         return output_state
 
     def halt(self):
         self.runnable.stop()
-        self._stop_event.set()
 
 
 class Loop(LoopUntilNoImprovement):
@@ -934,60 +927,6 @@ class Unwind(Runnable, traits.SIMO):
                 break
 
         return output
-
-
-def stoppable(cls):
-    """Extends a `Runnable` subclass with a `stop_signal` semaphore/event, and
-    amends the existing `halt` and `next` methods to signal stop via the
-    semaphore, and reset the stop signal on run completion, respectively.
-
-    Example:
-        A Runnable block that accepts `timeout` and on `run` blocks for up to
-        `timeout` seconds. It can be interrupted via call to `stop`, in which
-        case blocks shorter than the timeout interval::
-
-            @stoppable
-            class StoppableSleeper(Runnable):
-                def next(self, state, timeout=None, **runopts):
-                    self.stop_signal.wait(timeout=timeout)
-                    return state
-
-            >>> sleeper = StoppableSleeper(timeout=30)
-            >>> sleeper.run(state)
-            <Future at 0x7fbb575e6f60 state=running>
-
-            >>> sleeper.stop()
-            >>> sleeper.timers
-            <snipped>
-                'dispatch.next': [13.224211193970405]
-
-    """
-    if not issubclass(cls, Runnable):
-        raise TypeError("Runnable subclass expected as the decorated class")
-
-    orig_init = cls.__init__
-    orig_halt = cls.halt
-    orig_next = cls.next
-
-    def __init__(self, *args, **kwargs):
-        orig_init(self, *args, **kwargs)
-        self.stop_signal = threading.Event()
-
-    def halt(self):
-        result = orig_halt(self)
-        self.stop_signal.set()
-        return result
-
-    def next(self, state, **runopts):
-        result = orig_next(self, state, **runopts)
-        self.stop_signal.clear()
-        return result
-
-    cls.__init__ = __init__
-    cls.halt = halt
-    cls.next = next
-
-    return cls
 
 
 @stoppable
