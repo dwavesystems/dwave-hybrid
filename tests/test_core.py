@@ -24,7 +24,7 @@ from tabu import TabuSampler
 
 import hybrid
 from hybrid.core import (
-    PliableDict, State, States, SampleSet, Runnable, Branch,
+    PliableDict, State, States, SampleSet, Runnable, Branch, stoppable,
     HybridSampler, HybridRunnable, HybridProblemRunnable, HybridSubproblemRunnable
 )
 from hybrid.concurrency import Present, Future, immediate_executor
@@ -32,7 +32,7 @@ from hybrid.decomposers import IdentityDecomposer
 from hybrid.composers import IdentityComposer
 from hybrid.samplers import TabuProblemSampler
 from hybrid.utils import min_sample, sample_as_dict
-from hybrid.testing import isolated_environ
+from hybrid.testing import isolated_environ, RunTimeAssertionMixin
 from hybrid.exceptions import RunnableError
 
 
@@ -313,6 +313,46 @@ class TestRunnable(unittest.TestCase):
 
         # init() should get the same
         self.assertEqual(add.final_scale, 5)
+
+
+class TestStoppableDecorator(unittest.TestCase, RunTimeAssertionMixin):
+
+    @stoppable
+    class StoppableSleeper(Runnable):
+        def next(self, state, timeout=None, **runopts):
+            if timeout is not None:
+                timeout /= 1000.0
+            self.stop_signal.wait(timeout=timeout)
+            return state
+
+    def test_interface(self):
+        sleeper = self.StoppableSleeper(timeout=100)
+        state = State()
+
+        with self.assertRuntimeWithin(0, 500):
+            sleeper.run(state).result()
+
+        with self.assertRuntimeWithin(0, 500):
+            r = sleeper.run(state)
+            sleeper.stop()
+            r.result()
+
+    def test_it_stops(self):
+        sleeper = self.StoppableSleeper(timeout=None)
+        state = State()
+
+        # runs indefinitely
+        r = sleeper.run(state)
+        self.assertFalse(r.done())
+        self.assertFalse(sleeper.stop_signal.is_set())
+
+        # until stopped
+        sleeper.stop()
+        self.assertTrue(sleeper.stop_signal.is_set())
+
+        # when it returns; but not before the decorator resets the stop signal
+        r.result()
+        self.assertFalse(sleeper.stop_signal.is_set())
 
 
 class TestHybridSampler(unittest.TestCase):

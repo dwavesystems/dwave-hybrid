@@ -14,7 +14,6 @@
 
 import time
 import logging
-import threading
 import warnings
 import concurrent.futures
 from operator import attrgetter
@@ -23,7 +22,7 @@ from itertools import chain
 
 import six
 
-from hybrid.core import Runnable, State, States
+from hybrid.core import Runnable, State, States, stoppable
 from hybrid.concurrency import Present, immediate_executor
 from hybrid.exceptions import EndOfStream
 from hybrid import traits
@@ -657,6 +656,7 @@ class TrackMin(Runnable, traits.SISO):
         return state
 
 
+@stoppable
 class LoopUntilNoImprovement(Runnable):
     """Iterates :class:`~hybrid.core.Runnable` for up to `max_iter` times, or
     until a state quality metric, defined by the `key` function, shows no
@@ -717,9 +717,6 @@ class LoopUntilNoImprovement(Runnable):
         self.outputs = self.runnable.outputs
         self.multi_output = self.runnable.multi_output
 
-        # stop flag
-        self._stop_event = threading.Event()
-
     def __str__(self):
         return "Loop over {}".format(self.runnable)
 
@@ -767,7 +764,7 @@ class LoopUntilNoImprovement(Runnable):
 
         runopts['executor'] = immediate_executor
 
-        while not self._stop_event.is_set():
+        while not self.stop_signal.is_set():
             output_state = self.runnable.run(input_state, **runopts).result()
 
             iterno, cnt, input_state = self.iteration_update(iterno, cnt, input_state, output_state)
@@ -781,14 +778,10 @@ class LoopUntilNoImprovement(Runnable):
             if self.convergence is not None and cnt <= 0:
                 break
 
-        # reset the stop flag, so next .run() works
-        self._stop_event.clear()
-
         return output_state
 
     def halt(self):
         self.runnable.stop()
-        self._stop_event.set()
 
 
 class Loop(LoopUntilNoImprovement):
@@ -936,26 +929,13 @@ class Unwind(Runnable, traits.SIMO):
         return output
 
 
-class StoppableMixin(object):
-    """Extends a `Runnable` object with a `.stop_signal` semaphore/event, and
-    implements the default `Runnable.halt` to signal stop.
-    """
-
-    def __init__(self, *args, **kwargs):
-        super(StoppableMixin, self).__init__(*args, **kwargs)
-        self.stop_signal = threading.Event()
-
-    def halt(self):
-        self.stop_signal.set()
-
-
-class Identity(StoppableMixin, Runnable):
+@stoppable
+class Identity(Runnable):
     """Trivial identity runnable. The output is a direct copy of the input."""
 
     def next(self, state, racing_context=False, **runopts):
         # in a racing context, we don't want to be the winning branch
         if racing_context:
             self.stop_signal.wait()
-            self.stop_signal.clear()
 
         return state.updated()
