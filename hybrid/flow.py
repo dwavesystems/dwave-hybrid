@@ -936,26 +936,67 @@ class Unwind(Runnable, traits.SIMO):
         return output
 
 
-class StoppableMixin(object):
-    """Extends a `Runnable` object with a `.stop_signal` semaphore/event, and
-    implements the default `Runnable.halt` to signal stop.
+def stoppable(cls):
+    """Extends a `Runnable` subclass with a `stop_signal` semaphore/event, and
+    amends the existing `halt` and `next` methods to signal stop via the
+    semaphore, and reset the stop signal on run completion, respectively.
+
+    Example:
+        A Runnable block that accepts `timeout` and on `run` blocks for up to
+        `timeout` seconds. It can be interrupted via call to `stop`, in which
+        case blocks shorter than the timeout interval::
+
+            @stoppable
+            class StoppableSleeper(Runnable):
+                def next(self, state, timeout=None, **runopts):
+                    self.stop_signal.wait(timeout=timeout)
+                    return state
+
+            >>> sleeper = StoppableSleeper(timeout=30)
+            >>> sleeper.run(state)
+            <Future at 0x7fbb575e6f60 state=running>
+
+            >>> sleeper.stop()
+            >>> sleeper.timers
+            <snipped>
+                'dispatch.next': [13.224211193970405]
+
     """
+    if not issubclass(cls, Runnable):
+        raise TypeError("Runnable subclass expected as the decorated class")
+
+    orig_init = cls.__init__
+    orig_halt = cls.halt
+    orig_next = cls.next
 
     def __init__(self, *args, **kwargs):
-        super(StoppableMixin, self).__init__(*args, **kwargs)
+        orig_init(self, *args, **kwargs)
         self.stop_signal = threading.Event()
 
     def halt(self):
+        result = orig_halt(self)
         self.stop_signal.set()
+        return result
+
+    def next(self, state, **runopts):
+        result = orig_next(self, state, **runopts)
+        self.stop_signal.clear()
+        return result
+
+    cls.__init__ = __init__
+    cls.halt = halt
+    cls.next = next
+
+    return cls
 
 
-class Identity(StoppableMixin, Runnable):
+@stoppable
+class Identity(Runnable):
     """Trivial identity runnable. The output is a direct copy of the input."""
 
     def next(self, state, racing_context=False, **runopts):
         # in a racing context, we don't want to be the winning branch
         if racing_context:
             self.stop_signal.wait()
-            self.stop_signal.clear()
 
         return state.updated()
