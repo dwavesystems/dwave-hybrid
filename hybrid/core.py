@@ -29,7 +29,8 @@ from hybrid.concurrency import Future, Present, Executor, immediate_executor, th
 
 __all__ = [
     'SampleSet', 'State', 'States', 'Runnable', 'HybridSampler',
-    'HybridRunnable', 'HybridProblemRunnable', 'HybridSubproblemRunnable'
+    'HybridRunnable', 'HybridProblemRunnable', 'HybridSubproblemRunnable',
+    'stoppable'
 ]
 
 logger = logging.getLogger(__name__)
