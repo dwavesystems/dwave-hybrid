@@ -936,22 +936,26 @@ class Unwind(Runnable, traits.SIMO):
         return output
 
 
-class Identity(Runnable):
-    """Trivial identity runnable. The output is a direct copy of the input."""
+class StoppableMixin(object):
+    """Extends a `Runnable` object with a `.stop_signal` semaphore/event, and
+    implements the default `Runnable.halt` to signal stop.
+    """
 
-    def __init__(self, **runopts):
-        super(Identity, self).__init__(**runopts)
-
-        # optional stop flag
-        self._stop_event = threading.Event()
-
-    def next(self, state, racing_context=False, **runopts):
-        # in racing context, don't return immediately
-        if racing_context:
-            self._stop_event.wait()
-            self._stop_event.clear()
-
-        return state.updated()
+    def __init__(self, *args, **kwargs):
+        super(StoppableMixin, self).__init__(*args, **kwargs)
+        self.stop_signal = threading.Event()
 
     def halt(self):
-        self._stop_event.set()
+        self.stop_signal.set()
+
+
+class Identity(StoppableMixin, Runnable):
+    """Trivial identity runnable. The output is a direct copy of the input."""
+
+    def next(self, state, racing_context=False, **runopts):
+        # in a racing context, we don't want to be the winning branch
+        if racing_context:
+            self.stop_signal.wait()
+            self.stop_signal.clear()
+
+        return state.updated()
