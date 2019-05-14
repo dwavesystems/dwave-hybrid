@@ -18,6 +18,7 @@ import unittest
 import threading
 import operator
 import copy
+from concurrent import futures
 
 import dimod
 
@@ -670,11 +671,18 @@ class TestIdentity(unittest.TestCase):
     def test_interruptable(self):
         ident = Identity()
         state = State(x=1)
+        out = ident.run(state, racing_context=True)
 
-        with tictoc() as timer:
-            out = ident.run(state, racing_context=True)
-            time.sleep(0.1)
-            ident.stop()
+        # ident block should not finish
+        done, not_done = futures.wait({out}, timeout=0.1)
+        self.assertEqual(len(done), 0)
+        self.assertEqual(len(not_done), 1)
+
+        # until we stop it
+        ident.stop()
+
+        done, not_done = futures.wait({out}, timeout=0.1)
+        self.assertEqual(len(done), 1)
+        self.assertEqual(len(not_done), 0)
 
         self.assertEqual(out.result().x, 1)
-        self.assertGreaterEqual(timer.dt, 0.1)
