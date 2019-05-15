@@ -97,6 +97,11 @@ import sphinx_rtd_theme
 html_theme = 'sphinx_rtd_theme'
 html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 
+def setup(app):
+   app.add_stylesheet('cookie_notice.css')
+   app.add_javascript('cookie_notice.js')
+
+
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'python': ('https://docs.python.org/3', None),
                        'dimod': ('https://docs.ocean.dwavesys.com/projects/dimod/en/latest/', None),
