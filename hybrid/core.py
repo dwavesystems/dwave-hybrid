@@ -159,7 +159,7 @@ class State(PliableDict):
         return self
 
     @classmethod
-    def from_sample(cls, sample, bqm):
+    def from_sample(cls, sample, bqm, **kwargs):
         """Convenience method for constructing a state from a raw (dict) sample.
 
         Energy is calculated from the binary quadratic model (BQM), and
@@ -172,10 +172,10 @@ class State(PliableDict):
             >>> state = State.from_sample({'a': -1, 'b': -1, 'c': -1}, bqm)
 
         """
-        return cls.from_samples([sample], bqm)
+        return cls.from_samples([sample], bqm, **kwargs)
 
     @classmethod
-    def from_samples(cls, samples, bqm):
+    def from_samples(cls, samples, bqm, **kwargs):
         """Convenience method for constructing a state from raw (dict) samples.
 
         Per-sample energy is calculated from the binary quadratic model (BQM),
@@ -188,24 +188,26 @@ class State(PliableDict):
             >>> state = State.from_samples([{'a': -1, 'b': -1, 'c': -1},
             ...                             {'a': -1, 'b': -1, 'c': 1}], bqm)
         """
-        return cls(problem=bqm, samples=SampleSet.from_samples_bqm(samples, bqm))
+        return cls(problem=bqm,
+                   samples=SampleSet.from_samples_bqm(samples, bqm), **kwargs)
 
     @classmethod
-    def from_subsample(cls, subsample, bqm):
+    def from_subsample(cls, subsample, bqm, **kwargs):
         """Similar to :meth:`.from_sample`, but initializes `subproblem` and
         `subsamples`.
         """
-        return cls.from_subsamples([subsample], bqm)
+        return cls.from_subsamples([subsample], bqm, **kwargs)
 
     @classmethod
-    def from_subsamples(cls, subsamples, bqm):
+    def from_subsamples(cls, subsamples, bqm, **kwargs):
         """Similar to :meth:`.from_samples`, but initializes `subproblem` and
         `subsamples`.
         """
-        return cls(subproblem=bqm, subsamples=SampleSet.from_samples_bqm(subsamples, bqm))
+        return cls(subproblem=bqm,
+                   subsamples=SampleSet.from_samples_bqm(subsamples, bqm), **kwargs)
 
     @classmethod
-    def from_problem(cls, bqm, samples=None):
+    def from_problem(cls, bqm, samples=None, **kwargs):
         """Convenience method for constructing a state from (possibly only)
         a BQM.
         """
@@ -218,10 +220,10 @@ class State(PliableDict):
         else:
             samples_like = samples
 
-        return cls.from_samples(samples_like, bqm)
+        return cls.from_samples(samples_like, bqm, **kwargs)
 
     @classmethod
-    def from_subproblem(cls, bqm, subsamples=None):
+    def from_subproblem(cls, bqm, subsamples=None, **kwargs):
         """Convenience method for constructing a state from (possibly only)
         a subproblem BQM.
         """
@@ -234,7 +236,7 @@ class State(PliableDict):
         else:
             subsamples_like = subsamples
 
-        return cls.from_subsamples(subsamples_like, bqm)
+        return cls.from_subsamples(subsamples_like, bqm, **kwargs)
 
 
 class States(list):

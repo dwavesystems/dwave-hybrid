@@ -176,7 +176,7 @@ def iter_inorder(runnable):
             yield node
 
 
-def walk_inorder(runnable, visit, level=0):
+def walk_inorder(runnable, visit, level=0):     # pragma: no cover
     """Inorder DFS traversal of `runnable`, as a callback `visit`."""
     visit(runnable, level)
     for child in runnable:
@@ -188,7 +188,7 @@ def print_structure(runnable, indent=2):
     walk_inorder(runnable, lambda r, d: print(" "*indent*d, r.name, sep=''))
 
 
-def print_counters(runnable, indent=4):
+def print_counters(runnable, indent=4):         # pragma: no cover
     """Pretty print timers and counters, recursively starting with `runnable`."""
 
     def visit(runnable, level):
