@@ -123,8 +123,10 @@ class TestState(unittest.TestCase):
         bqm = dimod.BinaryQuadraticModel({0: 1, 1: 2}, {}, 0.0, 'BINARY')
         self.assertEqual(State.from_sample(s1, bqm).samples.first.energy, 2.0)
         self.assertEqual(State.from_sample(s2, bqm).samples.first.energy, 1.0)
+        self.assertEqual(State.from_sample(s1, bqm, beta=0.5).beta, 0.5)
         self.assertEqual(State.from_samples([s1, s1], bqm).samples.first.energy, 2.0)
         self.assertEqual(State.from_samples([s2, s2], bqm).samples.first.energy, 1.0)
+        self.assertEqual(State.from_samples([s1, s1], bqm, beta=0.5).beta, 0.5)
         self.assertEqual(State.from_samples([sample_as_dict(s1), s2], bqm).samples.first.energy, 1.0)
 
     def test_from_subsamples(self):
@@ -133,14 +135,17 @@ class TestState(unittest.TestCase):
         bqm = dimod.BinaryQuadraticModel({0: 1, 1: 2}, {}, 0.0, 'BINARY')
         self.assertEqual(State.from_subsample(s1, bqm).subsamples.first.energy, 2.0)
         self.assertEqual(State.from_subsample(s2, bqm).subsamples.first.energy, 1.0)
+        self.assertEqual(State.from_subsample(s2, bqm, beta=0.5).beta, 0.5)
         self.assertEqual(State.from_subsamples([s1, s1], bqm).subsamples.first.energy, 2.0)
         self.assertEqual(State.from_subsamples([s2, s2], bqm).subsamples.first.energy, 1.0)
+        self.assertEqual(State.from_subsamples([s2, s2], bqm, beta=0.5).beta, 0.5)
         self.assertEqual(State.from_subsamples([sample_as_dict(s1), s2], bqm).subsamples.first.energy, 1.0)
 
     def test_from_problem(self):
         sample = {0: 1, 1: 0}
         bqm = dimod.BinaryQuadraticModel({0: 1, 1: 2}, {}, 0.0, 'BINARY')
         self.assertEqual(State.from_problem(bqm).samples.first.energy, 0.0)
+        self.assertEqual(State.from_problem(bqm, beta=0.5).beta, 0.5)
         self.assertEqual(State.from_problem(bqm, samples=hybrid.utils.max_sample).samples.first.energy, 3.0)
         self.assertEqual(State.from_problem(bqm, samples=sample), State.from_samples(sample, bqm))
         self.assertEqual(State.from_problem(bqm, samples=[sample]), State.from_samples([sample], bqm))
@@ -149,6 +154,7 @@ class TestState(unittest.TestCase):
         subsample = {0: 1, 1: 0}
         bqm = dimod.BinaryQuadraticModel({0: 1, 1: 2}, {}, 0.0, 'BINARY')
         self.assertEqual(State.from_subproblem(bqm).subsamples.first.energy, 0.0)
+        self.assertEqual(State.from_subproblem(bqm, beta=0.5).beta, 0.5)
         self.assertEqual(State.from_subproblem(bqm, subsamples=hybrid.utils.max_sample).subsamples.first.energy, 3.0)
         self.assertEqual(State.from_subproblem(bqm, subsamples=subsample), State.from_subsamples(subsample, bqm))
         self.assertEqual(State.from_subproblem(bqm, subsamples=[subsample]), State.from_subsamples([subsample], bqm))
