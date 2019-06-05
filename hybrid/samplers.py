@@ -187,6 +187,16 @@ class SimulatedAnnealingSubproblemSampler(Runnable, traits.SubproblemSampler):
         num_sweeps (int, optional, default=1000):
             Number of sweeps or steps.
 
+        beta_range (tuple, optional):
+            A 2-tuple defining the beginning and end of the beta schedule, where
+            beta is the inverse temperature. The schedule is applied linearly in
+            beta. Default range is set based on the total bias associated with
+            each node.
+
+        beta_schedule_type (string, optional, default='geometric'):
+            Beta schedule type, or how the beta values are interpolated between
+            the given 'beta_range'. Supported values are: linear and geometric.
+
         initial_states_generator (str, 'none'/'tile'/'random', optional, default='random'):
             Defines the expansion of input state subsamples into `initial_states`
             for the simulated annealing, if fewer than `num_reads` subsamples are
@@ -196,10 +206,13 @@ class SimulatedAnnealingSubproblemSampler(Runnable, traits.SubproblemSampler):
     """
 
     def __init__(self, num_reads=None, num_sweeps=1000,
+                 beta_range=None, beta_schedule_type='geometric',
                  initial_states_generator='random', **runopts):
         super(SimulatedAnnealingSubproblemSampler, self).__init__(**runopts)
         self.num_reads = num_reads
         self.num_sweeps = num_sweeps
+        self.beta_range = beta_range
+        self.beta_schedule_type = beta_schedule_type
         self.initial_states_generator = initial_states_generator
         self.sampler = SimulatedAnnealingSampler()
         self._stop_event = threading.Event()
@@ -212,6 +225,7 @@ class SimulatedAnnealingSubproblemSampler(Runnable, traits.SubproblemSampler):
     def next(self, state, **runopts):
         subsamples = self.sampler.sample(
             state.subproblem, num_reads=self.num_reads, num_sweeps=self.num_sweeps,
+            beta_range=self.beta_range, beta_schedule_type=self.beta_schedule_type,
             initial_states=state.subsamples,
             initial_states_generator=self.initial_states_generator,
             interrupt_function=lambda: self._stop_event.is_set())
@@ -236,6 +250,16 @@ class SimulatedAnnealingProblemSampler(Runnable, traits.ProblemSampler):
         num_sweeps (int, optional, default=1000):
             Number of sweeps or steps.
 
+        beta_range (tuple, optional):
+            A 2-tuple defining the beginning and end of the beta schedule, where
+            beta is the inverse temperature. The schedule is applied linearly in
+            beta. Default range is set based on the total bias associated with
+            each node.
+
+        beta_schedule_type (string, optional, default='geometric'):
+            Beta schedule type, or how the beta values are interpolated between
+            the given 'beta_range'. Supported values are: linear and geometric.
+
         initial_states_generator (str, 'none'/'tile'/'random', optional, default='random'):
             Defines the expansion of input state samples into `initial_states`
             for the simulated annealing, if fewer than `num_reads` samples are
@@ -244,10 +268,13 @@ class SimulatedAnnealingProblemSampler(Runnable, traits.ProblemSampler):
     """
 
     def __init__(self, num_reads=None, num_sweeps=1000,
+                 beta_range=None, beta_schedule_type='geometric',
                  initial_states_generator='random', **runopts):
         super(SimulatedAnnealingProblemSampler, self).__init__(**runopts)
         self.num_reads = num_reads
         self.num_sweeps = num_sweeps
+        self.beta_range = beta_range
+        self.beta_schedule_type = beta_schedule_type
         self.initial_states_generator = initial_states_generator
         self.sampler = SimulatedAnnealingSampler()
         self._stop_event = threading.Event()
@@ -260,6 +287,7 @@ class SimulatedAnnealingProblemSampler(Runnable, traits.ProblemSampler):
     def next(self, state, **runopts):
         samples = self.sampler.sample(
             state.problem, num_reads=self.num_reads, num_sweeps=self.num_sweeps,
+            beta_range=self.beta_range, beta_schedule_type=self.beta_schedule_type,
             initial_states=state.samples,
             initial_states_generator=self.initial_states_generator,
             interrupt_function=lambda: self._stop_event.is_set())
