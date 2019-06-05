@@ -318,7 +318,8 @@ class RandomSubproblemDecomposer(Runnable, traits.ProblemDecomposer):
         return state.updated(subproblem=subbqm)
 
 
-class RoofDualityDecomposer(Runnable, traits.ProblemDecomposer):
+class RoofDualityDecomposer(Runnable, traits.ProblemDecomposer,
+                            traits.ProblemSampler, traits.SamplesProducing):
     """Selects a subproblem with variables that cannot be fixed by roof duality.
 
     Roof duality finds a lower bound for the minimum of a quadratic polynomial.
@@ -326,8 +327,8 @@ class RoofDualityDecomposer(Runnable, traits.ProblemDecomposer):
     variables; these fixed variables take the same values in all optimal
     solutions [BHT]_ [BH]_. A quadratic pseudo-Boolean function can be
     represented as a network to find the lower bound through network-flow
-    computations. `fix_variables` uses maximum flow in the implication network
-    to correctly fix variables. Consequently, you can find an assignment for the
+    computations. This decomposer can also use maximum flow in the implication
+    network to fix variables. Consequently, you can find an assignment for the
     remaining variables that attains the optimal value.
 
     Args:
