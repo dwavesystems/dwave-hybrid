@@ -26,7 +26,7 @@ from hybrid.samplers import (
 from hybrid.decomposers import IdentityDecomposer, EnergyImpactDecomposer
 from hybrid.composers import SplatComposer
 from hybrid.core import State
-from hybrid.flow import RacingBranches, ArgMin, Loop
+from hybrid.flow import RacingBranches, ArgMin, Loop, Identity
 from hybrid.utils import random_sample
 
 
@@ -62,8 +62,9 @@ class KerberosSampler(dimod.Sampler):
         }
         self.properties = {}
 
-    def sample(self, bqm, init_sample=None, max_iter=100, convergence=10, num_reads=1,
-            sa_reads=1, sa_sweeps=1000, qpu_reads=100, qpu_sampler=None, max_subproblem_size=50):
+    def sample(self, bqm, init_sample=None, max_iter=100, convergence=3,
+               num_reads=1, sa_reads=1, sa_sweeps=1000, tabu_timeout=100,
+               qpu_reads=100, qpu_sampler=None, max_subproblem_size=50):
         """Run Tabu search, Simulated annealing and QPU subproblem sampling (for
         high energy impact problem variables) in parallel and return the best
         samples.
@@ -92,6 +93,10 @@ class KerberosSampler(dimod.Sampler):
             sa_sweeps (int):
                 Number of sweeps in the simulated annealing branch.
 
+            tabu_timeout (int):
+                Timeout for non-interruptable operation of tabu search (time in
+                milliseconds).
+
             qpu_reads (int):
                 Number of reads in the QPU branch.
 
@@ -118,7 +123,8 @@ class KerberosSampler(dimod.Sampler):
         subproblem_size = min(len(bqm), max_subproblem_size)
 
         iteration = RacingBranches(
-            InterruptableTabuSampler(),
+            Identity(),
+            InterruptableTabuSampler(timeout=tabu_timeout),
             InterruptableSimulatedAnnealingProblemSampler(num_reads=sa_reads, num_sweeps=sa_sweeps),
             EnergyImpactDecomposer(size=subproblem_size, rolling=True, rolling_history=0.3, traversal='bfs')
                 | QPUSubproblemAutoEmbeddingSampler(num_reads=qpu_reads, qpu_sampler=qpu_sampler)
