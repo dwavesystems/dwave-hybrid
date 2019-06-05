@@ -56,8 +56,7 @@ class QPUSubproblemExternalEmbeddingSampler(Runnable, traits.SubproblemSampler, 
         qpu_sampler (:class:`dimod.Sampler`, optional, default=DWaveSampler()):
             Quantum sampler such as a D-Wave system.
 
-    Examples:
-        See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/samplers.html#examples.
+    See :ref:`samplers-examples`.
     """
 
     def __init__(self, num_reads=100, qpu_sampler=None, **runopts):
@@ -91,8 +90,7 @@ class QPUSubproblemAutoEmbeddingSampler(Runnable, traits.SubproblemSampler):
             it will be converted to unstructured via
             :class:`~dwave.system.composited.EmbeddingComposite`.
 
-    Examples:
-        See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/samplers.html#examples.
+    See :ref:`samplers-examples`.
     """
 
     def __init__(self, num_reads=100, qpu_sampler=None, **runopts):
@@ -194,8 +192,7 @@ class SimulatedAnnealingSubproblemSampler(Runnable, traits.SubproblemSampler):
             for the simulated annealing, if fewer than `num_reads` subsamples are
             present. See :meth:`~neal.SimulatedAnnealingSampler.sample`.
 
-    Examples:
-        See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/samplers.html#examples.
+    See :ref:`samplers-examples`.
     """
 
     def __init__(self, num_reads=None, num_sweeps=1000,
@@ -297,8 +294,7 @@ class TabuSubproblemSampler(Runnable, traits.SubproblemSampler):
             for the Tabu search, if fewer than `num_reads` subsamples are
             present. See :meth:`~tabu.TabuSampler.sample`.
 
-    Examples:
-        See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/samplers.html#examples.
+    See :ref:`samplers-examples`.
     """
 
     def __init__(self, num_reads=None, tenure=None, timeout=20,
@@ -344,8 +340,7 @@ class TabuProblemSampler(Runnable, traits.ProblemSampler):
             for the Tabu search, if fewer than `num_reads` samples are
             present. See :meth:`~tabu.TabuSampler.sample`.
 
-    Examples:
-        See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/samplers.html#examples.
+    See :ref:`samplers-examples`.
     """
 
     def __init__(self, num_reads=None, tenure=None, timeout=20,
@@ -398,8 +393,7 @@ class InterruptableTabuSampler(Loop):
         max_time (float, optional, default=None):
             Total running time in milliseconds.
 
-    Examples:
-        See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/samplers.html#examples.
+    See :ref:`samplers-examples`.
     """
 
     def __init__(self, max_time=None, **tabu):

@@ -12,6 +12,9 @@ Class
 .. autoclass:: SplatComposer
 .. autoclass:: GreedyPathMerge
 
+
+.. _composers-examples:
+
 Examples
 ========
 
