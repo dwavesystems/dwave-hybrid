@@ -75,8 +75,8 @@ class TestMultithreading(unittest.TestCase, RunTimeAssertionMixin):
 
     @unittest.skipUnless(cpu_count() >= 2, "at least two threads required")
     def test_concurrent_sa_samples(self):
-        s1 = hybrid.SimulatedAnnealingProblemSampler(num_reads=1000, sweeps=10000)
-        s2 = hybrid.SimulatedAnnealingProblemSampler(num_reads=1000, sweeps=10000)
+        s1 = hybrid.SimulatedAnnealingProblemSampler(num_reads=1000, num_sweeps=10000)
+        s2 = hybrid.SimulatedAnnealingProblemSampler(num_reads=1000, num_sweeps=10000)
         p = hybrid.Parallel(s1, s2)
 
         bqm = dimod.BinaryQuadraticModel({'a': 1}, {}, 0, 'BINARY')

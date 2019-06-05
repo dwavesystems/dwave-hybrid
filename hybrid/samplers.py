@@ -171,45 +171,54 @@ class ReverseAnnealingAutoEmbeddingSampler(Runnable, traits.SubproblemSampler):
                        "anneal_schedule={self.anneal_schedule!r})").format(self=self)
 
     def next(self, state, **runopts):
-        # TODO: handle more than just the first subsample
-        response = self.sampler.sample(
+        # TODO: handle more than just the first subsample (not yet supported via API)
+        subsamples = self.sampler.sample(
             state.subproblem, num_reads=self.num_reads,
             initial_state=state.subsamples.first.sample,
             anneal_schedule=self.anneal_schedule)
-        return state.updated(subsamples=response)
+        return state.updated(subsamples=subsamples)
 
 
 class SimulatedAnnealingSubproblemSampler(Runnable, traits.SubproblemSampler):
     """A simulated annealing sampler for a subproblem.
 
     Args:
-        num_reads (int, optional, default=1):
+        num_reads (int, optional, default=len(state.subsamples) or 1):
             Number of states (output solutions) to read from the sampler.
 
-        sweeps (int, optional, default=1000):
+        num_sweeps (int, optional, default=1000):
             Number of sweeps or steps.
+
+        initial_states_generator (str, 'none'/'tile'/'random', optional, default='random'):
+            Defines the expansion of input state subsamples into `initial_states`
+            for the simulated annealing, if fewer than `num_reads` subsamples are
+            present. See :meth:`~neal.SimulatedAnnealingSampler.sample`.
 
     Examples:
         See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/samplers.html#examples.
     """
 
-    def __init__(self, num_reads=1, sweeps=1000, **runopts):
+    def __init__(self, num_reads=None, num_sweeps=1000,
+                 initial_states_generator='random', **runopts):
         super(SimulatedAnnealingSubproblemSampler, self).__init__(**runopts)
         self.num_reads = num_reads
-        self.sweeps = sweeps
+        self.num_sweeps = num_sweeps
+        self.initial_states_generator = initial_states_generator
         self.sampler = SimulatedAnnealingSampler()
         self._stop_event = threading.Event()
 
     def __repr__(self):
         return ("{self}(num_reads={self.num_reads!r}, "
-                       "sweeps={self.sweeps!r})").format(self=self)
+                       "num_sweeps={self.num_sweeps!r}, "
+                       "initial_states_generator={self.initial_states_generator!r})").format(self=self)
 
     def next(self, state, **runopts):
-        subbqm = state.subproblem
-        response = self.sampler.sample(
-            subbqm, num_reads=self.num_reads, sweeps=self.sweeps,
+        subsamples = self.sampler.sample(
+            state.subproblem, num_reads=self.num_reads, num_sweeps=self.num_sweeps,
+            initial_states=state.subsamples,
+            initial_states_generator=self.initial_states_generator,
             interrupt_function=lambda: self._stop_event.is_set())
-        return state.updated(subsamples=response)
+        return state.updated(subsamples=subsamples)
 
     def halt(self):
         self._stop_event.set()
@@ -224,31 +233,40 @@ class SimulatedAnnealingProblemSampler(Runnable, traits.ProblemSampler):
     """A simulated annealing sampler for a complete problem.
 
     Args:
-        num_reads (int, optional, default=1):
+        num_reads (int, optional, default=len(state.samples) or 1):
             Number of states (output solutions) to read from the sampler.
 
-        sweeps (int, optional, default=1000):
+        num_sweeps (int, optional, default=1000):
             Number of sweeps or steps.
+
+        initial_states_generator (str, 'none'/'tile'/'random', optional, default='random'):
+            Defines the expansion of input state samples into `initial_states`
+            for the simulated annealing, if fewer than `num_reads` samples are
+            present. See :meth:`~neal.SimulatedAnnealingSampler.sample`.
 
     """
 
-    def __init__(self, num_reads=1, sweeps=1000, **runopts):
+    def __init__(self, num_reads=None, num_sweeps=1000,
+                 initial_states_generator='random', **runopts):
         super(SimulatedAnnealingProblemSampler, self).__init__(**runopts)
         self.num_reads = num_reads
-        self.sweeps = sweeps
+        self.num_sweeps = num_sweeps
+        self.initial_states_generator = initial_states_generator
         self.sampler = SimulatedAnnealingSampler()
         self._stop_event = threading.Event()
 
     def __repr__(self):
         return ("{self}(num_reads={self.num_reads!r}, "
-                       "sweeps={self.sweeps!r})").format(self=self)
+                       "num_sweeps={self.num_sweeps!r}, "
+                       "initial_states_generator={self.initial_states_generator!r})").format(self=self)
 
     def next(self, state, **runopts):
-        bqm = state.problem
-        response = self.sampler.sample(
-            bqm, num_reads=self.num_reads, sweeps=self.sweeps,
+        samples = self.sampler.sample(
+            state.problem, num_reads=self.num_reads, num_sweeps=self.num_sweeps,
+            initial_states=state.samples,
+            initial_states_generator=self.initial_states_generator,
             interrupt_function=lambda: self._stop_event.is_set())
-        return state.updated(samples=response)
+        return state.updated(samples=samples)
 
     def halt(self):
         self._stop_event.set()
@@ -263,7 +281,7 @@ class TabuSubproblemSampler(Runnable, traits.SubproblemSampler):
     """A tabu sampler for a subproblem.
 
     Args:
-        num_reads (int, optional, default=1):
+        num_reads (int, optional, default=len(state.subsamples) or 1):
             Number of states (output solutions) to read from the sampler.
 
         tenure (int, optional):
@@ -274,34 +292,43 @@ class TabuSubproblemSampler(Runnable, traits.SubproblemSampler):
         timeout (int, optional, default=20):
             Total running time in milliseconds.
 
+        initial_states_generator (str, 'none'/'tile'/'random', optional, default='random'):
+            Defines the expansion of input state subsamples into `initial_states`
+            for the Tabu search, if fewer than `num_reads` subsamples are
+            present. See :meth:`~tabu.TabuSampler.sample`.
+
     Examples:
         See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/samplers.html#examples.
     """
 
-    def __init__(self, num_reads=1, tenure=None, timeout=20, **runopts):
+    def __init__(self, num_reads=None, tenure=None, timeout=20,
+                 initial_states_generator='random', **runopts):
         super(TabuSubproblemSampler, self).__init__(**runopts)
         self.num_reads = num_reads
         self.tenure = tenure
         self.timeout = timeout
+        self.initial_states_generator = initial_states_generator
         self.sampler = TabuSampler()
 
     def __repr__(self):
         return ("{self}(num_reads={self.num_reads!r}, "
                        "tenure={self.tenure!r}, "
-                       "timeout={self.timeout!r})").format(self=self)
+                       "timeout={self.timeout!r}, "
+                       "initial_states_generator={self.initial_states_generator!r})").format(self=self)
 
     def next(self, state, **runopts):
-        subbqm = state.subproblem
-        response = self.sampler.sample(
-            subbqm, tenure=self.tenure, timeout=self.timeout, num_reads=self.num_reads)
-        return state.updated(subsamples=response)
+        subsamples = self.sampler.sample(
+            state.subproblem, initial_states=state.subsamples,
+            initial_states_generator=self.initial_states_generator,
+            tenure=self.tenure, timeout=self.timeout, num_reads=self.num_reads)
+        return state.updated(subsamples=subsamples)
 
 
 class TabuProblemSampler(Runnable, traits.ProblemSampler):
     """A tabu sampler for a binary quadratic problem.
 
     Args:
-        num_reads (int, optional, default=1):
+        num_reads (int, optional, default=len(state.samples) or 1):
             Number of states (output solutions) to read from the sampler.
 
         tenure (int, optional):
@@ -312,26 +339,35 @@ class TabuProblemSampler(Runnable, traits.ProblemSampler):
         timeout (int, optional, default=20):
             Total running time in milliseconds.
 
+        initial_states_generator (str, 'none'/'tile'/'random', optional, default='random'):
+            Defines the expansion of input state samples into `initial_states`
+            for the Tabu search, if fewer than `num_reads` samples are
+            present. See :meth:`~tabu.TabuSampler.sample`.
+
     Examples:
         See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/samplers.html#examples.
     """
 
-    def __init__(self, num_reads=1, tenure=None, timeout=20, **runopts):
+    def __init__(self, num_reads=None, tenure=None, timeout=20,
+                 initial_states_generator='random', **runopts):
         super(TabuProblemSampler, self).__init__(**runopts)
         self.num_reads = num_reads
         self.tenure = tenure
         self.timeout = timeout
+        self.initial_states_generator = initial_states_generator
         self.sampler = TabuSampler()
 
     def __repr__(self):
         return ("{self}(num_reads={self.num_reads!r}, "
                        "tenure={self.tenure!r}, "
-                       "timeout={self.timeout!r})").format(self=self)
+                       "timeout={self.timeout!r}, "
+                       "initial_states_generator={self.initial_states_generator!r})").format(self=self)
 
     def next(self, state, **runopts):
         sampleset = self.sampler.sample(
-            state.problem, init_solution=state.samples, tenure=self.tenure,
-            timeout=self.timeout, num_reads=self.num_reads)
+            state.problem, initial_states=state.samples,
+            initial_states_generator=self.initial_states_generator,
+            tenure=self.tenure, timeout=self.timeout, num_reads=self.num_reads)
         return state.updated(samples=sampleset)
 
 
@@ -353,6 +389,11 @@ class InterruptableTabuSampler(Loop):
             variables, if this time interval has been exceeded, the search can
             be stopped by an interrupt signal or expiration of the `timeout`
             parameter.
+
+        initial_states_generator (str, 'none'/'tile'/'random', optional, default='random'):
+            Defines the expansion of input state samples into `initial_states`
+            for the Tabu search, if fewer than `num_reads` samples are
+            present. See :meth:`~tabu.TabuSampler.sample`.
 
         max_time (float, optional, default=None):
             Total running time in milliseconds.

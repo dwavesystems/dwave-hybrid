@@ -35,7 +35,7 @@ iteration = hybrid.RacingBranches(
     hybrid.SimulatedAnnealingProblemSampler(),
     hybrid.EnergyImpactDecomposer(size=50)
         | hybrid.RacingBranches(
-            hybrid.SimulatedAnnealingSubproblemSampler(sweeps=1000),
+            hybrid.SimulatedAnnealingSubproblemSampler(num_sweeps=1000),
             hybrid.TabuSubproblemSampler(tenure=20, timeout=10)
         )
         | hybrid.ArgMin('subsamples.first.energy')

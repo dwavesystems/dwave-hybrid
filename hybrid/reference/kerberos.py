@@ -119,7 +119,7 @@ class KerberosSampler(dimod.Sampler):
 
         iteration = RacingBranches(
             InterruptableTabuSampler(),
-            InterruptableSimulatedAnnealingProblemSampler(num_reads=sa_reads, sweeps=sa_sweeps),
+            InterruptableSimulatedAnnealingProblemSampler(num_reads=sa_reads, num_sweeps=sa_sweeps),
             EnergyImpactDecomposer(size=subproblem_size, rolling=True, rolling_history=0.3, traversal='bfs')
                 | QPUSubproblemAutoEmbeddingSampler(num_reads=qpu_reads, qpu_sampler=qpu_sampler)
                 | SplatComposer(),
