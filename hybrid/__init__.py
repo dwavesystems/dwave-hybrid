@@ -69,6 +69,8 @@ import hybrid.composers
 import hybrid.utils
 import hybrid.profiling
 
+import hybrid.reference
+
 # convenience top-level import
 from hybrid.core import *
 from hybrid.flow import *
@@ -82,3 +84,5 @@ from hybrid.composers import *
 
 from hybrid.utils import *
 from hybrid.profiling import *
+
+from hybrid.reference import *
