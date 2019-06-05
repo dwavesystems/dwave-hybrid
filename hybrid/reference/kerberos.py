@@ -19,15 +19,7 @@ results from QPU sampling a subproblem.
 """
 
 import dimod
-from hybrid.samplers import (
-    QPUSubproblemAutoEmbeddingSampler,
-    InterruptableSimulatedAnnealingProblemSampler,
-    InterruptableTabuSampler)
-from hybrid.decomposers import IdentityDecomposer, EnergyImpactDecomposer
-from hybrid.composers import SplatComposer
-from hybrid.core import State
-from hybrid.flow import RacingBranches, ArgMin, Loop, Identity
-from hybrid.utils import random_sample
+import hybrid
 
 
 class KerberosSampler(dimod.Sampler):
@@ -57,6 +49,7 @@ class KerberosSampler(dimod.Sampler):
             'num_reads': [],
             'sa_reads': [],
             'sa_sweeps': [],
+            'tabu_timeout': [],
             'qpu_reads': [],
             'max_subproblem_size': []
         }
@@ -112,25 +105,25 @@ class KerberosSampler(dimod.Sampler):
         """
 
         if callable(init_sample):
-            init_state_gen = lambda: State.from_sample(init_sample(), bqm)
+            init_state_gen = lambda: hybrid.State.from_sample(init_sample(), bqm)
         elif init_sample is None:
-            init_state_gen = lambda: State.from_sample(random_sample(bqm), bqm)
+            init_state_gen = lambda: hybrid.State.from_sample(hybrid.random_sample(bqm), bqm)
         elif isinstance(init_sample, dimod.SampleSet):
-            init_state_gen = lambda: State.from_sample(init_sample, bqm)
+            init_state_gen = lambda: hybrid.State.from_sample(init_sample, bqm)
         else:
             raise TypeError("'init_sample' should be a SampleSet or a SampleSet generator")
 
         subproblem_size = min(len(bqm), max_subproblem_size)
 
-        iteration = RacingBranches(
-            Identity(),
-            InterruptableTabuSampler(timeout=tabu_timeout),
-            InterruptableSimulatedAnnealingProblemSampler(num_reads=sa_reads, num_sweeps=sa_sweeps),
-            EnergyImpactDecomposer(size=subproblem_size, rolling=True, rolling_history=0.3, traversal='bfs')
-                | QPUSubproblemAutoEmbeddingSampler(num_reads=qpu_reads, qpu_sampler=qpu_sampler)
-                | SplatComposer(),
-        ) | ArgMin()
-        self.runnable = Loop(iteration, max_iter=max_iter, convergence=convergence)
+        iteration = hybrid.Race(
+            hybrid.Identity(),
+            hybrid.InterruptableTabuSampler(timeout=tabu_timeout),
+            hybrid.InterruptableSimulatedAnnealingProblemSampler(num_reads=sa_reads, num_sweeps=sa_sweeps),
+            hybrid.EnergyImpactDecomposer(size=subproblem_size, rolling=True, rolling_history=0.3, traversal='bfs')
+                | hybrid.QPUSubproblemAutoEmbeddingSampler(num_reads=qpu_reads, qpu_sampler=qpu_sampler)
+                | hybrid.SplatComposer(),
+        ) | hybrid.ArgMin()
+        self.runnable = hybrid.Loop(iteration, max_iter=max_iter, convergence=convergence)
 
         samples = []
         energies = []
