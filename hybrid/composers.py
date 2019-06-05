@@ -33,8 +33,7 @@ class IdentityComposer(Runnable, traits.SubsamplesComposer):
 class SplatComposer(Runnable, traits.SubsamplesComposer):
     """A composer that overwrites current samples with subproblem samples.
 
-    Examples:
-        See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/composers.html#examples.
+    See :ref:`composers-examples`.
     """
 
     def next(self, state, **runopts):
@@ -59,8 +58,7 @@ class GreedyPathMerge(Runnable, traits.MISO, traits.SamplesIntaking, traits.Samp
 
     Note: only the lowest-energy sample, is considered from either input state.
 
-    Examples:
-        See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/composers.html#examples.
+    See :ref:`composers-examples`.
 
     References
     ----------

@@ -94,8 +94,7 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
                 impact list, proceeding with the variable on the search boundary
                 that has the highest energy impact.
 
-    Examples:
-        See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/decomposers.html#examples.
+    See :ref:`decomposers-examples`.
     """
 
     @classmethod
@@ -294,8 +293,7 @@ class RandomSubproblemDecomposer(Runnable, traits.ProblemDecomposer):
         size (int):
             Number of variables in the subproblem.
 
-    Examples:
-        See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/decomposers.html#examples.
+    See :ref:`decomposers-examples`.
     """
 
     def __init__(self, size, **runopts):
@@ -390,8 +388,7 @@ class TilingChimeraDecomposer(Runnable, traits.ProblemDecomposer, traits.Embeddi
         loop (Bool, optional, default=True):
             Cycle continually through the tiles.
 
-    Examples:
-        See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/decomposers.html#examples.
+    See :ref:`decomposers-examples`.
     """
 
     def __init__(self, size=(4,4,4), loop=True, **runopts):
@@ -434,8 +431,7 @@ class RandomConstraintDecomposer(Runnable, traits.ProblemDecomposer):
             Groups of variables in the BQM, as a list of sets, where each set is
             associated with a constraint.
 
-    Examples:
-        See examples on https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/reference/decomposers.html#examples.
+    See :ref:`decomposers-examples`.
     """
 
     def __init__(self, size, constraints, **runopts):

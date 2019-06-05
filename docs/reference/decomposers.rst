@@ -17,6 +17,8 @@ Classes
 .. autoclass:: TilingChimeraDecomposer
 
 
+.. _decomposers-examples:
+
 Examples
 ========
 

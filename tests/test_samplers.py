@@ -13,8 +13,9 @@
 # limitations under the License.
 
 import unittest
-
 import time
+
+import numpy as np
 import dimod
 from neal import SimulatedAnnealingSampler
 from dwave.system.testing import MockDWaveSampler
@@ -103,6 +104,28 @@ class TestTabuSamplers(unittest.TestCase):
         self.assertEqual(result.samples.first.energy, -3)
         self.assertEqual(len(result.samples), 1)
 
+    def test_tabu_problem_sampler_initialization(self):
+        bqm = dimod.BinaryQuadraticModel({}, {'ab': 1}, 0, 'SPIN')
+        sampleset = dimod.SampleSet.from_samples_bqm([{'a': 1, 'b': -1},
+                                                      {'a': -1, 'b': 1}], bqm)
+        state = State(problem=bqm, samples=sampleset)
+
+        # with timeout=0, TabuSampler should just return the initial_states
+        result = TabuProblemSampler(timeout=0).run(state).result()
+        expected = sampleset.record.sample
+
+        self.assertTrue(np.array_equal(result.samples.record.sample, expected))
+        self.assertEqual(len(result.samples), 2)
+
+        # test input samples are tiled
+        result = TabuProblemSampler(timeout=0, num_reads=4,
+                                    initial_states_generator="tile").run(state).result()
+
+        expected = np.tile(sampleset.record.sample, (2,1))
+
+        self.assertTrue(np.array_equal(result.samples.record.sample, expected))
+        self.assertEqual(len(result.samples), 4)
+
     def test_tabu_subproblem_sampler(self):
         bqm = dimod.BinaryQuadraticModel({}, {'ab': 1, 'bc': -1, 'ca': 1}, 0, 'SPIN')
 
@@ -114,6 +137,28 @@ class TestTabuSamplers(unittest.TestCase):
 
         self.assertEqual(result.subsamples.first.energy, -3)
         self.assertEqual(len(result.subsamples), 1)
+
+    def test_tabu_subproblem_sampler_initialization(self):
+        bqm = dimod.BinaryQuadraticModel({}, {'ab': 1}, 0, 'SPIN')
+        sampleset = dimod.SampleSet.from_samples_bqm([{'a': 1, 'b': -1},
+                                                      {'a': -1, 'b': 1}], bqm)
+        state = State(subproblem=bqm, subsamples=sampleset)
+
+        # with timeout=0, TabuSampler should just return the initial_states
+        result = TabuSubproblemSampler(timeout=0).run(state).result()
+        expected = sampleset.record.sample
+
+        self.assertTrue(np.array_equal(result.subsamples.record.sample, expected))
+        self.assertEqual(len(result.subsamples), 2)
+
+        # test input samples are tiled
+        result = TabuSubproblemSampler(timeout=0, num_reads=4,
+                                       initial_states_generator="tile").run(state).result()
+
+        expected = np.tile(sampleset.record.sample, (2,1))
+
+        self.assertTrue(np.array_equal(result.subsamples.record.sample, expected))
+        self.assertEqual(len(result.subsamples), 4)
 
     def test_interruptable_tabu(self):
         bqm = dimod.BinaryQuadraticModel({}, {'ab': 1, 'bc': -1, 'ca': 1}, 0, 'SPIN')
@@ -129,3 +174,73 @@ class TestTabuSamplers(unittest.TestCase):
 
         self.assertEqual(future.result().samples.first.energy, -3)
         self.assertGreater(len(workflow.timers['dispatch.next']), 0)
+
+
+class TestSASamplers(unittest.TestCase):
+
+    def test_sa_problem_sampler_interface(self):
+        bqm = dimod.BinaryQuadraticModel({'a': 1}, {}, 0, 'SPIN')
+
+        workflow = SimulatedAnnealingProblemSampler(num_reads=10)
+
+        init = State.from_sample({'a': 1}, bqm)
+        result = workflow.run(init).result()
+
+        self.assertEqual(result.samples.first.energy, -1)
+        self.assertEqual(len(result.samples), 10)
+
+    def test_sa_problem_sampler_functionality(self):
+        bqm = dimod.BinaryQuadraticModel({}, {'ab': 1, 'bc': -1, 'ca': 1}, 0, 'SPIN')
+
+        workflow = SimulatedAnnealingProblemSampler(num_reads=10)
+
+        # use a random sample as initial value
+        init = State(problem=bqm, samples=None)
+        result = workflow.run(init).result()
+
+        self.assertEqual(result.samples.first.energy, -3)
+        self.assertEqual(len(result.samples), 10)
+
+    def test_sa_problem_sampler_initialization(self):
+        bqm = dimod.BinaryQuadraticModel({}, {'ab': 1}, 0, 'SPIN')
+        sampleset = dimod.SampleSet.from_samples_bqm([{'a': 1, 'b': -1},
+                                                      {'a': -1, 'b': 1}], bqm)
+        state = State(problem=bqm, samples=sampleset)
+
+        # with timeout=0, TabuSampler should just return the initial_states
+        result = SimulatedAnnealingProblemSampler(num_sweeps=0).run(state).result()
+        expected = sampleset.record.sample
+
+        self.assertTrue(np.array_equal(result.samples.record.sample, expected))
+        self.assertEqual(len(result.samples), 2)
+
+        # test input samples are tiled
+        result = SimulatedAnnealingProblemSampler(
+            num_sweeps=0, num_reads=4, initial_states_generator="tile").run(state).result()
+
+        expected = np.tile(sampleset.record.sample, (2,1))
+
+        self.assertTrue(np.array_equal(result.samples.record.sample, expected))
+        self.assertEqual(len(result.samples), 4)
+
+    def test_sa_subproblem_sampler_initialization(self):
+        bqm = dimod.BinaryQuadraticModel({}, {'ab': 1}, 0, 'SPIN')
+        sampleset = dimod.SampleSet.from_samples_bqm([{'a': 1, 'b': -1},
+                                                      {'a': -1, 'b': 1}], bqm)
+        state = State(subproblem=bqm, subsamples=sampleset)
+
+        # with timeout=0, TabuSampler should just return the initial_states
+        result = SimulatedAnnealingSubproblemSampler(num_sweeps=0).run(state).result()
+        expected = sampleset.record.sample
+
+        self.assertTrue(np.array_equal(result.subsamples.record.sample, expected))
+        self.assertEqual(len(result.subsamples), 2)
+
+        # test input samples are tiled
+        result = SimulatedAnnealingSubproblemSampler(
+            num_sweeps=0, num_reads=4, initial_states_generator="tile").run(state).result()
+
+        expected = np.tile(sampleset.record.sample, (2,1))
+
+        self.assertTrue(np.array_equal(result.subsamples.record.sample, expected))
+        self.assertEqual(len(result.subsamples), 4)
