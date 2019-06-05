@@ -13,6 +13,7 @@ Classes
 .. autoclass:: IdentityDecomposer
 .. autoclass:: RandomConstraintDecomposer
 .. autoclass:: RandomSubproblemDecomposer
+.. autoclass:: RoofDualityDecomposer
 .. autoclass:: TilingChimeraDecomposer
 
 

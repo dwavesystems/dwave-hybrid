@@ -22,7 +22,8 @@ import dimod
 import networkx as nx
 
 from hybrid.decomposers import (
-    EnergyImpactDecomposer, RandomSubproblemDecomposer, RandomConstraintDecomposer)
+    EnergyImpactDecomposer, RandomSubproblemDecomposer,
+    RandomConstraintDecomposer, RoofDualityDecomposer)
 from hybrid.core import State
 from hybrid.utils import min_sample
 
@@ -355,3 +356,34 @@ class TestConstraintDecomposer(unittest.TestCase):
 
         self.assertIn('subproblem', newstate)
         self.assertTrue(len(newstate.subproblem) <= 3)  # correct size
+
+
+class TestRoofDualityDecomposer(unittest.TestCase):
+    def test_allfixed(self):
+        bqm = dimod.BinaryQuadraticModel.from_ising({'a': -1}, {})
+
+        init = State.from_sample({'a': -1}, bqm)  # should be flipped
+        new = RoofDualityDecomposer().run(init).result()
+
+        self.assertEqual(new.problem, bqm)
+        self.assertEqual(new.subproblem,
+                         dimod.BinaryQuadraticModel.from_ising({}, {}, -1))
+        self.assertEqual(new.samples.record.sample, [1])
+
+    def test_sampling_mode(self):
+        bqm = dimod.BinaryQuadraticModel.from_ising({'a': 0}, {})
+
+        init = State.from_samples([{'a': -1}, {'a': 1}], bqm)
+
+        # variable not fixed
+        new = RoofDualityDecomposer(sampling_mode=True).run(init).result()
+        self.assertEqual(new.problem, bqm)
+        self.assertEqual(new.subproblem, bqm)
+        self.assertEqual(new.samples, init.samples)
+
+        # variable fixed
+        new = RoofDualityDecomposer(sampling_mode=False).run(init).result()
+        self.assertEqual(new.problem, bqm)
+        self.assertEqual(new.subproblem,
+                         dimod.BinaryQuadraticModel.from_ising({}, {}))
+        self.assertTrue(len(set(new.samples.record.sample.flatten())), 1)

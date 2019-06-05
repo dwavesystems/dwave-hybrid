@@ -19,6 +19,7 @@ import itertools
 from heapq import heappush, heappop
 from functools import partial
 
+import dimod
 import networkx as nx
 
 from hybrid.core import Runnable, State
@@ -31,6 +32,7 @@ from hybrid.utils import (
 __all__ = [
     'IdentityDecomposer', 'EnergyImpactDecomposer', 'RandomSubproblemDecomposer',
     'TilingChimeraDecomposer', 'RandomConstraintDecomposer',
+    'RoofDualityDecomposer',
 ]
 
 logger = logging.getLogger(__name__)
@@ -314,6 +316,60 @@ class RandomSubproblemDecomposer(Runnable, traits.ProblemDecomposer):
         sample = state.samples.change_vartype(bqm.vartype).first.sample
         subbqm = bqm_induced_by(bqm, variables, sample)
         return state.updated(subproblem=subbqm)
+
+
+class RoofDualityDecomposer(Runnable, traits.ProblemDecomposer,
+                            traits.ProblemSampler, traits.SamplesProducing):
+    """Selects a subproblem with variables that cannot be fixed by roof duality.
+
+    Roof duality finds a lower bound for the minimum of a quadratic polynomial.
+    It can also find minimizing assignments for some of the polynomial's
+    variables; these fixed variables take the same values in all optimal
+    solutions [BHT]_ [BH]_. A quadratic pseudo-Boolean function can be
+    represented as a network to find the lower bound through network-flow
+    computations. This decomposer can also use maximum flow in the implication
+    network to fix variables. Consequently, you can find an assignment for the
+    remaining variables that attains the optimal value.
+
+    Args:
+        sampling_mode (bool, optional, default=True):
+            In sampling mode, only roof-duality is used. When `sampling_mode` is
+            false, strongly connected components are used to fix more variables,
+            but in some optimal solutions these variables may take different
+            values.
+
+    .. [BHT] Boros, E., P.L. Hammer, G. Tavares. Preprocessing of Unconstraint
+        Quadratic Binary Optimization. Rutcor Research Report 10-2006, April,
+        2006.
+
+    .. [BH] Boros, E., P.L. Hammer. Pseudo-Boolean optimization. Discrete
+        Applied Mathematics 123, (2002), pp. 155-225
+
+    """
+    def __init__(self, sampling_mode=True, **runopts):
+        super(RoofDualityDecomposer, self).__init__(**runopts)
+        self.sampling_mode = sampling_mode
+
+    def __repr__(self):
+        return "{self.name}(sampling_mode={self.sampling_mode!r})".format(self=self)
+
+    def next(self, state, **runopts):
+        bqm = state.problem
+        sampleset = state.samples
+
+        fixed_vars = dimod.fix_variables(bqm, sampling_mode=self.sampling_mode)
+
+        # make a new bqm of everything not-fixed
+        subbqm = bqm.copy()
+        subbqm.fix_variables(fixed_vars)
+
+        # update the existing state with the fixed variables
+        newsampleset = sampleset.copy()
+        for v, val in fixed_vars.items():
+            # index lookups on variables are fast for SampleSets
+            newsampleset.record.sample[:, newsampleset.variables.index(v)] = val
+
+        return state.updated(subproblem=subbqm, samples=newsampleset)
 
 
 class TilingChimeraDecomposer(Runnable, traits.ProblemDecomposer, traits.EmbeddingProducing):
