@@ -23,7 +23,7 @@ import numpy
 from dwave_networkx.algorithms import canonical_chimera_labeling
 
 
-def cpu_count():
+def cpu_count():    # pragma: no cover
     try:
         import os
         # doesn't exist in python2, and can return None
