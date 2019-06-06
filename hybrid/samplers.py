@@ -314,7 +314,7 @@ class TabuSubproblemSampler(Runnable, traits.SubproblemSampler):
             recently explored solutions kept in memory. Default is a quarter of
             the number of problem variables up to a maximum value of 20.
 
-        timeout (int, optional, default=20):
+        timeout (int, optional, default=100):
             Total running time in milliseconds.
 
         initial_states_generator (str, 'none'/'tile'/'random', optional, default='random'):
@@ -325,7 +325,7 @@ class TabuSubproblemSampler(Runnable, traits.SubproblemSampler):
     See :ref:`samplers-examples`.
     """
 
-    def __init__(self, num_reads=None, tenure=None, timeout=20,
+    def __init__(self, num_reads=None, tenure=None, timeout=100,
                  initial_states_generator='random', **runopts):
         super(TabuSubproblemSampler, self).__init__(**runopts)
         self.num_reads = num_reads
@@ -360,7 +360,7 @@ class TabuProblemSampler(Runnable, traits.ProblemSampler):
             recently explored solutions kept in memory. Default is a quarter of
             the number of problem variables up to a maximum value of 20.
 
-        timeout (int, optional, default=20):
+        timeout (int, optional, default=100):
             Total running time in milliseconds.
 
         initial_states_generator (str, 'none'/'tile'/'random', optional, default='random'):
@@ -371,7 +371,7 @@ class TabuProblemSampler(Runnable, traits.ProblemSampler):
     See :ref:`samplers-examples`.
     """
 
-    def __init__(self, num_reads=None, tenure=None, timeout=20,
+    def __init__(self, num_reads=None, tenure=None, timeout=100,
                  initial_states_generator='random', **runopts):
         super(TabuProblemSampler, self).__init__(**runopts)
         self.num_reads = num_reads
