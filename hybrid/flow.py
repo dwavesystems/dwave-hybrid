@@ -638,17 +638,21 @@ class TrackMin(Runnable, traits.SISO):
             "input_key={self.input_key!r}, output_key={self.output_key!r})"
         ).format(self=self)
 
-    def init(self, state, **runopts):
+    def _set_new_best(self, state):
         self.best = state
-        logger.debug("{} selected {!r} for the initial best state".format(
+
+        logger.debug("{} selected state with key={!r} for the new best state".format(
+            self.name, self.key(self.best)))
+        logger.trace("{} selected {!r} for the new best state".format(
             self.name, self.best))
+
+    def init(self, state, **runopts):
+        self._set_new_best(state)
 
     def next(self, state, **runopts):
         if self.key(state) < self.key(self.best):
-            self.best = state
+            self._set_new_best(state)
             self.count('new-best')
-            logger.debug("{} selected {!r} for the new best state".format(
-                self.name, self.best))
 
         if self.output:
             return state.updated(**{self.output_key: self.best[self.input_key]})
