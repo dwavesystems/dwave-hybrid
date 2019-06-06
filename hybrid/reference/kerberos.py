@@ -56,7 +56,7 @@ class KerberosSampler(dimod.Sampler):
         self.properties = {}
 
     def sample(self, bqm, init_sample=None, max_iter=100, convergence=3,
-               num_reads=1, sa_reads=1, sa_sweeps=1000, tabu_timeout=100,
+               num_reads=1, sa_reads=1, sa_sweeps=10000, tabu_timeout=500,
                qpu_reads=100, qpu_sampler=None, max_subproblem_size=50):
         """Run Tabu search, Simulated annealing and QPU subproblem sampling (for
         high energy impact problem variables) in parallel and return the best
@@ -117,12 +117,17 @@ class KerberosSampler(dimod.Sampler):
 
         iteration = hybrid.Race(
             hybrid.Identity(),
-            hybrid.InterruptableTabuSampler(timeout=tabu_timeout),
-            hybrid.InterruptableSimulatedAnnealingProblemSampler(num_reads=sa_reads, num_sweeps=sa_sweeps),
-            hybrid.EnergyImpactDecomposer(size=subproblem_size, rolling=True, rolling_history=0.3, traversal='bfs')
-                | hybrid.QPUSubproblemAutoEmbeddingSampler(num_reads=qpu_reads, qpu_sampler=qpu_sampler)
+            hybrid.InterruptableTabuSampler(
+                timeout=tabu_timeout),
+            hybrid.InterruptableSimulatedAnnealingProblemSampler(
+                num_reads=sa_reads, num_sweeps=sa_sweeps),
+            hybrid.EnergyImpactDecomposer(
+                size=subproblem_size, rolling=True, rolling_history=0.3, traversal='bfs')
+                | hybrid.QPUSubproblemAutoEmbeddingSampler(
+                    num_reads=qpu_reads, qpu_sampler=qpu_sampler)
                 | hybrid.SplatComposer(),
         ) | hybrid.ArgMin()
+
         self.runnable = hybrid.Loop(iteration, max_iter=max_iter, convergence=convergence)
 
         samples = []
