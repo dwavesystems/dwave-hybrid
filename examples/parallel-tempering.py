@@ -41,52 +41,43 @@ print("BQM: {} nodes, {} edges, {:.2f}% density".format(n, m, d))
 # PT workflow, one approach: store temperatures/betas in states
 
 class FixedTemperatureSampler(hybrid.Runnable, hybrid.traits.SISO):
-    """PT propagate/update step."""
+    """PT propagate/update step.
+
+    On each call, run 10k sweeps of fixed beta/temperature simulated annealing,
+    effectively generating one new sample on a given temperature.
+    """
 
     def next(self, state, **runopts):
-        num_reads = 20
-
-        # neal bugfix
-        samples = state.samples.change_vartype('SPIN', inplace=False)
-
-        # construct initial_states from current samples (tile and/or trim)
-        labels_map = dict(zip(samples.variables, range(len(samples.variables))))
-        samples_array = samples.record.sample
-        if samples_array.shape[0] < num_reads:
-            samples_array = np.tile(samples_array, (num_reads // samples_array.shape[0] + 1, 1))
-        if samples_array.shape[0] > num_reads:
-            samples_array = samples_array[:num_reads]
-
-        initial_states = (samples_array, labels_map)
         new_samples = neal.SimulatedAnnealingSampler().sample(
-            state.problem, initial_states=initial_states,
+            state.problem, initial_states=state.samples,
             beta_range=(state.beta, state.beta), beta_schedule_type='linear',
-            num_reads=num_reads, sweeps=1000).aggregate()
+            num_reads=1, num_sweeps=10000).aggregate()
 
         return state.updated(samples=new_samples)
 
 
 class SwapReplicas(hybrid.Runnable, hybrid.traits.MIMO):
-    """PT swap replicas step."""
+    """PT swap replicas step.
+
+    On each call, choose a random input state (replica), and propose a swap with
+    the adjacent state (replica).
+    """
 
     def next(self, states, **runopts):
-        # choose a random state, and propose a swap with the adjacent state
-
         i = random.choice(range(len(states) - 1))
         j = i + 1
 
-        state_i = states[i]
-        state_j = states[j]
+        s_i = states[i]
+        s_j = states[j]
 
-        beta_diff = state_i.beta - state_j.beta
-        energy_diff = state_i.samples.first.energy - state_j.samples.first.energy
+        beta_diff = s_i.beta - s_j.beta
+        energy_diff = s_i.samples.first.energy - s_j.samples.first.energy
 
         p = random.uniform(0, 1)
         w = min(1, math.exp(beta_diff * energy_diff))
-        if p < w:
+        if w > p:
             # swap samples for replicas i and j
-            states[i] = state_i.updated(samples=state_j.samples)
-            states[j] = state_j.updated(samples=state_i.samples)
+            states[i].samples, states[j].samples = s_j.samples, s_i.samples
 
         return states
 
@@ -94,8 +85,8 @@ class SwapReplicas(hybrid.Runnable, hybrid.traits.MIMO):
 n_replicas = 10
 n_iterations = 10
 
-# every state is randomly initialized
-state = hybrid.State.from_problem(bqm, samples=hybrid.random_sample)
+# states are randomly initialized
+state = hybrid.State(problem=bqm)
 
 # create n_replicas with geometric distribution of betas (inverse temperature)
 replicas = hybrid.States(
@@ -103,10 +94,10 @@ replicas = hybrid.States(
 
 # run replicas update/swap for n_iterations
 # (after each update/sampling step, do n_replicas-1 swap operations)
-workflow = hybrid.Loop(
-    hybrid.Map(FixedTemperatureSampler())
-    | hybrid.Loop(SwapReplicas(), max_iter=n_replicas-1), max_iter=n_iterations
-) | hybrid.MergeSamples(aggregate=True)
+update = hybrid.Map(FixedTemperatureSampler())
+swap = hybrid.Loop(SwapReplicas(), max_iter=n_replicas-1)
+workflow = hybrid.Loop(update | swap, max_iter=n_iterations) \
+         | hybrid.MergeSamples(aggregate=True)
 
 solution = workflow.run(replicas).result()
 
