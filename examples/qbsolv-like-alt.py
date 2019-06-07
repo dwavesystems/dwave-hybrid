@@ -49,7 +49,7 @@ random = hybrid.Map(
     hybrid.Lambda(merge_substates)
 ) | hybrid.SplatComposer()
 
-subsampler = hybrid.Parallel(qpu, random, endomorphic=False) | hybrid.ArgMin()
+subsampler = hybrid.Parallel(qpu, random) | hybrid.ArgMin()
 
 iteration = hybrid.Race(
     hybrid.Identity(),

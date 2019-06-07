@@ -52,10 +52,10 @@ generate_antithesis = ( hybrid.IdentityDecomposer()
 generate_synthesis = ( hybrid.GreedyPathMerge()
                      | hybrid.TabuProblemSampler())
 
-min_tracker = hybrid.TrackMin()
+tracker = hybrid.TrackMin()
 
 local_update = hybrid.LoopWhileNoImprovement(
-    hybrid.Parallel(generate_antithesis) | generate_synthesis | min_tracker,
+    hybrid.Parallel(hybrid.Identity(), generate_antithesis) | generate_synthesis | tracker,
     max_tries=10)
 
 global_update = hybrid.Loop(generate_antithesis | local_update, max_iter=10)
@@ -69,4 +69,4 @@ final_state = global_update.run(init_state).result()
 hybrid.profiling.print_counters(global_update)
 
 # show results
-print("Solution: sample={.samples.first}".format(min_tracker.best))
+print("Solution: sample={.samples.first}".format(tracker.best))
