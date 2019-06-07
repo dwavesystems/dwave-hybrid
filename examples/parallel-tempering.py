@@ -73,8 +73,10 @@ class SwapReplicas(hybrid.Runnable, hybrid.traits.MIMO):
         beta_diff = s_i.beta - s_j.beta
         energy_diff = s_i.samples.first.energy - s_j.samples.first.energy
 
+        # since `min(1, math.exp(beta_diff * energy_diff))` can overflow,
+        # we need to move `min` under `exp`
+        w = math.exp(min(0, beta_diff * energy_diff))
         p = random.uniform(0, 1)
-        w = min(1, math.exp(beta_diff * energy_diff))
         if w > p:
             # swap samples for replicas i and j
             states[i].samples, states[j].samples = s_j.samples, s_i.samples
