@@ -45,6 +45,12 @@ class Branch(Runnable):
             Complete processing sequence to update a current set of samples,
             such as: :code:`decomposer | sampler | composer`.
 
+    Input:
+        Defined by the first branch component.
+
+    Output:
+        Defined by the last branch component.
+
     Examples:
         This example runs one iteration of a branch comprising a decomposer,
         local Tabu solver, and a composer. A 10-variable binary quadratic model
@@ -107,15 +113,14 @@ class Branch(Runnable):
         self.multi_input = self.components[0].multi_input
         self.multi_output = self.components[-1].multi_output
 
-
     def __or__(self, other):
-        """Composition of Branch with runnable components (L-to-R) returns a new
-        runnable Branch.
+        """Sequential composition of runnable components (L-to-R)
+        returns a new runnable Branch.
         """
         if isinstance(other, Branch):
-            return Branch(components=chain(self.components, other.components))
+            return Branch(components=chain(self, other))
         elif isinstance(other, Runnable):
-            return Branch(components=chain(self.components, (other,)))
+            return Branch(components=chain(self, (other,)))
         else:
             raise TypeError("branch can be composed only with Branch or Runnable")
 
@@ -161,6 +166,100 @@ class Branch(Runnable):
         """Try terminating all components in an instantiated :class:`Branch`."""
         for component in self.components:
             component.stop()
+
+
+class Branches(Runnable, traits.MIMO):
+    """Parallelly executed :class:`~hybrid.core.Runnable` components.
+
+    Args:
+        *branches ([:class:`~hybrid.core.Runnable`]):
+            Runnable branches listed as positional arguments.
+
+    Input:
+        :class:`~hybrid.core.States`
+
+    Output:
+        :class:`~hybrid.core.States`
+
+    Note:
+        `Branches` is also available via implicit parallelization binary
+        operator `&`.
+
+    Examples:
+        This example runs two branches, a classical tabu search and a random
+        sampler, until both terminate.
+
+        >>> Branches(TabuSubproblemSampler(), RandomSubproblemSampler())    # doctest: +SKIP
+
+        Alternatively:
+
+        >>> TabuSubproblemSampler() & RandomSubproblemSampler()     # doctest: +SKIP
+
+    """
+
+    def __init__(self, *branches, **runopts):
+        self.branches = branches
+        super(Branches, self).__init__(**runopts)
+
+        if not self.branches:
+            raise ValueError("Branches require at least one branch")
+
+        # patch components's I/O requirements based on the subcomponents' requirements
+
+        # ensure i/o dimensionality for all branches is the same
+        first = branches[0]
+        if not all(b.multi_input == first.multi_input for b in branches[1:]):
+            raise TypeError("not all branches have the same input dimensionality")
+        if not all(b.multi_output == first.multi_output for b in branches[1:]):
+            raise TypeError("not all branches have the same output dimensionality")
+
+        # input has to satisfy all branches' input
+        self.inputs = set.union(*(branch.inputs for branch in self.branches))
+        self.multi_input = True
+
+        # output will be one of the branches' output, but the only guarantee we
+        # can make upfront is the largest common subset of all outputs
+        self.outputs = set.intersection(*(branch.outputs for branch in self.branches))
+        self.multi_output = True
+
+    def __and__(self, other):
+        """Parallel composition of runnable components returns new Branches."""
+        if isinstance(other, Branches):
+            return Branches(*chain(self, other))
+        elif isinstance(other, Runnable):
+            return Branches(*chain(self, (other,)))
+        else:
+            raise TypeError("Branches can only be composed only with Branches or Runnable")
+
+    def __str__(self):
+        return " & ".join("({})".format(b) for b in self) or "(zero branches)"
+
+    def __repr__(self):
+        return "{}{!r}".format(self.name, tuple(self))
+
+    def __iter__(self):
+        return iter(self.branches)
+
+    def next(self, states, **runopts):
+        futures = [
+            branch.run(state.updated(), **runopts)
+                for branch, state in zip(self.branches, states)]
+
+        # wait for all branches to finish
+        concurrent.futures.wait(
+            futures,
+            return_when=concurrent.futures.ALL_COMPLETED)
+
+        # collect resolved states (in original order, not completion order)
+        states = States()
+        for f in futures:
+            states.append(f.result())
+
+        return states
+
+    def halt(self):
+        for branch in self.branches:
+            branch.stop()
 
 
 class RacingBranches(Runnable, traits.SIMO):
