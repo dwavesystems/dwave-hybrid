@@ -198,11 +198,15 @@ class Branches(Runnable, traits.MIMO):
     """
 
     def __init__(self, *branches, **runopts):
-        self.branches = branches
         super(Branches, self).__init__(**runopts)
+        self.branches = tuple(branches)
 
         if not self.branches:
             raise ValueError("Branches require at least one branch")
+
+        for branch in self.branches:
+            if not isinstance(branch, Runnable):
+                raise TypeError("expected Runnable branch, got {!r}".format(branch))
 
         # patch components's I/O requirements based on the subcomponents' requirements
 

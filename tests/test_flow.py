@@ -23,7 +23,7 @@ from concurrent import futures
 import dimod
 
 from hybrid.flow import (
-    Branch, RacingBranches, ParallelBranches,
+    Branch, Branches, RacingBranches, ParallelBranches,
     ArgMin, Map, Reduce, Lambda, Unwind, TrackMin,
     LoopUntilNoImprovement, LoopWhileNoImprovement, SimpleIterator, Loop,
     Identity
@@ -107,6 +107,107 @@ class TestBranch(unittest.TestCase):
         branch.stop()
 
         self.assertTrue(next(iter(branch)).stopped)
+
+
+class TestBranches(unittest.TestCase):
+
+    def test_empty(self):
+        with self.assertRaises(ValueError):
+            Branches()
+
+    def test_composition(self):
+        class A(Runnable):
+            def next(self, state):
+                return state.updated(x=state.x + 1)
+        class B(Runnable):
+            def next(self, state):
+                return state.updated(x=state.x * 7)
+
+        a, b = A(), B()
+
+        # single branch
+
+        b1 = Branches(a)
+        ss = States(State(x=1))
+        res = b1.run(ss).result()
+
+        self.assertEqual(b1.branches, (a,))
+        self.assertEqual(len(res), 1)
+        self.assertEqual(res[0].x, ss[0].x + 1)
+
+        # two branches, explicit and implicit construction
+
+        for b2 in [Branches(a, b), a & b]:
+            ss = States(State(x=1), State(x=1))
+            res = b2.run(ss).result()
+
+            self.assertEqual(b2.branches, (a, b))
+            self.assertEqual(len(res), 2)
+            self.assertEqual(res[0].x, ss[0].x + 1)
+            self.assertEqual(res[1].x, ss[1].x * 7)
+
+        # adding a branch to branches
+
+        b4 = b2 & b & a
+        ss = States(*[State(x=1) for _ in range(4)])
+        res = b4.run(ss).result()
+
+        self.assertEqual(b4.branches, (a, b, b, a))
+        self.assertEqual(len(res), 4)
+        self.assertEqual(res[0].x, ss[0].x + 1)
+        self.assertEqual(res[1].x, ss[1].x * 7)
+        self.assertEqual(res[2].x, ss[2].x * 7)
+        self.assertEqual(res[3].x, ss[3].x + 1)
+
+        # invalid type
+
+        with self.assertRaises(TypeError):
+            b & 1
+        with self.assertRaises(TypeError):
+            b1 & 1
+
+    def test_look_and_feel(self):
+        br = Runnable(), Runnable()
+        pb = Branches(*br)
+        self.assertEqual(pb.name, 'Branches')
+        self.assertEqual(str(pb), '(Runnable) & (Runnable)')
+        self.assertEqual(repr(pb), 'Branches(Runnable(), Runnable())')
+        self.assertEqual(tuple(pb), br)
+
+    def test_continuity(self):
+        class Fast(Runnable):
+            def next(self, state):
+                time.sleep(0.1)
+                return state.updated(x=state.x + 1)
+
+        class Slow(Runnable):
+            def next(self, state):
+                time.sleep(0.2)
+                return state.updated(x=state.x + 2)
+
+        bs = Branches(Slow(), Fast(), Slow())
+        ss = States(*[State(x=0) for _ in range(3)])
+        res = bs.run(ss).result()
+        self.assertEqual([s.x for s in res], [2, 1, 2])
+
+    def test_parallel_independent_execution(self):
+        class Component(Runnable):
+            def __init__(self, runtime):
+                super(Component, self).__init__()
+                self.runtime = runtime
+            def next(self, state):
+                time.sleep(self.runtime)
+                return state
+
+        # make sure all branches really run in parallel
+        n = 5
+        bs = Branches(*[Component(1) for _ in range(n)])
+        ss = States(*[State() for _ in range(n)])
+        with tictoc() as tt:
+            bs.run(ss).result()
+
+        # total runtime has to be smaller that the sum of individual runtimes
+        self.assertTrue(1 <= tt.dt <= 2)
 
 
 class TestRacingBranches(unittest.TestCase):
