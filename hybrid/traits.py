@@ -31,7 +31,7 @@ class StateTraits(object):
     def validate_state_trait(self, state, trait, io):
         """Validate single input/output (`io`) `state` `trait`."""
         if trait not in state:
-            raise StateTraitMissingError("{} state is missing {!r}".format(io, trait))
+            raise StateTraitMissingError("{} state is missing {!r} on {!r}".format(io, trait, self))
 
     def validate_input_state_traits(self, inp):
         if not self.validate_input:
