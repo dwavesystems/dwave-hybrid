@@ -28,10 +28,10 @@ from hybrid.exceptions import EndOfStream
 from hybrid import traits
 
 __all__ = [
-    'Branch', 'RacingBranches', 'Race', 'ParallelBranches', 'Parallel',
+    'Branch', 'Branches', 'RacingBranches', 'Race', 'ParallelBranches', 'Parallel',
     'Map', 'Reduce', 'Lambda', 'ArgMin', 'Unwind', 'TrackMin',
     'Loop', 'LoopUntilNoImprovement', 'LoopWhileNoImprovement',
-    'Identity'
+    'Identity', 'Dup'
 ]
 
 logger = logging.getLogger(__name__)
@@ -365,6 +365,22 @@ class RacingBranches(Runnable, traits.SIMO):
 
 
 Race = RacingBranches
+
+
+class Dup(Runnable, traits.SIMO):
+    """Duplicates input :class:`~hybrid.core.State`, n times, into output
+    :class:`~hybrid.core.States`.
+    """
+
+    def __init__(self, n, **runopts):
+        super(Dup, self).__init__(**runopts)
+        self.n = n
+
+    def __repr__(self):
+        return "{}(n={!r})".format(self.name, self.n)
+
+    def next(self, state, **runopts):
+        return States(*[state.updated() for _ in range(self.n)])
 
 
 class ParallelBranches(Runnable, traits.SIMO):

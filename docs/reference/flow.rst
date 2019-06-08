@@ -13,6 +13,7 @@ Classes
 
 .. autoclass:: ArgMin
 .. autoclass:: Branch
+.. autoclass:: Branches
 .. autoclass:: Lambda
 .. autoclass:: Loop
 .. autoclass:: LoopUntilNoImprovement
@@ -23,6 +24,7 @@ Classes
 .. autoclass:: Reduce
 .. autoclass:: TrackMin
 .. autoclass:: Unwind
+.. autoclass:: Dup
 
 Methods
 =======

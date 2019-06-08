@@ -26,7 +26,7 @@ from hybrid.flow import (
     Branch, Branches, RacingBranches, ParallelBranches,
     ArgMin, Map, Reduce, Lambda, Unwind, TrackMin,
     LoopUntilNoImprovement, LoopWhileNoImprovement, SimpleIterator, Loop,
-    Identity
+    Identity, Dup
 )
 from hybrid.core import State, States, Runnable, Present
 from hybrid.utils import min_sample, max_sample
@@ -210,6 +210,22 @@ class TestBranches(unittest.TestCase):
 
         # total runtime has to be smaller that the sum of individual runtimes
         self.assertTrue(1 <= tt.dt <= 2)
+
+
+class TestDup(unittest.TestCase):
+
+    def test_basic(self):
+        s = State(x=1)
+        self.assertEqual(Dup(0).run(s).result(), States())
+        self.assertEqual(Dup(1).run(s).result(), States(s))
+        self.assertEqual(Dup(2).run(s).result(), States(s, s))
+
+    def test_immutability(self):
+        s = State(x=1)
+        ss = Dup(1).run(s).result()
+
+        s.x = 2
+        self.assertEqual(ss[0].x, 1)
 
 
 class TestRacingBranches(unittest.TestCase):
