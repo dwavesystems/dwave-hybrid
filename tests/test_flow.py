@@ -62,6 +62,8 @@ class TestBranch(unittest.TestCase):
         self.assertEqual(b2.run(s).result().x, (s.x + 1) * 7 * 7 + 1)
 
         with self.assertRaises(TypeError):
+            a | 1
+        with self.assertRaises(TypeError):
             b1 | 1
 
     def test_look_and_feel(self):

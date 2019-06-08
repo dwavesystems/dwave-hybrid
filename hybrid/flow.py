@@ -82,6 +82,10 @@ class Branch(Runnable):
         if not self.components:
             raise ValueError("branch has to contain at least one component")
 
+        for component in self.components:
+            if not isinstance(component, Runnable):
+                raise TypeError("expected Runnable component, got {!r}".format(component))
+
         # patch branch's I/O requirements based on the first and last component
 
         # be conservative in output requirements, but liberal in input requirements
@@ -122,7 +126,7 @@ class Branch(Runnable):
         elif isinstance(other, Runnable):
             return Branch(components=chain(self, (other,)))
         else:
-            raise TypeError("branch can be composed only with Branch or Runnable")
+            raise TypeError("only Runnable's can be composed into a Branch")
 
     def __str__(self):
         return " | ".join(map(str, self)) or "(empty branch)"
@@ -233,7 +237,7 @@ class Branches(Runnable, traits.MIMO):
         elif isinstance(other, Runnable):
             return Branches(*chain(self, (other,)))
         else:
-            raise TypeError("Branches can only be composed only with Branches or Runnable")
+            raise TypeError("only Runnable's can be composed into Branches")
 
     def __str__(self):
         return " & ".join("({})".format(b) for b in self) or "(zero branches)"
