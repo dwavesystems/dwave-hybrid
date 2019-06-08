@@ -372,8 +372,8 @@ class Dup(Runnable, traits.SIMO):
     :class:`~hybrid.core.States`.
     """
 
-    def __init__(self, n, **runopts):
-        super(Dup, self).__init__(**runopts)
+    def __init__(self, n, *args, **kwargs):
+        super(Dup, self).__init__(*args, **kwargs)
         self.n = n
 
     def __repr__(self):
@@ -391,6 +391,17 @@ class ParallelBranches(Runnable, traits.SIMO):
         *branches ([:class:`~hybrid.core.Runnable`]):
             Comma-separated branches.
 
+    Input:
+        :class:`~hybrid.core.State`
+
+    Output:
+        :class:`~hybrid.core.States`
+
+    Note:
+        `Parallel` is implemented as::
+
+            Parallel(*branches) := Dup(len(branches)) | Branches(*branches)
+
     Note:
         `ParallelBranches` is also available as `Parallel`.
 
@@ -406,58 +417,26 @@ class ParallelBranches(Runnable, traits.SIMO):
     """
 
     def __init__(self, *branches, **runopts):
-        self.branches = branches
         super(ParallelBranches, self).__init__(**runopts)
+        self.branches = Branches(*branches)
+        self.runnable = Dup(len(tuple(self.branches))) | self.branches
 
-        if not self.branches:
-            raise ValueError("parallel branches require at least one branch")
-
-        # patch components's I/O requirements based on the subcomponents' requirements
-
-        # ensure i/o dimensionality for all branches is the same
-        first = branches[0]
-        if not all(b.multi_input == first.multi_input for b in branches[1:]):
-            raise TypeError("not all branches have the same input dimensionality")
-        if not all(b.multi_output == first.multi_output for b in branches[1:]):
-            raise TypeError("not all branches have the same output dimensionality")
-
-        # PB's input has to satisfy all branches' input
-        self.inputs = set.union(*(branch.inputs for branch in self.branches))
-        self.multi_input = first.multi_input
-
-        # PB's output will be one of the branches' output, but the only guarantee we
-        # can make upfront is the largest common subset of all outputs
-        self.outputs = set.intersection(*(branch.outputs for branch in self.branches))
-        self.multi_output = True
-
-    def __str__(self):
-        return " & ".join("({})".format(b) for b in self) or "(zero branches)"
+        # propagate on-construction traits verification (optional)
+        self.inputs = self.branches.inputs
+        self.outputs = self.branches.outputs
 
     def __repr__(self):
-        return "{}{!r}".format(self.name, tuple(self))
+        return "{}{!r}".format(self.name, tuple(self.branches))
 
     def __iter__(self):
         return iter(self.branches)
 
     def next(self, state, **runopts):
-        futures = [branch.run(state.updated(), **runopts) for branch in self.branches]
-
-        # wait for all branches to finish
-        concurrent.futures.wait(
-            futures,
-            return_when=concurrent.futures.ALL_COMPLETED)
-
-        # collect resolved states (in original order, not completion order)
-        states = States()
-        for f in futures:
-            states.append(f.result())
-
-        return states
+        runopts['executor'] = immediate_executor
+        return self.runnable.run(state, **runopts).result()
 
     def halt(self):
-        """Terminate an iteration of an instantiated :class:`RacingBranches`."""
-        for branch in self.branches:
-            branch.stop()
+        return self.runnable.stop()
 
 
 Parallel = ParallelBranches

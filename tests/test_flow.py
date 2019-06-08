@@ -272,7 +272,6 @@ class TestParallelBranches(unittest.TestCase):
         br = Runnable(), Runnable()
         pb = ParallelBranches(*br)
         self.assertEqual(pb.name, 'ParallelBranches')
-        self.assertEqual(str(pb), '(Runnable) & (Runnable)')
         self.assertEqual(repr(pb), 'ParallelBranches(Runnable(), Runnable())')
         self.assertEqual(tuple(pb), br)
 
