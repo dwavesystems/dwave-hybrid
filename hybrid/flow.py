@@ -805,18 +805,27 @@ class LoopUntilNoImprovement(Runnable):
             By default, `key == operator.attrgetter('samples.first.energy')`,
             thus favoring states containing a sample with the minimal energy.
 
+        terminate (callable, optional, default=None):
+            Loop termination predicate on `key` value::
+
+                terminate :: (Ord k) => k -> Bool
     """
 
     def __init__(self, runnable, max_iter=None, convergence=None,
-                 max_time=None, key=None, **runopts):
+                 max_time=None, key=None, terminate=None, **runopts):
         super(LoopUntilNoImprovement, self).__init__(**runopts)
         self.runnable = runnable
         self.max_iter = max_iter
         self.max_time = max_time
         self.convergence = convergence
+
         if key is None:
             key = attrgetter('samples.first.energy')
         self.key = key
+
+        if terminate is not None and not callable(terminate):
+            raise TypeError("expecting a predicate on 'key' for 'terminate'")
+        self.terminate = terminate
 
         # preemptively check runnable's i/o dimensionality
         if runnable.validate_input and runnable.validate_output:
@@ -835,7 +844,8 @@ class LoopUntilNoImprovement(Runnable):
 
     def __repr__(self):
         return ("{self.name}(runnable={self.runnable!r}, max_iter={self.max_iter!r}, "
-                "convergence={self.convergence!r}, key={self.key!r})").format(self=self)
+                "convergence={self.convergence!r}, max_time={self.max_time!r}, "
+                "key={self.key!r}, terminate={self.key!r})").format(self=self)
 
     def __iter__(self):
         return iter((self.runnable,))
@@ -890,6 +900,10 @@ class LoopUntilNoImprovement(Runnable):
                 break
             if self.convergence is not None and cnt <= 0:
                 break
+            if self.terminate is not None:
+                output_energy = self.key(output_state)
+                if self.terminate(output_energy):
+                    break
 
         return output_state
 
