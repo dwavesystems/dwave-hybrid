@@ -820,7 +820,9 @@ class LoopUntilNoImprovement(Runnable):
         self.convergence = convergence
 
         if key is None:
-            key = attrgetter('samples.first.energy')
+            key = 'samples.first.energy'
+        if isinstance(key, six.string_types):
+            key = attrgetter(key)
         self.key = key
 
         if terminate is not None and not callable(terminate):

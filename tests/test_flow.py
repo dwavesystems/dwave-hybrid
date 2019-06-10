@@ -471,7 +471,17 @@ class TestLoopUntilNoImprovement(unittest.TestCase):
                                    key=operator.attrgetter('samples.first.energy'),
                                    terminate=partial(operator.ge, -1))
         s = w.run(state).result()
+        self.assertEqual(s.samples.first.energy, -1)
 
+        w = LoopUntilNoImprovement(ExactSolver(),
+                                   key='samples.first.energy',
+                                   terminate=partial(operator.ge, -1))
+        s = w.run(state).result()
+        self.assertEqual(s.samples.first.energy, -1)
+
+        w = LoopUntilNoImprovement(ExactSolver(),
+                                   terminate=partial(operator.ge, -1))
+        s = w.run(state).result()
         self.assertEqual(s.samples.first.energy, -1)
 
     def test_finite_loop(self):
