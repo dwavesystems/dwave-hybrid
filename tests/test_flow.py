@@ -445,6 +445,18 @@ class TestLoopUntilNoImprovement(unittest.TestCase):
             state = loop.run(State(cnt=0)).result()
             self.assertEqual(state.cnt, 3)
 
+    def test_terminate_predicate(self):
+        class Inc(Runnable):
+            def next(self, state):
+                return state.updated(cnt=state.cnt + 1)
+
+        it = LoopUntilNoImprovement(Inc(),
+                                    key=lambda state: state.cnt,
+                                    terminate=lambda key: key >= 3)
+        s = it.run(State(cnt=0)).result()
+
+        self.assertEqual(s.cnt, 3)
+
     def test_finite_loop(self):
         class Inc(Runnable):
             def next(self, state):
@@ -582,6 +594,18 @@ class TestLoopWhileNoImprovement(unittest.TestCase):
 
         self.assertEqual(len(loop.runnable.timers['dispatch.next']), 5)
         self.assertEqual(state.cnt, 1)
+
+    def test_terminate_predicate(self):
+        class Inc(Runnable):
+            def next(self, state):
+                return state.updated(cnt=state.cnt + 1)
+
+        it = LoopWhileNoImprovement(Inc(),
+                                    key=lambda state: state.cnt,
+                                    terminate=lambda key: key >= 3)
+        s = it.run(State(cnt=0)).result()
+
+        self.assertEqual(s.cnt, 3)
 
     def test_infinite_loop_stops(self):
         """An infinite loop can be stopped after 10 iterations."""
