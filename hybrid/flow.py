@@ -850,7 +850,7 @@ class LoopUntilNoImprovement(Runnable):
     def __iter__(self):
         return iter((self.runnable,))
 
-    def iteration_update(self, iterno, cnt, input_state, output_state):
+    def iteration_update(self, iterno, cnt, inp, out):
         """Implement "converge on unchanging output" behavior:
 
           - loop `max_iter` times, but bail-out earlier if output doesn't change
@@ -861,17 +861,13 @@ class LoopUntilNoImprovement(Runnable):
         Input: relevant counters and I/O states.
         Output: next input state and next counter values
         """
+        input_state, input_key = inp
+        output_state, output_key = out
 
         if self.convergence is None:
             return iterno + 1, cnt, output_state
 
-        input_energy = self.key(input_state)
-        output_energy = self.key(output_state)
-
-        logger.info("{name} Iteration(iterno={iterno}, output_state_energy={key})".format(
-            name=self.name, iterno=iterno, key=output_energy))
-
-        if output_energy == input_energy:
+        if output_key == input_key:
             cnt -= 1
         else:
             cnt = self.convergence
@@ -883,6 +879,8 @@ class LoopUntilNoImprovement(Runnable):
         cnt = self.convergence or 0
         input_state = state
         output_state = input_state
+        input_key = None
+        output_key = None
         start = time.time()
 
         runopts['executor'] = immediate_executor
@@ -890,7 +888,17 @@ class LoopUntilNoImprovement(Runnable):
         while not self.stop_signal.is_set():
             output_state = self.runnable.run(input_state, **runopts).result()
 
-            iterno, cnt, input_state = self.iteration_update(iterno, cnt, input_state, output_state)
+            if self.convergence or self.terminate:
+                input_key = self.key(input_state)
+                output_key = self.key(output_state)
+
+            logger.info("{name} Iteration(iterno={iterno}, "
+                        "input_state_key={inp}, output_state_key={out})".format(
+                            name=self.name, iterno=iterno,
+                            inp=input_key, out=output_key))
+
+            iterno, cnt, input_state = self.iteration_update(
+                iterno, cnt, (input_state, input_key), (output_state, output_key))
 
             runtime = time.time() - start
 
@@ -900,10 +908,8 @@ class LoopUntilNoImprovement(Runnable):
                 break
             if self.convergence is not None and cnt <= 0:
                 break
-            if self.terminate is not None:
-                output_energy = self.key(output_state)
-                if self.terminate(output_energy):
-                    break
+            if self.terminate is not None and self.terminate(output_key):
+                break
 
         return output_state
 
@@ -974,7 +980,7 @@ class LoopWhileNoImprovement(LoopUntilNoImprovement):
             runnable=runnable, max_iter=max_iter, convergence=max_tries,
             max_time=max_time, key=key, **runopts)
 
-    def iteration_update(self, iterno, cnt, input_state, output_state):
+    def iteration_update(self, iterno, cnt, inp, out):
         """Implement "no-improvement count-down" behavior:
 
           - loop indefinitely, but bail-out if there's no improvement of output
@@ -986,17 +992,13 @@ class LoopWhileNoImprovement(LoopUntilNoImprovement):
         Input: relevant counters and I/O states.
         Output: next input state and next counter values
         """
+        input_state, input_key = inp
+        output_state, output_key = out
 
         if self.convergence is None:
             return iterno + 1, cnt, output_state
 
-        input_energy = self.key(input_state)
-        output_energy = self.key(output_state)
-
-        logger.info("{name} Iteration(iterno={iterno}, output_state_energy={key})".format(
-            name=self.name, iterno=iterno, key=output_energy))
-
-        if output_energy >= input_energy:
+        if output_key >= input_key:
             # no improvement, re-use the same input
             cnt -= 1
             next_input_state = input_state
