@@ -444,6 +444,10 @@ class Runnable(traits.StateTraits):
         runnable Branch."""
         return Branch(components=(self, other))
 
+    def __and__(self, other):
+        """Parallel composition of runnable components returns new Branches."""
+        return Branches(self, other)
+
 
 def stoppable(cls):
     """Extends a `Runnable` subclass with a `stop_signal` semaphore/event, and
@@ -653,4 +657,4 @@ class HybridSubproblemRunnable(HybridRunnable):
 
 
 # deferred import, due to flow.* deps on core.*
-from hybrid.flow import Branch
+from hybrid.flow import Branch, Branches

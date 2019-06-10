@@ -28,10 +28,10 @@ from hybrid.exceptions import EndOfStream
 from hybrid import traits
 
 __all__ = [
-    'Branch', 'RacingBranches', 'Race', 'ParallelBranches', 'Parallel',
+    'Branch', 'Branches', 'RacingBranches', 'Race', 'ParallelBranches', 'Parallel',
     'Map', 'Reduce', 'Lambda', 'ArgMin', 'Unwind', 'TrackMin',
     'Loop', 'LoopUntilNoImprovement', 'LoopWhileNoImprovement',
-    'Identity'
+    'Identity', 'Dup'
 ]
 
 logger = logging.getLogger(__name__)
@@ -44,6 +44,12 @@ class Branch(Runnable):
         components (iterable of :class:`~hybrid.core.Runnable`):
             Complete processing sequence to update a current set of samples,
             such as: :code:`decomposer | sampler | composer`.
+
+    Input:
+        Defined by the first branch component.
+
+    Output:
+        Defined by the last branch component.
 
     Examples:
         This example runs one iteration of a branch comprising a decomposer,
@@ -76,6 +82,10 @@ class Branch(Runnable):
         if not self.components:
             raise ValueError("branch has to contain at least one component")
 
+        for component in self.components:
+            if not isinstance(component, Runnable):
+                raise TypeError("expected Runnable component, got {!r}".format(component))
+
         # patch branch's I/O requirements based on the first and last component
 
         # be conservative in output requirements, but liberal in input requirements
@@ -107,17 +117,16 @@ class Branch(Runnable):
         self.multi_input = self.components[0].multi_input
         self.multi_output = self.components[-1].multi_output
 
-
     def __or__(self, other):
-        """Composition of Branch with runnable components (L-to-R) returns a new
-        runnable Branch.
+        """Sequential composition of runnable components (L-to-R)
+        returns a new runnable Branch.
         """
         if isinstance(other, Branch):
-            return Branch(components=chain(self.components, other.components))
+            return Branch(components=chain(self, other))
         elif isinstance(other, Runnable):
-            return Branch(components=chain(self.components, (other,)))
+            return Branch(components=chain(self, (other,)))
         else:
-            raise TypeError("branch can be composed only with Branch or Runnable")
+            raise TypeError("only Runnables can be composed into a Branch")
 
     def __str__(self):
         return " | ".join(map(str, self)) or "(empty branch)"
@@ -161,6 +170,108 @@ class Branch(Runnable):
         """Try terminating all components in an instantiated :class:`Branch`."""
         for component in self.components:
             component.stop()
+
+
+class Branches(Runnable, traits.MIMO):
+    """Runs multiple workflows of type :class:`~hybrid.core.Runnable` in
+    parallel, blocking until all finish.
+
+    Branches operates similarly to :class:`~hybrid.flow.Parallel`, but each
+    branch runs on a separate input :class:`~hybrid.core.State`.
+
+    Args:
+        *branches ([:class:`~hybrid.core.Runnable`]):
+            Runnable branches listed as positional arguments.
+
+    Input:
+        :class:`~hybrid.core.States`
+
+    Output:
+        :class:`~hybrid.core.States`
+
+    Note:
+        :class:`~hybrid.flow.Branches` is also available via implicit
+        parallelization binary operator `&`.
+
+    Examples:
+        This example runs two branches, a classical tabu search and a random
+        sampler, until both terminate.
+
+        >>> Branches(TabuSubproblemSampler(), RandomSubproblemSampler())    # doctest: +SKIP
+
+        Alternatively:
+
+        >>> TabuSubproblemSampler() & RandomSubproblemSampler()     # doctest: +SKIP
+
+    """
+
+    def __init__(self, *branches, **runopts):
+        super(Branches, self).__init__(**runopts)
+        self.branches = tuple(branches)
+
+        if not self.branches:
+            raise ValueError("Branches require at least one branch")
+
+        for branch in self.branches:
+            if not isinstance(branch, Runnable):
+                raise TypeError("expected Runnable branch, got {!r}".format(branch))
+
+        # patch components's I/O requirements based on the subcomponents' requirements
+
+        # ensure i/o dimensionality for all branches is the same
+        first = branches[0]
+        if not all(b.multi_input == first.multi_input for b in branches[1:]):
+            raise TypeError("not all branches have the same input dimensionality")
+        if not all(b.multi_output == first.multi_output for b in branches[1:]):
+            raise TypeError("not all branches have the same output dimensionality")
+
+        # input has to satisfy all branches' input
+        self.inputs = set.union(*(branch.inputs for branch in self.branches))
+        self.multi_input = True
+
+        # output will be one of the branches' output, but the only guarantee we
+        # can make upfront is the largest common subset of all outputs
+        self.outputs = set.intersection(*(branch.outputs for branch in self.branches))
+        self.multi_output = True
+
+    def __and__(self, other):
+        """Parallel composition of runnable components returns new Branches."""
+        if isinstance(other, Branches):
+            return Branches(*chain(self, other))
+        elif isinstance(other, Runnable):
+            return Branches(*chain(self, (other,)))
+        else:
+            raise TypeError("only Runnables can be composed into Branches")
+
+    def __str__(self):
+        return " & ".join("({})".format(b) for b in self) or "(zero branches)"
+
+    def __repr__(self):
+        return "{}{!r}".format(self.name, tuple(self))
+
+    def __iter__(self):
+        return iter(self.branches)
+
+    def next(self, states, **runopts):
+        futures = [
+            branch.run(state.updated(), **runopts)
+                for branch, state in zip(self.branches, states)]
+
+        # wait for all branches to finish
+        concurrent.futures.wait(
+            futures,
+            return_when=concurrent.futures.ALL_COMPLETED)
+
+        # collect resolved states (in original order, not completion order)
+        states = States()
+        for f in futures:
+            states.append(f.result())
+
+        return states
+
+    def halt(self):
+        for branch in self.branches:
+            branch.stop()
 
 
 class RacingBranches(Runnable, traits.SIMO):
@@ -260,13 +371,43 @@ class RacingBranches(Runnable, traits.SIMO):
 Race = RacingBranches
 
 
+class Dup(Runnable, traits.SIMO):
+    """Duplicates input :class:`~hybrid.core.State`, n times, into output
+    :class:`~hybrid.core.States`.
+    """
+
+    def __init__(self, n, *args, **kwargs):
+        super(Dup, self).__init__(*args, **kwargs)
+        self.n = n
+
+    def __repr__(self):
+        return "{}(n={!r})".format(self.name, self.n)
+
+    def next(self, state, **runopts):
+        return States(*[state.updated() for _ in range(self.n)])
+
+
 class ParallelBranches(Runnable, traits.SIMO):
-    """Runs multiple multiple workflows of type :class:`~hybrid.core.Runnable`
-    in parallel, blocking until all finish.
+    """Runs multiple workflows of type :class:`~hybrid.core.Runnable` in
+    parallel, blocking until all finish.
+
+    Parallel/ParallelBranches operates similarly to :class:`~hybrid.flow.Branches`,
+    but every branch re-uses the same input :class:`~hybrid.core.State`.
 
     Args:
         *branches ([:class:`~hybrid.core.Runnable`]):
             Comma-separated branches.
+
+    Input:
+        :class:`~hybrid.core.State`
+
+    Output:
+        :class:`~hybrid.core.States`
+
+    Note:
+        `Parallel` is implemented as::
+
+            Parallel(*branches) := Dup(len(branches)) | Branches(*branches)
 
     Note:
         `ParallelBranches` is also available as `Parallel`.
@@ -283,58 +424,26 @@ class ParallelBranches(Runnable, traits.SIMO):
     """
 
     def __init__(self, *branches, **runopts):
-        self.branches = branches
         super(ParallelBranches, self).__init__(**runopts)
+        self.branches = Branches(*branches)
+        self.runnable = Dup(len(tuple(self.branches))) | self.branches
 
-        if not self.branches:
-            raise ValueError("parallel branches require at least one branch")
-
-        # patch components's I/O requirements based on the subcomponents' requirements
-
-        # ensure i/o dimensionality for all branches is the same
-        first = branches[0]
-        if not all(b.multi_input == first.multi_input for b in branches[1:]):
-            raise TypeError("not all branches have the same input dimensionality")
-        if not all(b.multi_output == first.multi_output for b in branches[1:]):
-            raise TypeError("not all branches have the same output dimensionality")
-
-        # PB's input has to satisfy all branches' input
-        self.inputs = set.union(*(branch.inputs for branch in self.branches))
-        self.multi_input = first.multi_input
-
-        # PB's output will be one of the branches' output, but the only guarantee we
-        # can make upfront is the largest common subset of all outputs
-        self.outputs = set.intersection(*(branch.outputs for branch in self.branches))
-        self.multi_output = True
-
-    def __str__(self):
-        return " & ".join("({})".format(b) for b in self) or "(zero branches)"
+        # propagate on-construction traits verification (optional)
+        self.inputs = self.branches.inputs
+        self.outputs = self.branches.outputs
 
     def __repr__(self):
-        return "{}{!r}".format(self.name, tuple(self))
+        return "{}{!r}".format(self.name, tuple(self.branches))
 
     def __iter__(self):
         return iter(self.branches)
 
     def next(self, state, **runopts):
-        futures = [branch.run(state.updated(), **runopts) for branch in self.branches]
-
-        # wait for all branches to finish
-        concurrent.futures.wait(
-            futures,
-            return_when=concurrent.futures.ALL_COMPLETED)
-
-        # collect resolved states (in original order, not completion order)
-        states = States()
-        for f in futures:
-            states.append(f.result())
-
-        return states
+        runopts['executor'] = immediate_executor
+        return self.runnable.run(state, **runopts).result()
 
     def halt(self):
-        """Terminate an iteration of an instantiated :class:`RacingBranches`."""
-        for branch in self.branches:
-            branch.stop()
+        return self.runnable.stop()
 
 
 Parallel = ParallelBranches
