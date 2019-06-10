@@ -126,7 +126,7 @@ class Branch(Runnable):
         elif isinstance(other, Runnable):
             return Branch(components=chain(self, (other,)))
         else:
-            raise TypeError("only Runnable's can be composed into a Branch")
+            raise TypeError("only Runnables can be composed into a Branch")
 
     def __str__(self):
         return " | ".join(map(str, self)) or "(empty branch)"
@@ -173,7 +173,11 @@ class Branch(Runnable):
 
 
 class Branches(Runnable, traits.MIMO):
-    """Parallelly executed :class:`~hybrid.core.Runnable` components.
+    """Runs multiple workflows of type :class:`~hybrid.core.Runnable` in
+    parallel, blocking until all finish.
+
+    Branches operates similarly to :class:`~hybrid.flow.Parallel`, but each
+    branch runs on a separate input :class:`~hybrid.core.State`.
 
     Args:
         *branches ([:class:`~hybrid.core.Runnable`]):
@@ -186,8 +190,8 @@ class Branches(Runnable, traits.MIMO):
         :class:`~hybrid.core.States`
 
     Note:
-        `Branches` is also available via implicit parallelization binary
-        operator `&`.
+        :class:`~hybrid.flow.Branches` is also available via implicit
+        parallelization binary operator `&`.
 
     Examples:
         This example runs two branches, a classical tabu search and a random
@@ -237,7 +241,7 @@ class Branches(Runnable, traits.MIMO):
         elif isinstance(other, Runnable):
             return Branches(*chain(self, (other,)))
         else:
-            raise TypeError("only Runnable's can be composed into Branches")
+            raise TypeError("only Runnables can be composed into Branches")
 
     def __str__(self):
         return " & ".join("({})".format(b) for b in self) or "(zero branches)"
@@ -384,8 +388,11 @@ class Dup(Runnable, traits.SIMO):
 
 
 class ParallelBranches(Runnable, traits.SIMO):
-    """Runs multiple multiple workflows of type :class:`~hybrid.core.Runnable`
-    in parallel, blocking until all finish.
+    """Runs multiple workflows of type :class:`~hybrid.core.Runnable` in
+    parallel, blocking until all finish.
+
+    Parallel/ParallelBranches operates similarly to :class:`~hybrid.flow.Branches`,
+    but every branch re-uses the same input :class:`~hybrid.core.State`.
 
     Args:
         *branches ([:class:`~hybrid.core.Runnable`]):
