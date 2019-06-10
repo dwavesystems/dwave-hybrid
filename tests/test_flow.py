@@ -19,6 +19,7 @@ import threading
 import operator
 import copy
 from concurrent import futures
+from functools import partial
 
 import dimod
 
@@ -456,6 +457,22 @@ class TestLoopUntilNoImprovement(unittest.TestCase):
         s = it.run(State(cnt=0)).result()
 
         self.assertEqual(s.cnt, 3)
+
+    def test_energy_threshold_termination(self):
+        class ExactSolver(Runnable):
+            def next(self, state):
+                return state.updated(
+                    samples=dimod.ExactSolver().sample(state.problem))
+
+        bqm = dimod.BinaryQuadraticModel({'a': 1}, {}, 0, dimod.SPIN)
+        state = State.from_sample({'a': 1}, bqm)
+
+        w = LoopUntilNoImprovement(ExactSolver(),
+                                   key=operator.attrgetter('samples.first.energy'),
+                                   terminate=partial(operator.ge, -1))
+        s = w.run(state).result()
+
+        self.assertEqual(s.samples.first.energy, -1)
 
     def test_finite_loop(self):
         class Inc(Runnable):
