@@ -773,7 +773,10 @@ class TrackMin(Runnable, traits.SISO):
 class LoopUntilNoImprovement(Runnable):
     """Iterates :class:`~hybrid.core.Runnable` for up to `max_iter` times, or
     until a state quality metric, defined by the `key` function, shows no
-    improvement for at least `convergence` number of iterations.
+    improvement for at least `convergence` number of iterations. Alternatively,
+    maximum allowed runtime can be defined with `max_time`, or a custom
+    termination Boolean function can be given with `terminate` (a predicate
+    on `key`).
 
     Args:
         runnable (:class:`~hybrid.core.Runnable`):
@@ -806,7 +809,7 @@ class LoopUntilNoImprovement(Runnable):
             thus favoring states containing a sample with the minimal energy.
 
         terminate (callable, optional, default=None):
-            Loop termination predicate on `key` value::
+            Loop termination Boolean function (a predicate on `key` value)::
 
                 terminate :: (Ord k) => k -> Bool
     """
@@ -937,6 +940,9 @@ class LoopWhileNoImprovement(LoopUntilNoImprovement):
     """Iterates :class:`~hybrid.core.Runnable` until a state quality metric,
     defined by the `key` function, shows no improvement for at least `max_tries`
     number of iterations or until `max_iter` number of iterations is exceeded.
+    Alternatively, maximum allowed runtime can be defined with `max_time`, or a
+    custom termination Boolean function can be given with `terminate` (a
+    predicate on `key`).
 
     Note:
         Unlike `LoopUntilNoImprovement`/`Loop`, `LoopWhileNoImprovement` will
@@ -974,13 +980,17 @@ class LoopWhileNoImprovement(LoopUntilNoImprovement):
             By default, `key == operator.attrgetter('samples.first.energy')`,
             thus favoring states containing a sample with the minimal energy.
 
+        terminate (callable, optional, default=None):
+            Loop termination Boolean function (a predicate on `key` value)::
+
+                terminate :: (Ord k) => k -> Bool
     """
 
     def __init__(self, runnable, max_iter=None, max_tries=None,
-                 max_time=None, key=None, **runopts):
+                 max_time=None, key=None, terminate=None, **runopts):
         super(LoopWhileNoImprovement, self).__init__(
             runnable=runnable, max_iter=max_iter, convergence=max_tries,
-            max_time=max_time, key=key, **runopts)
+            max_time=max_time, key=key, terminate=terminate, **runopts)
 
     def iteration_update(self, iterno, cnt, inp, out):
         """Implement "no-improvement count-down" behavior:
