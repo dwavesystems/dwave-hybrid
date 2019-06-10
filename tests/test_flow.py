@@ -19,6 +19,7 @@ import threading
 import operator
 import copy
 from concurrent import futures
+from functools import partial
 
 import dimod
 
@@ -445,6 +446,44 @@ class TestLoopUntilNoImprovement(unittest.TestCase):
             state = loop.run(State(cnt=0)).result()
             self.assertEqual(state.cnt, 3)
 
+    def test_terminate_predicate(self):
+        class Inc(Runnable):
+            def next(self, state):
+                return state.updated(cnt=state.cnt + 1)
+
+        it = LoopUntilNoImprovement(Inc(),
+                                    key=lambda state: state.cnt,
+                                    terminate=lambda key: key >= 3)
+        s = it.run(State(cnt=0)).result()
+
+        self.assertEqual(s.cnt, 3)
+
+    def test_energy_threshold_termination(self):
+        class ExactSolver(Runnable):
+            def next(self, state):
+                return state.updated(
+                    samples=dimod.ExactSolver().sample(state.problem))
+
+        bqm = dimod.BinaryQuadraticModel({'a': 1}, {}, 0, dimod.SPIN)
+        state = State.from_sample({'a': 1}, bqm)
+
+        w = LoopUntilNoImprovement(ExactSolver(),
+                                   key=operator.attrgetter('samples.first.energy'),
+                                   terminate=partial(operator.ge, -1))
+        s = w.run(state).result()
+        self.assertEqual(s.samples.first.energy, -1)
+
+        w = LoopUntilNoImprovement(ExactSolver(),
+                                   key='samples.first.energy',
+                                   terminate=partial(operator.ge, -1))
+        s = w.run(state).result()
+        self.assertEqual(s.samples.first.energy, -1)
+
+        w = LoopUntilNoImprovement(ExactSolver(),
+                                   terminate=partial(operator.ge, -1))
+        s = w.run(state).result()
+        self.assertEqual(s.samples.first.energy, -1)
+
     def test_finite_loop(self):
         class Inc(Runnable):
             def next(self, state):
@@ -582,6 +621,18 @@ class TestLoopWhileNoImprovement(unittest.TestCase):
 
         self.assertEqual(len(loop.runnable.timers['dispatch.next']), 5)
         self.assertEqual(state.cnt, 1)
+
+    def test_terminate_predicate(self):
+        class Inc(Runnable):
+            def next(self, state):
+                return state.updated(cnt=state.cnt + 1)
+
+        it = LoopWhileNoImprovement(Inc(),
+                                    key=lambda state: state.cnt,
+                                    terminate=lambda key: key >= 3)
+        s = it.run(State(cnt=0)).result()
+
+        self.assertEqual(s.cnt, 3)
 
     def test_infinite_loop_stops(self):
         """An infinite loop can be stopped after 10 iterations."""

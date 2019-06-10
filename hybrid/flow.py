@@ -773,7 +773,10 @@ class TrackMin(Runnable, traits.SISO):
 class LoopUntilNoImprovement(Runnable):
     """Iterates :class:`~hybrid.core.Runnable` for up to `max_iter` times, or
     until a state quality metric, defined by the `key` function, shows no
-    improvement for at least `convergence` number of iterations.
+    improvement for at least `convergence` number of iterations. Alternatively,
+    maximum allowed runtime can be defined with `max_time`, or a custom
+    termination Boolean function can be given with `terminate` (a predicate
+    on `key`).
 
     Args:
         runnable (:class:`~hybrid.core.Runnable`):
@@ -805,18 +808,29 @@ class LoopUntilNoImprovement(Runnable):
             By default, `key == operator.attrgetter('samples.first.energy')`,
             thus favoring states containing a sample with the minimal energy.
 
+        terminate (callable, optional, default=None):
+            Loop termination Boolean function (a predicate on `key` value)::
+
+                terminate :: (Ord k) => k -> Bool
     """
 
     def __init__(self, runnable, max_iter=None, convergence=None,
-                 max_time=None, key=None, **runopts):
+                 max_time=None, key=None, terminate=None, **runopts):
         super(LoopUntilNoImprovement, self).__init__(**runopts)
         self.runnable = runnable
         self.max_iter = max_iter
         self.max_time = max_time
         self.convergence = convergence
+
         if key is None:
-            key = attrgetter('samples.first.energy')
+            key = 'samples.first.energy'
+        if isinstance(key, six.string_types):
+            key = attrgetter(key)
         self.key = key
+
+        if terminate is not None and not callable(terminate):
+            raise TypeError("expecting a predicate on 'key' for 'terminate'")
+        self.terminate = terminate
 
         # preemptively check runnable's i/o dimensionality
         if runnable.validate_input and runnable.validate_output:
@@ -835,12 +849,13 @@ class LoopUntilNoImprovement(Runnable):
 
     def __repr__(self):
         return ("{self.name}(runnable={self.runnable!r}, max_iter={self.max_iter!r}, "
-                "convergence={self.convergence!r}, key={self.key!r})").format(self=self)
+                "convergence={self.convergence!r}, max_time={self.max_time!r}, "
+                "key={self.key!r}, terminate={self.key!r})").format(self=self)
 
     def __iter__(self):
         return iter((self.runnable,))
 
-    def iteration_update(self, iterno, cnt, input_state, output_state):
+    def iteration_update(self, iterno, cnt, inp, out):
         """Implement "converge on unchanging output" behavior:
 
           - loop `max_iter` times, but bail-out earlier if output doesn't change
@@ -851,17 +866,13 @@ class LoopUntilNoImprovement(Runnable):
         Input: relevant counters and I/O states.
         Output: next input state and next counter values
         """
+        input_state, input_key = inp
+        output_state, output_key = out
 
         if self.convergence is None:
             return iterno + 1, cnt, output_state
 
-        input_energy = self.key(input_state)
-        output_energy = self.key(output_state)
-
-        logger.info("{name} Iteration(iterno={iterno}, output_state_energy={key})".format(
-            name=self.name, iterno=iterno, key=output_energy))
-
-        if output_energy == input_energy:
+        if output_key == input_key:
             cnt -= 1
         else:
             cnt = self.convergence
@@ -873,6 +884,8 @@ class LoopUntilNoImprovement(Runnable):
         cnt = self.convergence or 0
         input_state = state
         output_state = input_state
+        input_key = None
+        output_key = None
         start = time.time()
 
         runopts['executor'] = immediate_executor
@@ -880,7 +893,17 @@ class LoopUntilNoImprovement(Runnable):
         while not self.stop_signal.is_set():
             output_state = self.runnable.run(input_state, **runopts).result()
 
-            iterno, cnt, input_state = self.iteration_update(iterno, cnt, input_state, output_state)
+            if self.convergence or self.terminate:
+                input_key = self.key(input_state)
+                output_key = self.key(output_state)
+
+            logger.info("{name} Iteration(iterno={iterno}, "
+                        "input_state_key={inp}, output_state_key={out})".format(
+                            name=self.name, iterno=iterno,
+                            inp=input_key, out=output_key))
+
+            iterno, cnt, input_state = self.iteration_update(
+                iterno, cnt, (input_state, input_key), (output_state, output_key))
 
             runtime = time.time() - start
 
@@ -889,6 +912,8 @@ class LoopUntilNoImprovement(Runnable):
             if self.max_time is not None and runtime >= self.max_time:
                 break
             if self.convergence is not None and cnt <= 0:
+                break
+            if self.terminate is not None and self.terminate(output_key):
                 break
 
         return output_state
@@ -915,6 +940,9 @@ class LoopWhileNoImprovement(LoopUntilNoImprovement):
     """Iterates :class:`~hybrid.core.Runnable` until a state quality metric,
     defined by the `key` function, shows no improvement for at least `max_tries`
     number of iterations or until `max_iter` number of iterations is exceeded.
+    Alternatively, maximum allowed runtime can be defined with `max_time`, or a
+    custom termination Boolean function can be given with `terminate` (a
+    predicate on `key`).
 
     Note:
         Unlike `LoopUntilNoImprovement`/`Loop`, `LoopWhileNoImprovement` will
@@ -952,15 +980,19 @@ class LoopWhileNoImprovement(LoopUntilNoImprovement):
             By default, `key == operator.attrgetter('samples.first.energy')`,
             thus favoring states containing a sample with the minimal energy.
 
+        terminate (callable, optional, default=None):
+            Loop termination Boolean function (a predicate on `key` value)::
+
+                terminate :: (Ord k) => k -> Bool
     """
 
     def __init__(self, runnable, max_iter=None, max_tries=None,
-                 max_time=None, key=None, **runopts):
+                 max_time=None, key=None, terminate=None, **runopts):
         super(LoopWhileNoImprovement, self).__init__(
             runnable=runnable, max_iter=max_iter, convergence=max_tries,
-            max_time=max_time, key=key, **runopts)
+            max_time=max_time, key=key, terminate=terminate, **runopts)
 
-    def iteration_update(self, iterno, cnt, input_state, output_state):
+    def iteration_update(self, iterno, cnt, inp, out):
         """Implement "no-improvement count-down" behavior:
 
           - loop indefinitely, but bail-out if there's no improvement of output
@@ -972,17 +1004,13 @@ class LoopWhileNoImprovement(LoopUntilNoImprovement):
         Input: relevant counters and I/O states.
         Output: next input state and next counter values
         """
+        input_state, input_key = inp
+        output_state, output_key = out
 
         if self.convergence is None:
             return iterno + 1, cnt, output_state
 
-        input_energy = self.key(input_state)
-        output_energy = self.key(output_state)
-
-        logger.info("{name} Iteration(iterno={iterno}, output_state_energy={key})".format(
-            name=self.name, iterno=iterno, key=output_energy))
-
-        if output_energy >= input_energy:
+        if output_key >= input_key:
             # no improvement, re-use the same input
             cnt -= 1
             next_input_state = input_state
