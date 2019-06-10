@@ -367,6 +367,9 @@ class RoofDualityDecomposer(Runnable, traits.ProblemDecomposer,
             # index lookups on variables are fast for SampleSets
             newsampleset.record.sample[:, newsampleset.variables.index(v)] = val
 
+        # make sure the energies reflect the changes
+        newsampleset.record.energy = bqm.energies(newsampleset)
+
         return state.updated(subproblem=subbqm, samples=newsampleset)
 
 

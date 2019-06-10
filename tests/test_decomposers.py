@@ -387,3 +387,13 @@ class TestRoofDualityDecomposer(unittest.TestCase):
         self.assertEqual(new.subproblem,
                          dimod.BinaryQuadraticModel.from_ising({}, {}))
         self.assertTrue(len(set(new.samples.record.sample.flatten())), 1)
+
+    def test_energy_correctness(self):
+        bqm = dimod.BinaryQuadraticModel.from_ising({'a': -1}, {})
+
+        init = State.from_sample({'a': -1}, bqm)  # should be flipped
+        new = RoofDualityDecomposer().run(init).result()
+
+        self.assertEqual(new.samples.record.energy,
+                         bqm.energies((new.samples.record.sample,
+                                       new.samples.variables)))
