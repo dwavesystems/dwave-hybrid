@@ -15,6 +15,8 @@
 import concurrent.futures
 from operator import attrgetter
 
+import six
+
 from hybrid.core import Runnable
 
 import logging
@@ -145,14 +147,21 @@ class SimpleIterator(Runnable):
     metric, defined by the `key` function, shows no improvement for at least
     `convergence` time."""
 
-    def __init__(self, runnable, max_iter=1000, convergence=10, key=None):
+    def __init__(self, runnable, max_iter=1000, convergence=10, key=None, terminate=None):
         super(SimpleIterator, self).__init__()
         self.runnable = runnable
         self.max_iter = max_iter
         self.convergence = convergence
+
         if key is None:
-            key = attrgetter('samples.first.energy')
+            key = 'samples.first.energy'
+        if isinstance(key, six.string_types):
+            key = attrgetter(key)
         self.key = key
+
+        if terminate is not None and not callable(terminate):
+            raise TypeError("expecting a predicate on 'key' for 'terminate'")
+        self.terminate = terminate
 
     def __str__(self):
         return "Loop over {}".format(self.runnable)
@@ -174,7 +183,7 @@ class SimpleIterator(Runnable):
             state = self.runnable.run(state).result()
             state_key = self.key(state)
 
-            logger.info("{name} Iteration(iterno={iterno}, best_state_key={key})".format(
+            logger.info("{name} Iteration(iterno={iterno}, state_key={key})".format(
                 name=self.name, iterno=iterno, key=state_key))
 
             if state_key == last_key:
@@ -182,6 +191,9 @@ class SimpleIterator(Runnable):
             else:
                 cnt = self.convergence
             if cnt <= 0:
+                break
+
+            if self.terminate is not None and self.terminate(state_key):
                 break
 
             last_key = state_key
