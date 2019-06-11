@@ -62,7 +62,8 @@ class KerberosSampler(dimod.Sampler):
         self.properties = {}
 
     def sample(self, bqm, init_sample=None, max_iter=100, convergence=10, num_reads=1,
-            sa_reads=1, sa_sweeps=1000, qpu_reads=100, qpu_sampler=None, max_subproblem_size=50):
+            sa_reads=1, sa_sweeps=1000, qpu_reads=100, qpu_sampler=None,
+            max_subproblem_size=50, energy_threshold=None):
         """Run Tabu search, Simulated annealing and QPU subproblem sampling (for
         high energy impact problem variables) in parallel and return the best
         samples.
@@ -107,6 +108,10 @@ class KerberosSampler(dimod.Sampler):
 
         subproblem_size = min(len(bqm), max_subproblem_size)
 
+        energy_reached = None
+        if energy_threshold is not None:
+            energy_reached = lambda en: en <= energy_threshold
+
         iteration = RacingBranches(
             InterruptableTabuSampler(),
             IdentityDecomposer()
@@ -116,7 +121,7 @@ class KerberosSampler(dimod.Sampler):
                 | QPUSubproblemAutoEmbeddingSampler(num_reads=qpu_reads, qpu_sampler=qpu_sampler)
                 | SplatComposer(),
         ) | ArgMinFold()
-        main = SimpleIterator(iteration, max_iter=max_iter, convergence=convergence)
+        main = SimpleIterator(iteration, max_iter=max_iter, convergence=convergence, terminate=energy_reached)
 
         samples = []
         energies = []
