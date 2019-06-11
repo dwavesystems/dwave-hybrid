@@ -1,12 +1,14 @@
 #!/usr/bin/env python
+# Usage: $0 <runs.json >targets.json
 import os
 import sys
 import json
 import plucky
+from collections import OrderedDict
 
-all_data = json.load(sys.stdin)
+all_data = json.load(sys.stdin, object_pairs_hook=OrderedDict)
 
-targets = {}
+targets = OrderedDict()
 
 for path, problem_data in all_data.items():
     problem_name = os.path.splitext(os.path.basename(path))[0]
