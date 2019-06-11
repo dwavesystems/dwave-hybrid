@@ -1,5 +1,7 @@
 #!/usr/bin/env python
+import os
 import sys
+import json
 from glob import glob
 from itertools import chain
 from collections import OrderedDict
@@ -45,10 +47,11 @@ samplers = [
 ]
 
 
-def run(problems, workflows, samplers, n_runs=1):
+def run(problems, workflows, samplers, n_runs=1, targets=None):
     results = OrderedDict()
+    targets = targets or {}
 
-    def run_workflow(bqm, workflow):
+    def workflow_runner(bqm, workflow, **kwargs):
         init_state = State.from_sample(min_sample(bqm), bqm)
 
         with tictoc() as timer:
@@ -56,19 +59,23 @@ def run(problems, workflows, samplers, n_runs=1):
 
         return samples, timer
 
-    def run_sampler(bqm, sampler):
+    def sampler_runner(bqm, sampler, energy_threshold=None, **kwargs):
         with tictoc() as timer:
-            samples = sampler.sample(bqm, init_sample=lambda: min_sample(bqm))
+            samples = sampler.sample(bqm, init_sample=lambda: min_sample(bqm),
+                                     energy_threshold=energy_threshold)
 
         return samples, timer
 
     for problem in problems:
         results[problem] = OrderedDict()
 
+        problem_nice_name = os.path.splitext(os.path.basename(problem))[0]
+        target_energy = targets.get(problem_nice_name)
+
         with open(problem) as fp:
             bqm = dimod.BinaryQuadraticModel.from_coo(fp)
 
-        for runner, solvers in [(run_workflow, workflows), (run_sampler, samplers)]:
+        for runner, solvers in [(workflow_runner, workflows), (sampler_runner, samplers)]:
             for name, factory in solvers:
                 run_results = []
 
@@ -76,7 +83,8 @@ def run(problems, workflows, samplers, n_runs=1):
                     case = '{!r} with {!r}, run={!r}'.format(problem, name, run)
 
                     try:
-                        samples, timer = runner(bqm, factory())
+                        samples, timer = runner(bqm, factory(),
+                                                energy_threshold=target_energy)
 
                     except Exception as exc:
                         raise
@@ -96,6 +104,15 @@ def run(problems, workflows, samplers, n_runs=1):
 
 
 if __name__ == "__main__":
-    import json
-    results = run(problems[:3], workflows[:0], samplers, n_runs=3)
+    # Usage: $0 [target_energies_json]
+    # Outputs info to stdout, json to stderr.
+
+    # load target energies, if provided
+    targets = {}
+    if len(sys.argv) > 1:
+        with open(sys.argv[1]) as fp:
+            targets = json.load(fp)
+
+    results = run(problems[:1], workflows[:0], samplers, n_runs=1, targets=targets)
+
     print(json.dumps(results), file=sys.stderr)
