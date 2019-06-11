@@ -17,7 +17,7 @@ from hybrid.composers import SplatComposer
 from hybrid.reference.kerberos import KerberosSampler
 
 
-problems_per_group = None
+problems_per_group = 5
 
 problems = list(chain(
     sorted(glob('problems/qbsolv/bqp50_*'))[:problems_per_group],
@@ -26,10 +26,8 @@ problems = list(chain(
     sorted(glob('problems/qbsolv/bqp500_*'))[:problems_per_group],
     sorted(glob('problems/qbsolv/bqp1000_*'))[:problems_per_group],
     sorted(glob('problems/qbsolv/bqp2500_*'))[:problems_per_group],
-
     sorted(glob('problems/random-chimera/2048*'))[:problems_per_group],
     sorted(glob('problems/random-chimera/8192*'))[:problems_per_group],
-
     sorted(glob('problems/ac3/*'))[:problems_per_group],
 ))
 
@@ -80,16 +78,16 @@ def run(problems, workflows, samplers, n_runs=1, targets=None):
                 run_results = []
 
                 for run in range(n_runs):
-                    case = '{!r} with {!r}, run={!r}'.format(problem, name, run)
+                    case = '{!r} with {!r}, run={!r}, target={!r}'.format(
+                        problem, name, run, target_energy)
 
                     try:
                         samples, timer = runner(bqm, factory(),
                                                 energy_threshold=target_energy)
 
                     except Exception as exc:
-                        raise
                         print("FAILED {case}: {exc!r}".format(**locals()))
-                        run_results.append(repr(exc))
+                        run_results.append(dict(error=repr(exc)))
 
                     else:
                         print("case={case!r}"
@@ -113,6 +111,6 @@ if __name__ == "__main__":
         with open(sys.argv[1]) as fp:
             targets = json.load(fp)
 
-    results = run(problems[:1], workflows[:0], samplers, n_runs=1, targets=targets)
+    results = run(problems, workflows[:0], samplers, n_runs=3, targets=targets)
 
     print(json.dumps(results), file=sys.stderr)
