@@ -45,7 +45,7 @@ samplers = [
 ]
 
 
-def run(problems, workflows, samplers):
+def run(problems, workflows, samplers, n_runs=1):
     results = OrderedDict()
 
     def run_workflow(bqm, workflow):
@@ -70,28 +70,32 @@ def run(problems, workflows, samplers):
 
         for runner, solvers in [(run_workflow, workflows), (run_sampler, samplers)]:
             for name, factory in solvers:
-                case = '{!r} with {!r}'.format(problem, name)
+                run_results = []
 
-                try:
-                    samples, timer = runner(bqm, factory())
+                for run in range(n_runs):
+                    case = '{!r} with {!r}, run={!r}'.format(problem, name, run)
 
-                except Exception as exc:
-                    raise
-                    print("FAILED {case}: {exc!r}".format(**locals()))
-                    results[problem][name] = repr(exc)
+                    try:
+                        samples, timer = runner(bqm, factory())
 
-                else:
-                    print("case={case!r}"
-                        " energy={samples.first.energy!r},"
-                        " wallclock={timer.dt!r}".format(**locals()))
-                    results[problem][name] = dict(
-                        energy=samples.first.energy,
-                        wallclock=timer.dt)
+                    except Exception as exc:
+                        raise
+                        print("FAILED {case}: {exc!r}".format(**locals()))
+                        run_results.append(repr(exc))
+
+                    else:
+                        print("case={case!r}"
+                            " energy={samples.first.energy!r},"
+                            " wallclock={timer.dt!r}".format(**locals()))
+                        run_results.append(dict(energy=samples.first.energy,
+                                                wallclock=timer.dt))
+
+                results[problem][name] = run_results
 
     return results
 
 
 if __name__ == "__main__":
     import json
-    results = run(problems[:1], workflows[:0], samplers)
+    results = run(problems[:3], workflows[:0], samplers, n_runs=3)
     print(json.dumps(results), file=sys.stderr)
