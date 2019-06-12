@@ -17,30 +17,19 @@
 """Performance tests."""
 
 import sys
+import json
 from itertools import chain
 from collections import OrderedDict
 from glob import glob
 
 import dimod
-from dwave.system.samplers import DWaveSampler
-from dwave.system.composites import EmbeddingComposite
+import hybrid
+
+from dwave.system import DWaveSampler, EmbeddingComposite
 from dwave_qbsolv import QBSolv
 
-from hybrid.samplers import (
-    QPUSubproblemExternalEmbeddingSampler, QPUSubproblemAutoEmbeddingSampler,
-    SimulatedAnnealingSubproblemSampler, RandomSubproblemSampler,
-    TabuSubproblemSampler, TabuProblemSampler, InterruptableTabuSampler)
-from hybrid.decomposers import (
-    RandomSubproblemDecomposer, IdentityDecomposer,
-    TilingChimeraDecomposer, EnergyImpactDecomposer)
-from hybrid.composers import SplatComposer
-from hybrid.core import State, SampleSet, Runnable
-from hybrid.flow import RacingBranches, ArgMin, Loop
-from hybrid.utils import min_sample
-from hybrid.profiling import tictoc
 
-
-class QBSolvProblemSampler(Runnable):
+class QBSolvProblemSampler(hybrid.Runnable):
     """QBSolv wrapper for hybrid."""
 
     def __init__(self, qpu_sampler=None):
@@ -62,26 +51,26 @@ problems = chain(
 
 solver_factories = [
     ("10 second Tabu",
-        lambda **kw: TabuProblemSampler(timeout=10000)),
+        lambda **kw: hybrid.TabuProblemSampler(timeout=10000)),
 
     ("10k sweeps Simulated Annealing",
-        lambda **kw: IdentityDecomposer() | SimulatedAnnealingSubproblemSampler(sweeps=10000) | SplatComposer()),
+        lambda **kw: hybrid.IdentityDecomposer() | hybrid.SimulatedAnnealingSubproblemSampler(sweeps=10000) | hybrid.SplatComposer()),
 
     ("qbsolv-like solver",
-        lambda qpu, **kw: Loop(RacingBranches(
-            InterruptableTabuSampler(quantum_timeout=200),
-            EnergyImpactDecomposer(size=50, rolling=True, rolling_history=0.15)
-            | QPUSubproblemAutoEmbeddingSampler(qpu_sampler=qpu)
-            | SplatComposer()
-        ) | ArgMin(), max_iter=100, convergence=10)),
+        lambda qpu, **kw: hybrid.Loop(hybrid.Race(
+            hybrid.InterruptableTabuSampler(quantum_timeout=200),
+            hybrid.EnergyImpactDecomposer(size=50, rolling=True, rolling_history=0.15)
+            | hybrid.QPUSubproblemAutoEmbeddingSampler(qpu_sampler=qpu)
+            | hybrid.SplatComposer()
+        ) | hybrid.ArgMin(), max_iter=100, convergence=10)),
 
     ("tiling chimera solver",
-        lambda qpu, **kw: Loop(RacingBranches(
-            InterruptableTabuSampler(quantum_timeout=200),
-            TilingChimeraDecomposer(size=(16,16,4))
-            | QPUSubproblemExternalEmbeddingSampler(qpu_sampler=qpu)
-            | SplatComposer(),
-        ) | ArgMin(), max_iter=100, convergence=10)),
+        lambda qpu, **kw: hybrid.Loop(hybrid.Race(
+            hybrid.InterruptableTabuSampler(quantum_timeout=200),
+            hybrid.TilingChimeraDecomposer(size=(16,16,4))
+            | hybrid.QPUSubproblemExternalEmbeddingSampler(qpu_sampler=qpu)
+            | hybrid.SplatComposer(),
+        ) | hybrid.ArgMin(), max_iter=100, convergence=10)),
 
     ("qbsolv-classic",
         lambda **kw: QBSolvProblemSampler()),
@@ -109,9 +98,9 @@ def run(problems, solver_factories):
 
             try:
                 solver = factory(qpu=qpu)
-                init_state = State.from_sample(min_sample(bqm), bqm)
+                init_state = hybrid.State.from_sample(hybrid.min_sample(bqm), bqm)
 
-                with tictoc(case) as timer:
+                with hybrid.tictoc(case) as timer:
                     solution = solver.run(init_state).result()
 
             except Exception as exc:
@@ -130,6 +119,5 @@ def run(problems, solver_factories):
 
 
 if __name__ == "__main__":
-    import json
     results = run(problems, solver_factories)
     print(json.dumps(results), file=sys.stderr)
