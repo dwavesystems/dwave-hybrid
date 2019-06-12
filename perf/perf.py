@@ -55,20 +55,24 @@ workflows = [
                       | hybrid.SplatComposer())),
 
     ("qbsolv-like",
-        lambda qpu, **kw: hybrid.Loop(hybrid.Race(
+        lambda qpu, energy_threshold, **kw: hybrid.Loop(hybrid.Race(
             hybrid.InterruptableTabuSampler(timeout=200),
             hybrid.EnergyImpactDecomposer(size=50, rolling=True, rolling_history=0.15)
             | hybrid.QPUSubproblemAutoEmbeddingSampler(qpu_sampler=qpu)
             | hybrid.SplatComposer()
-        ) | hybrid.ArgMin(), max_iter=100, convergence=10)),
+        ) | hybrid.ArgMin(),
+        max_iter=100, convergence=10,
+        terminate=None if energy_threshold is None else lambda en: en <= energy_threshold)),
 
     ("tiling-chimera",
-        lambda qpu, **kw: hybrid.Loop(hybrid.Race(
+        lambda qpu, energy_threshold, **kw: hybrid.Loop(hybrid.Race(
             hybrid.InterruptableTabuSampler(timeout=200),
             hybrid.TilingChimeraDecomposer(size=(16,16,4))
             | hybrid.QPUSubproblemExternalEmbeddingSampler(qpu_sampler=qpu)
             | hybrid.SplatComposer(),
-        ) | hybrid.ArgMin(), max_iter=100, convergence=10)),
+        ) | hybrid.ArgMin(),
+        max_iter=100, convergence=10,
+        terminate=None if energy_threshold is None else lambda en: en <= energy_threshold)),
 ]
 
 samplers = [
@@ -78,10 +82,15 @@ samplers = [
             init_sample=init_sample, energy_threshold=energy_threshold)),
 
     ("qbsolv-classic",
-        lambda **kw: QBSolv().sample),
+        lambda energy_threshold, **kw: partial(
+            QBSolv().sample,
+            target=energy_threshold)),
 
     ("qbsolv-qpu",
-        lambda qpu, **kw: partial(QBSolv().sample, solver=EmbeddingComposite(qpu))),
+        lambda qpu, energy_threshold, **kw: partial(
+            QBSolv().sample,
+            solver=EmbeddingComposite(qpu),
+            target=energy_threshold)),
 ]
 
 
@@ -89,10 +98,10 @@ def run(problems, workflows, samplers, n_runs=1, targets=None):
     results = OrderedDict()
     targets = targets or {}
 
-    def workflow_runner(bqm, factory, qpu=None, **kwargs):
-        workflow = factory(qpu=qpu)
-        init_state = hybrid.State.from_sample(hybrid.min_sample(bqm), bqm)
+    def workflow_runner(bqm, factory, energy_threshold=None, qpu=None, **kwargs):
+        workflow = factory(qpu=qpu, energy_threshold=energy_threshold)
 
+        init_state = hybrid.State.from_sample(hybrid.min_sample(bqm), bqm)
         with hybrid.tictoc() as timer:
             samples = workflow.run(init_state).result().samples
 
@@ -100,9 +109,9 @@ def run(problems, workflows, samplers, n_runs=1, targets=None):
 
     def sampler_runner(bqm, factory, energy_threshold=None, qpu=None, **kwargs):
         sampler = factory(
-            qpu=qpu,
             init_sample=lambda: hybrid.min_sample(bqm),
-            energy_threshold=energy_threshold
+            energy_threshold=energy_threshold,
+            qpu=qpu
         )
 
         with hybrid.tictoc() as timer:
