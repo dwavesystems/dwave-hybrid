@@ -56,24 +56,41 @@ class QPUSubproblemExternalEmbeddingSampler(Runnable, traits.SubproblemSampler, 
         qpu_sampler (:class:`dimod.Sampler`, optional, default=DWaveSampler()):
             Quantum sampler such as a D-Wave system.
 
+        qpu_params (dict):
+            Dictionary of keyword arguments with values that will be used
+            on every call of the QPU sampler.
+
     See :ref:`samplers-examples`.
     """
 
-    def __init__(self, num_reads=100, qpu_sampler=None, **runopts):
+    def __init__(self, num_reads=100, qpu_sampler=None, qpu_params=None, **runopts):
         super(QPUSubproblemExternalEmbeddingSampler, self).__init__(**runopts)
 
         self.num_reads = num_reads
+
         if qpu_sampler is None:
             qpu_sampler = DWaveSampler()
         self.sampler = qpu_sampler
 
+        if qpu_params is None:
+            qpu_params = {}
+        self.qpu_params = qpu_params
+
     def __repr__(self):
         return ("{self}(num_reads={self.num_reads!r}, "
-                       "qpu_sampler={self.sampler!r})").format(self=self)
+                       "qpu_sampler={self.sampler!r}, "
+                       "qpu_params={self.qpu_params!r})").format(self=self)
 
     def next(self, state, **runopts):
+        num_reads = runopts.get('num_reads', self.num_reads)
+        qpu_params = runopts.get('qpu_params', self.qpu_params)
+
+        params = qpu_params.copy()
+        params.update(num_reads=num_reads)
+
         sampler = FixedEmbeddingComposite(self.sampler, embedding=state.embedding)
-        response = sampler.sample(state.subproblem, num_reads=self.num_reads)
+        response = sampler.sample(state.subproblem, **params)
+
         return state.updated(subsamples=response)
 
 
@@ -90,10 +107,14 @@ class QPUSubproblemAutoEmbeddingSampler(Runnable, traits.SubproblemSampler):
             it will be converted to unstructured via
             :class:`~dwave.system.composited.EmbeddingComposite`.
 
+        qpu_params (dict):
+            Dictionary of keyword arguments with values that will be used
+            on every call of the QPU sampler.
+
     See :ref:`samplers-examples`.
     """
 
-    def __init__(self, num_reads=100, qpu_sampler=None, **runopts):
+    def __init__(self, num_reads=100, qpu_sampler=None, qpu_params=None, **runopts):
         super(QPUSubproblemAutoEmbeddingSampler, self).__init__(**runopts)
 
         self.num_reads = num_reads
@@ -107,12 +128,24 @@ class QPUSubproblemAutoEmbeddingSampler(Runnable, traits.SubproblemSampler):
         else:
             self.sampler = qpu_sampler
 
+        if qpu_params is None:
+            qpu_params = {}
+        self.qpu_params = qpu_params
+
     def __repr__(self):
         return ("{self}(num_reads={self.num_reads!r}, "
-                       "qpu_sampler={self.sampler!r})").format(self=self)
+                       "qpu_sampler={self.sampler!r}, "
+                       "qpu_params={self.qpu_params!r})").format(self=self)
 
     def next(self, state, **runopts):
-        response = self.sampler.sample(state.subproblem, num_reads=self.num_reads)
+        num_reads = runopts.get('num_reads', self.num_reads)
+        qpu_params = runopts.get('qpu_params', self.qpu_params)
+
+        params = qpu_params.copy()
+        params.update(num_reads=num_reads)
+
+        response = self.sampler.sample(state.subproblem, **params)
+
         return state.updated(subsamples=response)
 
 

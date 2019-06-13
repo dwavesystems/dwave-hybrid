@@ -25,4 +25,5 @@ class TestKerberos(unittest.TestCase):
     def test_basic_operation(self):
         bqm = dimod.BinaryQuadraticModel({}, {'ab': 1, 'bc': 1, 'ca': 1}, 0, dimod.SPIN)
         sampleset = KerberosSampler().sample(
-            bqm, qpu_sampler=MockDWaveSampler(), max_subproblem_size=1)
+            bqm, max_subproblem_size=1, qpu_sampler=MockDWaveSampler(),
+            qpu_params=dict(chain_strength=2))

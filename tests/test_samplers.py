@@ -22,6 +22,7 @@ from dwave.system.testing import MockDWaveSampler
 
 from hybrid.samplers import *
 from hybrid.core import State
+from hybrid.testing import mock
 
 
 class MockDWaveReverseAnnealingSampler(MockDWaveSampler):
@@ -65,6 +66,21 @@ class TestQPUSamplers(unittest.TestCase):
         res = q.run(init).result()
         self.assertEqual(res.subsamples.first.energy, -1)
 
+    def test_external_embedding_sampler(self):
+        bqm = dimod.BinaryQuadraticModel.from_ising({'a': 1}, {})
+        init = State.from_subproblem(bqm, embedding={'a': [0]})
+
+        sampler = dimod.StructureComposite(
+            SimulatedAnnealingSampler(), nodelist=[0], edgelist=[])
+
+        workflow = QPUSubproblemExternalEmbeddingSampler(qpu_sampler=sampler)
+
+        # run mock sampling
+        res = workflow.run(init).result()
+
+        # verify mock sampler received custom kwargs
+        self.assertEqual(res.subsamples.first.energy, -1)
+
     def test_reverse_annealing_sampler(self):
         sampler = MockDWaveReverseAnnealingSampler()
         ra = ReverseAnnealingAutoEmbeddingSampler(qpu_sampler=sampler)
@@ -77,6 +93,23 @@ class TestQPUSamplers(unittest.TestCase):
         self.assertEqual(res.subsamples.first.energy, -1)
         self.assertEqual(sampler.initial_state.popitem()[1], 1)
         self.assertEqual(sampler.anneal_schedule, ra.anneal_schedule)
+
+    def test_custom_qpu_params(self):
+        bqm = dimod.BinaryQuadraticModel.from_ising({'a': 1}, {})
+        init = State.from_subproblem(bqm)
+
+        mock_sampler = mock.MagicMock()
+        qpu_params = dict(chain_strength=2, future_proof=True)
+
+        workflow = QPUSubproblemAutoEmbeddingSampler(
+            num_reads=10, qpu_sampler=mock_sampler, qpu_params=qpu_params)
+
+        # run mock sampling
+        workflow.run(init).result()
+
+        # verify mock sampler received custom kwargs
+        mock_sampler.sample.assert_called_once_with(
+            bqm, num_reads=10, **qpu_params)
 
 
 class TestTabuSamplers(unittest.TestCase):
