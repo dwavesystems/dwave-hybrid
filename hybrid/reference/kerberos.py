@@ -57,8 +57,8 @@ class KerberosSampler(dimod.Sampler):
 
     def sample(self, bqm, init_sample=None, max_iter=100, convergence=3,
                num_reads=1, sa_reads=1, sa_sweeps=10000, tabu_timeout=500,
-               qpu_reads=100, qpu_sampler=None, max_subproblem_size=50,
-               energy_threshold=None):
+               qpu_reads=100, qpu_sampler=None, qpu_params=None,
+               max_subproblem_size=50, energy_threshold=None):
         """Run Tabu search, Simulated annealing and QPU subproblem sampling (for
         high energy impact problem variables) in parallel and return the best
         samples.
@@ -97,6 +97,10 @@ class KerberosSampler(dimod.Sampler):
             qpu_sampler (:class:`dimod.Sampler`, optional, default=DWaveSampler()):
                 Quantum sampler such as a D-Wave system.
 
+            qpu_params (dict):
+                Dictionary of keyword arguments with values that will be used
+                on every call of the QPU sampler.
+
             max_subproblem_size (int):
                 Maximum size of the subproblem selected in the QPU branch.
 
@@ -133,7 +137,7 @@ class KerberosSampler(dimod.Sampler):
             hybrid.EnergyImpactDecomposer(
                 size=subproblem_size, rolling=True, rolling_history=0.3, traversal='bfs')
                 | hybrid.QPUSubproblemAutoEmbeddingSampler(
-                    num_reads=qpu_reads, qpu_sampler=qpu_sampler)
+                    num_reads=qpu_reads, qpu_sampler=qpu_sampler, qpu_params=qpu_params)
                 | hybrid.SplatComposer(),
         ) | hybrid.ArgMin()
 
