@@ -66,6 +66,21 @@ class TestQPUSamplers(unittest.TestCase):
         res = q.run(init).result()
         self.assertEqual(res.subsamples.first.energy, -1)
 
+    def test_external_embedding_sampler(self):
+        bqm = dimod.BinaryQuadraticModel.from_ising({'a': 1}, {})
+        init = State.from_subproblem(bqm, embedding={'a': [0]})
+
+        sampler = dimod.StructureComposite(
+            SimulatedAnnealingSampler(), nodelist=[0], edgelist=[])
+
+        workflow = QPUSubproblemExternalEmbeddingSampler(qpu_sampler=sampler)
+
+        # run mock sampling
+        res = workflow.run(init).result()
+
+        # verify mock sampler received custom kwargs
+        self.assertEqual(res.subsamples.first.energy, -1)
+
     def test_reverse_annealing_sampler(self):
         sampler = MockDWaveReverseAnnealingSampler()
         ra = ReverseAnnealingAutoEmbeddingSampler(qpu_sampler=sampler)
