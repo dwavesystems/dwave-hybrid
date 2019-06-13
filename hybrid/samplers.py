@@ -145,6 +145,7 @@ class QPUSubproblemAutoEmbeddingSampler(Runnable, traits.SubproblemSampler):
         params.update(num_reads=num_reads)
 
         response = self.sampler.sample(state.subproblem, **params)
+
         return state.updated(subsamples=response)
 
 
