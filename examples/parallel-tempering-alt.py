@@ -47,9 +47,11 @@ class FixedTemperatureSampler(hybrid.Runnable, hybrid.traits.SISO):
     effectively generating one new sample on a given temperature.
     """
 
-    def __init__(self, beta, **runopts):
+    def __init__(self, beta, num_sweeps=10000, num_reads=None, **runopts):
         super(FixedTemperatureSampler, self).__init__(**runopts)
         self.beta = beta
+        self.num_sweeps = num_sweeps
+        self.num_reads = num_reads
 
     def next(self, state, **runopts):
         new_samples = neal.SimulatedAnnealingSampler().sample(
@@ -101,7 +103,7 @@ betas = np.geomspace(1, 0.05, n_replicas)
 
 # run replicas update/swap for n_iterations
 # (after each update/sampling step, do n_replicas-1 swap operations)
-update = hybrid.Branches(*[FixedTemperatureSampler(beta) for beta in betas])
+update = hybrid.Branches(*[FixedTemperatureSampler(beta, num_sweeps=10000) for beta in betas])
 swap = hybrid.Loop(SwapReplicas(betas), max_iter=n_replicas-1)
 workflow = hybrid.Loop(update | swap, max_iter=n_iterations) \
          | hybrid.MergeSamples(aggregate=True)
