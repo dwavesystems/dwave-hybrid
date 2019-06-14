@@ -95,9 +95,14 @@ n_iterations = 10
 # states are randomly initialized
 state = hybrid.State(problem=bqm)
 
+# get a reasonable beta range
+beta_hot, beta_cold = neal.default_beta_range(bqm)
+
+# generate betas for all branches/replicas
+betas = np.geomspace(beta_hot, beta_cold, n_replicas)
+
 # create n_replicas with geometric distribution of betas (inverse temperature)
-replicas = hybrid.States(
-    *[state.updated(beta=b) for b in np.geomspace(1, 0.05, n_replicas)])
+replicas = hybrid.States(*[state.updated(beta=b) for b in betas])
 
 # run replicas update/swap for n_iterations
 # (after each update/sampling step, do n_replicas-1 swap operations)

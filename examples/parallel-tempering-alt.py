@@ -98,8 +98,11 @@ n_iterations = 10
 state = hybrid.State(problem=bqm)
 replicas = hybrid.States(*[state.updated() for _ in range(n_replicas)])
 
+# get a reasonable beta range
+beta_hot, beta_cold = neal.default_beta_range(bqm)
+
 # generate betas for all branches/replicas
-betas = np.geomspace(1, 0.05, n_replicas)
+betas = np.geomspace(beta_hot, beta_cold, n_replicas)
 
 # run replicas update/swap for n_iterations
 # (after each update/sampling step, do n_replicas-1 swap operations)
