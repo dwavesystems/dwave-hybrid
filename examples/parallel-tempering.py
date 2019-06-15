@@ -93,7 +93,7 @@ n_replicas = 10
 n_iterations = 10
 
 # states are randomly initialized
-state = hybrid.State(problem=bqm)
+state = hybrid.State.from_problem(bqm)
 
 # get a reasonable beta range
 beta_hot, beta_cold = neal.default_beta_range(bqm)

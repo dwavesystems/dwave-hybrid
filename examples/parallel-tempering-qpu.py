@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Hybridized parallel tempering: use QPU as a high-temperature sampler."""
+
 from __future__ import print_function
 
 import sys
@@ -104,13 +106,22 @@ beta_hot, beta_cold = neal.default_beta_range(bqm)
 # generate betas for all branches/replicas
 betas = np.geomspace(beta_hot, beta_cold, n_replicas)
 
-# run replicas update/swap for n_iterations
-# (after each update/sampling step, do n_replicas-1 swap operations)
-update = hybrid.Branches(*[FixedTemperatureSampler(beta, num_sweeps=10000) for beta in betas])
+# QPU branch: limits the PT workflow to QPU-sized problems
+qpu = hybrid.IdentityDecomposer() | hybrid.QPUSubproblemAutoEmbeddingSampler() | hybrid.IdentityComposer()
+
+# use QPU as the hottest temperature sampler and `n_replicas-1` fixed-temperature-samplers
+update = hybrid.Branches(
+    qpu,
+    *[FixedTemperatureSampler(beta, num_sweeps=10000) for beta in betas[1:]])
+
+# swap step is `n_replicas-1` pairwise potential swaps
 swap = hybrid.Loop(SwapReplicas(betas), max_iter=n_replicas-1)
+
+# we'll run update/swap sequence for `n_iterations`
 workflow = hybrid.Loop(update | swap, max_iter=n_iterations) \
          | hybrid.MergeSamples(aggregate=True)
 
+# execute the workflow
 solution = workflow.run(replicas).result()
 
 # show execution profile
