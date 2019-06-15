@@ -446,7 +446,12 @@ class Runnable(traits.StateTraits):
 
     def __and__(self, other):
         """Parallel composition of runnable components returns new Branches."""
-        return Branches(self, other)
+        if isinstance(other, Branches):
+            return Branches(self, *other)
+        elif isinstance(other, Runnable):
+            return Branches(self, other)
+        else:
+            raise TypeError("only Runnables can be composed into Branches")
 
 
 def stoppable(cls):
