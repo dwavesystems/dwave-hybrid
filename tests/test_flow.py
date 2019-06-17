@@ -149,18 +149,28 @@ class TestBranches(unittest.TestCase):
             self.assertEqual(res[0].x, ss[0].x + 1)
             self.assertEqual(res[1].x, ss[1].x * 7)
 
-        # adding a branch to branches
+        # appending a branch to branches
 
-        b4 = b2 & b & a
-        ss = States(*[State(x=1) for _ in range(4)])
-        res = b4.run(ss).result()
+        b3 = b2 & a
+        ss = States(*[State(x=1) for _ in range(3)])
+        res = b3.run(ss).result()
 
-        self.assertEqual(b4.branches, (a, b, b, a))
-        self.assertEqual(len(res), 4)
+        self.assertEqual(b3.branches, (a, b, a))
+        self.assertEqual(len(res), 3)
         self.assertEqual(res[0].x, ss[0].x + 1)
         self.assertEqual(res[1].x, ss[1].x * 7)
+        self.assertEqual(res[2].x, ss[2].x + 1)
+
+        # prepending a branch to branches
+        b4 = b & b2
+        ss = States(*[State(x=1) for _ in range(3)])
+        res = b4.run(ss).result()
+
+        self.assertEqual(b4.branches, (b, a, b))
+        self.assertEqual(len(res), 3)
+        self.assertEqual(res[0].x, ss[0].x * 7)
+        self.assertEqual(res[1].x, ss[1].x + 1)
         self.assertEqual(res[2].x, ss[2].x * 7)
-        self.assertEqual(res[3].x, ss[3].x + 1)
 
         # invalid type
 
