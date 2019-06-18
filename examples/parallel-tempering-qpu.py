@@ -64,7 +64,7 @@ class FixedTemperatureSampler(hybrid.Runnable, hybrid.traits.SISO):
         return state.updated(samples=new_samples)
 
 
-class SwapReplicas(hybrid.Runnable, hybrid.traits.MIMO):
+class SwapReplicasSweepDown(hybrid.Runnable, hybrid.traits.MIMO):
     """PT swap replicas step.
 
     On each call, choose a random input state (replica), and propose a swap with
@@ -72,12 +72,12 @@ class SwapReplicas(hybrid.Runnable, hybrid.traits.MIMO):
     """
 
     def __init__(self, betas, **runopts):
-        super(SwapReplicas, self).__init__(**runopts)
+        super(SwapReplicasSweepDown, self).__init__(**runopts)
         self.betas = betas
 
-    def next(self, states, **runopts):
-        i = random.choice(range(len(states) - 1))
-        j = i + 1
+    def swap_pair(self, states, i, j):
+        """Swap one pair of states (i, j) iff they satisfy the probabilistic
+        swap criterion."""
 
         beta_diff = self.betas[i] - self.betas[j]
         energy_diff = states[i].samples.first.energy - states[j].samples.first.energy
@@ -89,6 +89,12 @@ class SwapReplicas(hybrid.Runnable, hybrid.traits.MIMO):
         if w > p:
             # swap samples for replicas i and j
             states[i], states[j] = states[j], states[i]
+
+        return states
+
+    def next(self, states, **runopts):
+        for i in range(len(states) - 1):
+            states = self.swap_pair(states, i, i + 1)
 
         return states
 
@@ -115,7 +121,7 @@ update = hybrid.Branches(
     *[FixedTemperatureSampler(beta, num_sweeps=10000) for beta in betas[1:]])
 
 # swap step is `n_replicas-1` pairwise potential swaps
-swap = hybrid.Loop(SwapReplicas(betas), max_iter=n_replicas-1)
+swap = SwapReplicasSweepDown(betas)
 
 # we'll run update/swap sequence for `n_iterations`
 workflow = hybrid.Loop(update | swap, max_iter=n_iterations) \
