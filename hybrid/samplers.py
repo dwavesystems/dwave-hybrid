@@ -49,6 +49,9 @@ logger = logging.getLogger(__name__)
 class QPUSubproblemExternalEmbeddingSampler(Runnable, traits.SubproblemSampler, traits.EmbeddingIntaking):
     """A quantum sampler for a subproblem with a defined minor-embedding.
 
+    Note:
+        Externally supplied embedding must be present in the input state.
+
     Args:
         num_reads (int, optional, default=100):
             Number of states (output solutions) to read from the sampler.
@@ -104,8 +107,8 @@ class QPUSubproblemAutoEmbeddingSampler(Runnable, traits.SubproblemSampler):
 
         qpu_sampler (:class:`dimod.Sampler`, optional,
                 default=:class:`AutoEmbeddingComposite`(:class:`DWaveSampler`())):
-            Quantum sampler such as a D-Wave system. If the subproblem does not
-            fit the structure of the sampler, it will be auto-embedded on fly with
+            Quantum sampler such as a D-Wave system. Subproblems that do not fit
+            the sampler's structure are minor-embedded on the fly with
             :class:`~dwave.system.composites.AutoEmbeddingComposite`.
 
         qpu_params (dict):
@@ -157,8 +160,8 @@ class ReverseAnnealingAutoEmbeddingSampler(Runnable, traits.SubproblemSampler):
 
         qpu_sampler (:class:`dimod.Sampler`, optional,
                 default=:class:`AutoEmbeddingComposite`(:class:`DWaveSampler`())):
-            Quantum sampler such as a D-Wave system. If the subproblem does not
-            fit the structure of the sampler, it will be auto-embedded on fly with
+            Quantum sampler such as a D-Wave system. Subproblems that do not fit
+            the sampler's structure are minor-embedded on the fly with
             :class:`~dwave.system.composites.AutoEmbeddingComposite`.
 
         anneal_schedule (list(list), optional, default=[[0, 1], [0.5, 0.5], [1, 1]]):
