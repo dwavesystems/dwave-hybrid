@@ -43,21 +43,21 @@ print("BQM: {} nodes, {} edges, {:.2f}% density".format(n, m, d))
 class FixedTemperatureSampler(hybrid.Runnable, hybrid.traits.SISO):
     """PT propagate/update step.
 
-    On each call, run 10k sweeps of fixed beta/temperature simulated annealing,
-    effectively generating one new sample on a given temperature.
+    On each call, run fixed temperature (~`1/beta.state`) simulated annealing
+    for `num_sweeps` (seeded by input sample(s)), effectively producing a new
+    state by sampling from a Boltzmann distribution at the given temperature.
     """
 
-    def __init__(self, beta, num_sweeps=10000, num_reads=None, **runopts):
+    def __init__(self, beta, num_sweeps=10000, **runopts):
         super(FixedTemperatureSampler, self).__init__(**runopts)
         self.beta = beta
         self.num_sweeps = num_sweeps
-        self.num_reads = num_reads
 
     def next(self, state, **runopts):
         new_samples = neal.SimulatedAnnealingSampler().sample(
             state.problem, initial_states=state.samples,
             beta_range=(self.beta, self.beta), beta_schedule_type='linear',
-            num_reads=1, num_sweeps=10000).aggregate()
+            num_sweeps=self.num_sweeps).aggregate()
 
         return state.updated(samples=new_samples)
 
@@ -65,8 +65,8 @@ class FixedTemperatureSampler(hybrid.Runnable, hybrid.traits.SISO):
 class SwapReplicasSweepDown(hybrid.Runnable, hybrid.traits.MIMO):
     """PT swap replicas step.
 
-    On each call, choose a random input state (replica), and propose a swap with
-    the adjacent state (replica).
+    On each call, sweep through and probabilistically swap all adjacent pairs
+    of replicas (input states).
     """
 
     def __init__(self, betas, **runopts):
@@ -74,8 +74,7 @@ class SwapReplicasSweepDown(hybrid.Runnable, hybrid.traits.MIMO):
         self.betas = betas
 
     def swap_pair(self, states, i, j):
-        """Swap one pair of states (i, j) iff they satisfy the probabilistic
-        swap criterion."""
+        """One pair of states (i, j) probabilistic swap."""
 
         beta_diff = self.betas[i] - self.betas[j]
         energy_diff = states[i].samples.first.energy - states[j].samples.first.energy
@@ -97,6 +96,7 @@ class SwapReplicasSweepDown(hybrid.Runnable, hybrid.traits.MIMO):
         return states
 
 
+n_sweeps = 10000
 n_replicas = 10
 n_iterations = 10
 
@@ -112,7 +112,7 @@ betas = np.geomspace(beta_hot, beta_cold, n_replicas)
 
 # run replicas update/swap for n_iterations
 # (after each update/sampling step, do n_replicas-1 swap operations)
-update = hybrid.Branches(*[FixedTemperatureSampler(beta, num_sweeps=10000) for beta in betas])
+update = hybrid.Branches(*[FixedTemperatureSampler(beta, num_sweeps=n_sweeps) for beta in betas])
 swap = SwapReplicasSweepDown(betas)
 workflow = hybrid.Loop(update | swap, max_iter=n_iterations) \
          | hybrid.MergeSamples(aggregate=True)
