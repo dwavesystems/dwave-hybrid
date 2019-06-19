@@ -98,7 +98,11 @@ class TestQPUSamplers(unittest.TestCase):
         bqm = dimod.BinaryQuadraticModel.from_ising({'a': 1}, {})
         init = State.from_subproblem(bqm)
 
+        # define a mock sampler that exposes some parameters of interest
         mock_sampler = mock.MagicMock()
+        mock_sampler.parameters = {
+            'num_reads': [], 'chain_strength': [], 'future_proof': []}
+
         qpu_params = dict(chain_strength=2, future_proof=True)
 
         workflow = QPUSubproblemAutoEmbeddingSampler(

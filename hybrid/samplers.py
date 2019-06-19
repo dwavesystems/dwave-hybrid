@@ -24,7 +24,7 @@ from collections import namedtuple
 
 import dimod
 from dwave.system.samplers import DWaveSampler
-from dwave.system.composites import EmbeddingComposite, FixedEmbeddingComposite
+from dwave.system.composites import AutoEmbeddingComposite, FixedEmbeddingComposite
 
 from tabu import TabuSampler
 from neal import SimulatedAnnealingSampler
@@ -48,6 +48,9 @@ logger = logging.getLogger(__name__)
 
 class QPUSubproblemExternalEmbeddingSampler(Runnable, traits.SubproblemSampler, traits.EmbeddingIntaking):
     """A quantum sampler for a subproblem with a defined minor-embedding.
+
+    Note:
+        Externally supplied embedding must be present in the input state.
 
     Args:
         num_reads (int, optional, default=100):
@@ -102,10 +105,11 @@ class QPUSubproblemAutoEmbeddingSampler(Runnable, traits.SubproblemSampler):
         num_reads (int, optional, default=100):
             Number of states (output solutions) to read from the sampler.
 
-        qpu_sampler (:class:`dimod.Sampler`, optional, default=EmbeddingComposite(DWaveSampler())):
-            Quantum sampler such as a D-Wave system. If sampler is structured,
-            it will be converted to unstructured via
-            :class:`~dwave.system.composited.EmbeddingComposite`.
+        qpu_sampler (:class:`dimod.Sampler`, optional,
+                default=:class:`AutoEmbeddingComposite`(:class:`DWaveSampler`())):
+            Quantum sampler such as a D-Wave system. Subproblems that do not fit
+            the sampler's structure are minor-embedded on the fly with
+            :class:`~dwave.system.composites.AutoEmbeddingComposite`.
 
         qpu_params (dict):
             Dictionary of keyword arguments with values that will be used
@@ -122,11 +126,8 @@ class QPUSubproblemAutoEmbeddingSampler(Runnable, traits.SubproblemSampler):
         if qpu_sampler is None:
             qpu_sampler = DWaveSampler()
 
-        # convert the structured sampler to unstructured
-        if isinstance(qpu_sampler, dimod.Structured):
-            self.sampler = EmbeddingComposite(qpu_sampler)
-        else:
-            self.sampler = qpu_sampler
+        # embed on fly and only if needed
+        self.sampler = AutoEmbeddingComposite(qpu_sampler)
 
         if qpu_params is None:
             qpu_params = {}
@@ -157,10 +158,11 @@ class ReverseAnnealingAutoEmbeddingSampler(Runnable, traits.SubproblemSampler):
         num_reads (int, optional, default=100):
             Number of states (output solutions) to read from the sampler.
 
-        qpu_sampler (:class:`dimod.Sampler`, optional, default=EmbeddingComposite(DWaveSampler())):
-            Quantum sampler such as a D-Wave system. If sampler is structured,
-            it will be converted to unstructured via
-            :class:`~dwave.system.composited.EmbeddingComposite`.
+        qpu_sampler (:class:`dimod.Sampler`, optional,
+                default=:class:`AutoEmbeddingComposite`(:class:`DWaveSampler`())):
+            Quantum sampler such as a D-Wave system. Subproblems that do not fit
+            the sampler's structure are minor-embedded on the fly with
+            :class:`~dwave.system.composites.AutoEmbeddingComposite`.
 
         anneal_schedule (list(list), optional, default=[[0, 1], [0.5, 0.5], [1, 1]]):
             An anneal schedule defined by a series of pairs of floating-point
@@ -190,11 +192,8 @@ class ReverseAnnealingAutoEmbeddingSampler(Runnable, traits.SubproblemSampler):
         # happen only if user provided the `qpu_sampler`)
         qpu_sampler.validate_anneal_schedule(anneal_schedule)
 
-        # convert the structured sampler to unstructured
-        if isinstance(qpu_sampler, dimod.Structured):
-            self.sampler = EmbeddingComposite(qpu_sampler)
-        else:
-            self.sampler = qpu_sampler
+        # embed on fly and only if needed
+        self.sampler = AutoEmbeddingComposite(qpu_sampler)
 
     def __repr__(self):
         return ("{self}(num_reads={self.num_reads!r}, "
