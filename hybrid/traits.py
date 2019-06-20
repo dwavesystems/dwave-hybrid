@@ -31,7 +31,8 @@ class StateTraits(object):
     def validate_state_trait(self, state, trait, io):
         """Validate single input/output (`io`) `state` `trait`."""
         if trait not in state:
-            raise StateTraitMissingError("{} state is missing {!r} on {!r}".format(io, trait, self))
+            raise StateTraitMissingError(
+                "{} state is missing {!r} on {!r}".format(io, trait, self))
 
     def validate_input_state_traits(self, inp):
         if not self.validate_input:
@@ -39,7 +40,8 @@ class StateTraits(object):
 
         if self.multi_input:
             if not isinstance(inp, Sequence):
-                raise StateDimensionalityError("state sequence required on input")
+                raise StateDimensionalityError(
+                    "state sequence required on input to {!r}".format(self))
 
             for state in inp:
                 for trait in self.inputs:
@@ -47,7 +49,8 @@ class StateTraits(object):
 
         else:
             if not isinstance(inp, Mapping):
-                raise StateDimensionalityError("single state required on input")
+                raise StateDimensionalityError(
+                    "single state required on input to {!r}".format(self))
 
             for trait in self.inputs:
                 self.validate_state_trait(inp, trait, "input")
@@ -58,7 +61,8 @@ class StateTraits(object):
 
         if self.multi_output:
             if not isinstance(out, Sequence):
-                raise StateDimensionalityError("state sequence required on output")
+                raise StateDimensionalityError(
+                    "state sequence required on output from {!r}".format(self))
 
             for state in out:
                 for trait in self.outputs:
@@ -66,7 +70,8 @@ class StateTraits(object):
 
         else:
             if not isinstance(out, Mapping):
-                raise StateDimensionalityError("single state required on output")
+                raise StateDimensionalityError(
+                    "single state required on output from {!r}".format(self))
 
             for trait in self.outputs:
                 self.validate_state_trait(out, trait, "output")
