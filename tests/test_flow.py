@@ -325,6 +325,17 @@ class TestParallelBranches(unittest.TestCase):
         # total runtime has to be smaller that the sum of individual runtimes
         self.assertTrue(1 <= tt.dt <= 2)
 
+    def test_mimo(self):
+        """Parallel should support branches with States inputs"""
+
+        inp = States(State(x=1), State(x=2))
+        wrk = ParallelBranches(Identity(), Identity(), Identity())
+        out = wrk.run(inp).result()
+
+        self.assertEqual(len(out), 3)
+        self.assertIsInstance(out, States)
+        self.assertEqual(out.first, inp)
+
 
 class TestArgMin(unittest.TestCase):
 
