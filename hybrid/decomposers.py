@@ -482,7 +482,7 @@ class RandomConstraintDecomposer(Runnable, traits.ProblemDecomposer):
         for _, ci in nx.bfs_edges(CG, n):
             proposed = [v for v in constraints[ci] if v not in variables]
             if len(proposed) + len(variables) <= size:
-                variables.add(proposed)
+                variables.union(proposed)
             if len(variables) == size:
                 # can exit early
                 break
