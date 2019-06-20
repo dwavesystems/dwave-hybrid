@@ -357,6 +357,32 @@ class TestConstraintDecomposer(unittest.TestCase):
         self.assertIn('subproblem', newstate)
         self.assertTrue(len(newstate.subproblem) <= 3)  # correct size
 
+    def test_next_on_different_sized_constraints(self):
+        bqm = dimod.BinaryQuadraticModel.empty(dimod.SPIN)
+
+        variables = list('abcdefg')
+        fixed_variables = list('abc')
+        size = 3
+        constraints = []
+
+        # Set BQM and constraints of varying lengths
+        for triplet in itertools.combinations(variables, size):
+            for u, v in itertools.combinations(triplet, 2):
+                bqm.add_interaction(u, v, -1)
+            non_fixed_variables = set(triplet) - set(fixed_variables)
+            constraints.append(non_fixed_variables)
+
+        for fixed_variable in fixed_variables:
+            bqm.fix_variable(fixed_variable, 1)
+
+        # Get new state
+        rcd = RandomConstraintDecomposer(size, constraints)
+        state = State.from_sample(min_sample(bqm), bqm)
+        newstate = rcd.run(state).result()
+
+        self.assertIn('subproblem', newstate)
+        self.assertTrue(len(newstate.subproblem) <= size)  # correct size
+
 
 class TestRoofDualityDecomposer(unittest.TestCase):
     def test_allfixed(self):
