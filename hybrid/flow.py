@@ -1071,7 +1071,7 @@ class Unwind(Runnable, traits.SIMO):
 
 
 @stoppable
-class Identity(Runnable):
+class Identity(Runnable, traits.NotValidated):
     """Trivial identity runnable. The output is a direct copy of the input."""
 
     def next(self, state, racing_context=False, **runopts):

@@ -876,3 +876,10 @@ class TestIdentity(unittest.TestCase):
         self.assertEqual(len(not_done), 0)
 
         self.assertEqual(out.result().x, 1)
+
+    def test_input_type_invariant(self):
+        inp1 = State(x=1)
+        self.assertEqual(Identity().run(inp1).result(), inp1)
+
+        inp2 = States(State(x=1), State(x=2))
+        self.assertEqual(Identity().run(inp2).result(), inp2)
