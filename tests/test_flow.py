@@ -32,7 +32,7 @@ from hybrid.flow import (
 from hybrid.core import State, States, Runnable, Present
 from hybrid.utils import min_sample, max_sample
 from hybrid.profiling import tictoc
-from hybrid.exceptions import EndOfStream
+from hybrid.exceptions import EndOfStream, StateDimensionalityError
 from hybrid.testing import mock
 from hybrid import traits
 
@@ -610,13 +610,16 @@ class TestLoopUntilNoImprovement(unittest.TestCase):
 
         self.assertTrue(s.result().cnt >= 1)
 
-    def test_validation(self):
-        class simo(Runnable, traits.SIMO):
+    def test_dynamic_validation(self):
+        class simo(traits.SIMO, Runnable):
             def next(self, state):
                 return States(state, state)
 
-        with self.assertRaises(TypeError):
-            LoopUntilNoImprovement(simo())
+        with self.assertRaises(StateDimensionalityError):
+            LoopUntilNoImprovement(simo()).run(State()).result()
+
+        with self.assertRaises(StateDimensionalityError):
+            LoopUntilNoImprovement(simo()).run(States()).result()
 
 
 class TestLoopWhileNoImprovement(unittest.TestCase):
@@ -693,13 +696,16 @@ class TestLoopWhileNoImprovement(unittest.TestCase):
         self.assertEqual(len(loop.runnable.timers['dispatch.next']), 103)
         self.assertEqual(state.cnt, 4)
 
-    def test_validation(self):
-        class simo(Runnable, traits.SIMO):
+    def test_dynamic_validation(self):
+        class simo(traits.SIMO, Runnable):
             def next(self, state):
                 return States(state, state)
 
-        with self.assertRaises(TypeError):
-            LoopWhileNoImprovement(simo())
+        with self.assertRaises(StateDimensionalityError):
+            LoopWhileNoImprovement(simo()).run(State()).result()
+
+        with self.assertRaises(StateDimensionalityError):
+            LoopWhileNoImprovement(simo()).run(States()).result()
 
 
 class TestMap(unittest.TestCase):
@@ -837,13 +843,13 @@ class TestUnwind(unittest.TestCase):
         for idx, state in enumerate(states):
             self.assertEqual(state.cnt, 2-idx)
 
-    def test_validation(self):
-        class simo(Runnable, traits.SIMO):
+    def test_dynamic_validation(self):
+        class simo(traits.SIMO, Runnable):
             def next(self, state):
                 return States(state, state)
 
-        with self.assertRaises(TypeError):
-            Unwind(simo())
+        with self.assertRaises(StateDimensionalityError):
+            Unwind(simo()).run(States()).result()
 
 
 class TestIdentity(unittest.TestCase):
