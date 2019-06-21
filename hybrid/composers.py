@@ -23,14 +23,14 @@ __all__ = ['IdentityComposer', 'SplatComposer', 'GreedyPathMerge', 'MergeSamples
 logger = logging.getLogger(__name__)
 
 
-class IdentityComposer(Runnable, traits.SubsamplesComposer):
+class IdentityComposer(traits.SubsamplesComposer, traits.SISO, Runnable):
     """Copy `subsamples` to `samples` verbatim."""
 
     def next(self, state, **runopts):
         return state.updated(samples=state.subsamples)
 
 
-class SplatComposer(Runnable, traits.SubsamplesComposer):
+class SplatComposer(traits.SubsamplesComposer, traits.SISO, Runnable):
     """A composer that overwrites current samples with subproblem samples.
 
     See :ref:`composers-examples`.
@@ -48,7 +48,7 @@ class SplatComposer(Runnable, traits.SubsamplesComposer):
             samples=SampleSet.from_samples(composed_sample, state.samples.vartype, composed_energy))
 
 
-class GreedyPathMerge(Runnable, traits.MISO, traits.SamplesIntaking, traits.SamplesProducing):
+class GreedyPathMerge(traits.SamplesIntaking, traits.SamplesProducing, traits.MISO, Runnable):
     """Dialectic-search merge operation [KS]_. Generates a path from one input
     state, representing the thesis, to another input state, representing the
     antithesis, using a greedy method of single bit flips selected by decreasing
@@ -110,7 +110,7 @@ class GreedyPathMerge(Runnable, traits.MISO, traits.SamplesIntaking, traits.Samp
 
 # TODO: move MergeSamples and SliceSamples to `ops` module?
 
-class MergeSamples(Runnable, traits.MISO, traits.SamplesIntaking, traits.SamplesProducing):
+class MergeSamples(traits.SamplesIntaking, traits.SamplesProducing, traits.MISO, Runnable):
     """Merge multiple input states by concatenating samples from all the states
     in to the first state.
 
@@ -155,7 +155,7 @@ class MergeSamples(Runnable, traits.MISO, traits.SamplesIntaking, traits.Samples
         return states.first.updated(samples=samples)
 
 
-class SliceSamples(Runnable, traits.SISO, traits.SamplesIntaking, traits.SamplesProducing):
+class SliceSamples(traits.SamplesIntaking, traits.SamplesProducing, traits.SISO, Runnable):
     """Slice input sampleset acting on samples in a selected order.
 
     Args:

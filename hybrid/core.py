@@ -619,10 +619,6 @@ class HybridRunnable(Runnable):
         self.sampler = sampler
         self.input, self.output = fields
 
-        # manually add traits
-        self.inputs.add(self.input)
-        self.outputs.add(self.output)
-
     def next(self, state, **sample_kwargs):
         response = self.sampler.sample(state[self.input], **sample_kwargs)
         return state.updated(**{self.output: response})
