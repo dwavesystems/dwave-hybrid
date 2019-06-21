@@ -744,7 +744,7 @@ class TestMap(unittest.TestCase):
 
 class TestReduce(unittest.TestCase):
 
-    class Sum(Runnable, traits.MISO):
+    class Sum(traits.MISO, Runnable):
         def next(self, states):
             a, b = states
             return a.updated(val=a.val + b.val)

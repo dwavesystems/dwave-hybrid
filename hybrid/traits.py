@@ -77,6 +77,10 @@ class StateTraits(object):
                 self.validate_state_trait(out, trait, "output")
 
 
+#
+# I/O validation mixins
+#
+
 class InputValidated(object):
     def __init__(self):
         super(InputValidated, self).__init__()
@@ -104,6 +108,10 @@ class Validated(InputValidated, OutputValidated):
 class NotValidated(InputNotValidated, OutputNotValidated):
     """Input state(s) and output state(s) are not validated."""
 
+
+#
+# I/O dimensionality mixins. Imply I/O validation.
+#
 
 class SingleInputState(InputValidated):
     def __init__(self):
@@ -138,6 +146,10 @@ class MIMO(MultiInputStates, MultiOutputStates):
 class MISO(MultiInputStates, SingleOutputState):
     """Multiple Inputs, Single Output."""
 
+
+#
+# State structure mixins. Imply I/O validation.
+#
 
 class ProblemIntaking(InputValidated, StateTraits):
     def __init__(self):
