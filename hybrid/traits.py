@@ -217,3 +217,10 @@ class ProblemSampler(ProblemIntaking, SamplesProducing):
 
 class SubproblemSampler(SubproblemIntaking, SubsamplesProducing):
     pass
+
+
+class SamplesProcessor(SamplesIntaking, SamplesProducing):
+    pass
+
+class SubsamplesProcessor(SubsamplesIntaking, SubsamplesProducing):
+    pass

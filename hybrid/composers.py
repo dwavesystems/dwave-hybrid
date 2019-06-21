@@ -48,7 +48,7 @@ class SplatComposer(traits.SubsamplesComposer, traits.SISO, Runnable):
             samples=SampleSet.from_samples(composed_sample, state.samples.vartype, composed_energy))
 
 
-class GreedyPathMerge(traits.SamplesIntaking, traits.SamplesProducing, traits.MISO, Runnable):
+class GreedyPathMerge(traits.SamplesProcessor, traits.MISO, Runnable):
     """Dialectic-search merge operation [KS]_. Generates a path from one input
     state, representing the thesis, to another input state, representing the
     antithesis, using a greedy method of single bit flips selected by decreasing
@@ -110,7 +110,7 @@ class GreedyPathMerge(traits.SamplesIntaking, traits.SamplesProducing, traits.MI
 
 # TODO: move MergeSamples and SliceSamples to `ops` module?
 
-class MergeSamples(traits.SamplesIntaking, traits.SamplesProducing, traits.MISO, Runnable):
+class MergeSamples(traits.SamplesProcessor, traits.MISO, Runnable):
     """Merge multiple input states by concatenating samples from all the states
     in to the first state.
 
@@ -155,7 +155,7 @@ class MergeSamples(traits.SamplesIntaking, traits.SamplesProducing, traits.MISO,
         return states.first.updated(samples=samples)
 
 
-class SliceSamples(traits.SamplesIntaking, traits.SamplesProducing, traits.SISO, Runnable):
+class SliceSamples(traits.SamplesProcessor, traits.SISO, Runnable):
     """Slice input sampleset acting on samples in a selected order.
 
     Args:
