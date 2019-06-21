@@ -25,14 +25,14 @@ from hybrid import traits
 class TestRunnableTraits(unittest.TestCase):
 
     def test_valid_input(self):
-        class Component(Runnable, traits.SubproblemIntaking):
+        class Component(traits.SubproblemIntaking, Runnable):
             def next(self, state):
                 return State()
 
         self.assertTrue(Component().run(State(subproblem=None)).result())
 
     def test_invalid_input(self):
-        class Component(Runnable, traits.SubproblemIntaking):
+        class Component(traits.SubproblemIntaking, Runnable):
             def next(self, state):
                 return True
 
@@ -40,14 +40,14 @@ class TestRunnableTraits(unittest.TestCase):
             Component().run(State()).result()
 
     def test_valid_output(self):
-        class Component(Runnable, traits.SubproblemProducing):
+        class Component(traits.SubproblemProducing, Runnable):
             def next(self, state):
                 return state.updated(subproblem=True)
 
         self.assertTrue(Component().run(State()).result().subproblem)
 
     def test_invalid_output(self):
-        class Component(Runnable, traits.SubproblemProducing):
+        class Component(traits.SubproblemProducing, Runnable):
             def next(self, state):
                 return state
 
@@ -58,7 +58,7 @@ class TestRunnableTraits(unittest.TestCase):
 class TestMultipleTraits(unittest.TestCase):
 
     def test_explicit_siso_system(self):
-        class Component(Runnable, traits.SubproblemIntaking, traits.SubsamplesProducing):
+        class Component(traits.SubproblemIntaking, traits.SubsamplesProducing, Runnable):
             def next(self, state):
                 return state.updated(subsamples=True)
 
@@ -68,8 +68,8 @@ class TestMultipleTraits(unittest.TestCase):
             Component().run(State()).result()
 
     def test_explicit_mimo_system(self):
-        class Component(Runnable, traits.EmbeddingIntaking, traits.SubproblemIntaking,
-                                  traits.SubsamplesProducing, traits.SamplesProducing):
+        class Component(traits.EmbeddingIntaking, traits.SubproblemIntaking,
+                        traits.SubsamplesProducing, traits.SamplesProducing, Runnable):
             def next(self, state):
                 return state.updated(samples=True, subsamples=True)
 
@@ -82,7 +82,7 @@ class TestMultipleTraits(unittest.TestCase):
             Component().run(State(subproblem=True)).result()
 
     def test_atypical_output_only_system(self):
-        class Component(Runnable, traits.ProblemProducing, traits.EmbeddingProducing):
+        class Component(traits.ProblemProducing, traits.EmbeddingProducing, Runnable):
             def next(self, state):
                 return state.updated(problem=True, embedding=True)
 
@@ -90,7 +90,7 @@ class TestMultipleTraits(unittest.TestCase):
         self.assertTrue(Component().run(State()).result().embedding)
 
     def test_composed_traits(self):
-        class Component(Runnable, traits.ProblemDecomposer):
+        class Component(traits.ProblemDecomposer, Runnable):
             def next(self, state):
                 return state.updated(subproblem=True)
 
@@ -104,7 +104,7 @@ class TestMultipleTraits(unittest.TestCase):
     def test_problem_decomposer_traits(self):
         # ProblemDecomposer ~ ProblemIntaking, SamplesIntaking, SubproblemProducing
 
-        class Component(Runnable, traits.ProblemDecomposer):
+        class Component(traits.ProblemDecomposer, Runnable):
             def next(self, state):
                 return state
 
@@ -117,7 +117,7 @@ class TestMultipleTraits(unittest.TestCase):
     def test_subsamples_composer_traits(self):
         # SubsamplesComposer ~ SamplesIntaking, SubsamplesIntaking, ProblemIntaking, SamplesProducing
 
-        class Component(Runnable, traits.SubsamplesComposer):
+        class Component(traits.SubsamplesComposer, Runnable):
             def next(self, state):
                 return state
 
@@ -131,7 +131,7 @@ class TestMultipleTraits(unittest.TestCase):
 class TestMultipleStateTraits(unittest.TestCase):
 
     def test_siso(self):
-        class ValidSISO(Runnable, traits.SISO):
+        class ValidSISO(traits.SISO, Runnable):
             def next(self, state):
                 return state
 
@@ -139,7 +139,7 @@ class TestMultipleStateTraits(unittest.TestCase):
             ValidSISO().run(States()).result()
         self.assertEqual(ValidSISO().run(State(x=1)).result().x, 1)
 
-        class InvalidSISO(Runnable, traits.SISO):
+        class InvalidSISO(traits.SISO, Runnable):
             def next(self, state):
                 # should return a single State()
                 return States(state, state)
@@ -151,7 +151,7 @@ class TestMultipleStateTraits(unittest.TestCase):
     def test_mimo_with_specific_state_traits(self):
         # input: list of states with subproblem
         # output: list of states with subsamples
-        class SubproblemSamplerMIMO(Runnable, traits.MIMO, traits.SubproblemSampler):
+        class SubproblemSamplerMIMO(traits.SubproblemSampler, traits.MIMO, Runnable):
             def next(self, states):
                 return States(State(subsamples=1), State(subsamples=2))
 
@@ -165,7 +165,7 @@ class TestMultipleStateTraits(unittest.TestCase):
         self.assertEqual(r[1].subsamples, 2)
 
     def test_invalid_mimo(self):
-        class InvalidMIMO(Runnable, traits.MIMO):
+        class InvalidMIMO(traits.MIMO, Runnable):
             def next(self, states):
                 # should return States()
                 return State()
@@ -174,7 +174,7 @@ class TestMultipleStateTraits(unittest.TestCase):
             InvalidMIMO().run(States()).result()
 
     def test_all_state_traits_enforced(self):
-        class A(Runnable, traits.SIMO, traits.SubproblemIntaking, traits.EmbeddingProducing):
+        class A(traits.SubproblemIntaking, traits.EmbeddingProducing, traits.SIMO, Runnable):
             def next(self, state):
                 # FAIL: embedding is missing in second state
                 return States(State(embedding=1), State())
@@ -185,7 +185,7 @@ class TestMultipleStateTraits(unittest.TestCase):
         with self.assertRaises(traits.StateTraitMissingError):
             A().run(State(subproblem=1)).result()
 
-        class B(Runnable, traits.SIMO, traits.SubproblemIntaking, traits.EmbeddingProducing):
+        class B(traits.SubproblemIntaking, traits.EmbeddingProducing, traits.SIMO, Runnable):
             def next(self, state):
                 return States(State(embedding=1), State(embedding=2))
 
@@ -199,7 +199,7 @@ class TestMultipleStateTraits(unittest.TestCase):
 class TestTraitsValidationOnOff(unittest.TestCase):
 
     def test_validated(self):
-        class Validated(Runnable, traits.SISO, traits.Validated):
+        class Validated(traits.SISO, Runnable):
             def next(self, state):
                 return state
 
@@ -208,7 +208,7 @@ class TestTraitsValidationOnOff(unittest.TestCase):
         self.assertEqual(Validated().run(State(x=1)).result().x, 1)
 
     def test_not_validated(self):
-        class NotValidated(Runnable, traits.NotValidated):
+        class NotValidated(traits.NotValidated, Runnable):
             def next(self, state):
                 return state
 
@@ -220,7 +220,7 @@ class TestFlowComponentsTraits(unittest.TestCase):
 
     def test_branch_with_single_component(self):
         """Traits requirements from inner runnable must be reflected in branch."""
-        class ValidSISO(Runnable, traits.SISO):
+        class ValidSISO(traits.SISO, Runnable):
             def next(self, state):
                 return state
 
@@ -228,7 +228,7 @@ class TestFlowComponentsTraits(unittest.TestCase):
             Branch(components=(ValidSISO(),)).run(States()).result()
         self.assertEqual(Branch(components=(ValidSISO(),)).run(State(x=1)).result().x, 1)
 
-        class InvalidSISO(Runnable, traits.SISO):
+        class InvalidSISO(traits.SISO, Runnable):
             def next(self, state):
                 return States(state, state)
 
@@ -238,7 +238,7 @@ class TestFlowComponentsTraits(unittest.TestCase):
 
         # input: list of states with subproblem
         # output: list of states with subsamples
-        class SubproblemSamplerMIMO(Runnable, traits.MIMO, traits.SubproblemSampler):
+        class SubproblemSamplerMIMO(traits.SubproblemSampler, traits.MIMO, Runnable):
             def next(self, states):
                 return States(State(subsamples=1), State(subsamples=2))
 
@@ -251,77 +251,8 @@ class TestFlowComponentsTraits(unittest.TestCase):
         self.assertEqual(r[0].subsamples, 1)
         self.assertEqual(r[1].subsamples, 2)
 
-    def test_branch_with_multiple_components(self):
-        class A(Runnable, traits.ProblemSampler):
-            def next(self, state):
-                pass
-
-        class B(Runnable, traits.SubproblemSampler):
-            def next(self, state):
-                pass
-
-        class C(Runnable, traits.ProblemDecomposer):
-            def next(self, state):
-                pass
-
-        # total inputs are sum of components inputs
-        branch = A() | B()
-        self.assertSetEqual(branch.inputs, {'problem', 'subproblem'})
-        self.assertSetEqual(branch.outputs, {'subsamples'})
-
-        # total inputs are sum of components inputs
-        branch = A() | B() | C()
-        self.assertSetEqual(branch.inputs, {'problem', 'subproblem'})
-        self.assertSetEqual(branch.outputs, {'subproblem'})
-
-        # but order matters
-        branch = A() | C() | B()
-        self.assertSetEqual(branch.inputs, {'problem'})
-        self.assertSetEqual(branch.outputs, {'subsamples'})
-
-    def test_dimensions_match_on_compose(self):
-        class A(Runnable, traits.ProblemSampler):
-            def next(self, state):
-                pass
-
-        # dimensionality check
-        Map(A()) | ArgMin()
-        with self.assertRaises(TypeError):
-            A() | ArgMin()
-        with self.assertRaises(TypeError):
-            ArgMin() | Map(A())
-        with self.assertRaises(TypeError):
-            ArgMin() | Map(ArgMin())
-        with self.assertRaises(TypeError):
-            Loop(ArgMin())
-
-    def test_racing_branches(self):
-        class A(Runnable, traits.ProblemDecomposer):
-            def next(self, state):
-                return state.updated(subproblem=state.problem)
-
-        class B(Runnable, traits.SubproblemSampler):
-            def next(self, state):
-                return state.updated(subsamples=state.subproblem)
-
-        a, b = A(), B()
-        race = RacingBranches(a, b)
-        self.assertSetEqual(race.inputs, a.inputs | b.inputs)
-        self.assertSetEqual(race.outputs, a.outputs & b.outputs)
-
-    def test_map(self):
-        class A(Runnable, traits.ProblemDecomposer):
-            def next(self, state):
-                return state.updated(subproblem=state.problem)
-
-        a = A()
-        m = Map(a)
-        r = m.run(States(State(problem=1))).result()
-        self.assertSetEqual(m.inputs, a.inputs)
-        self.assertSetEqual(m.outputs, a.outputs)
-
     def test_loop(self):
-        class Identity(Runnable, traits.MIMO):
+        class Identity(traits.MIMO, Runnable):
             def next(self, states):
                 return states
 
