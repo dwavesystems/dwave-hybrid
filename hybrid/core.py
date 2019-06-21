@@ -265,9 +265,9 @@ class Runnable(traits.StateTraits):
             Keyword arguments passed down to each `Runnable.run` call.
 
     Note:
-        The base class :class:`hybrid.core.Runnable` does not enforce traits
+        The base class :class:`~hybrid.core.Runnable` does not enforce traits
         validation. To enable validation, derive your subclass from one of the
-        dimensionality state structure, or I/O validation mixins in
+        state structure, I/O dimensionality, or I/O validation mixins in
         :mod:`~hybrid.traits`.
 
     Examples:
