@@ -264,6 +264,12 @@ class Runnable(traits.StateTraits):
         **runopts (dict):
             Keyword arguments passed down to each `Runnable.run` call.
 
+    Note:
+        The base class :class:`~hybrid.core.Runnable` does not enforce traits
+        validation. To enable validation, derive your subclass from one of the
+        state structure, I/O dimensionality, or I/O validation mixins in
+        :mod:`~hybrid.traits`.
+
     Examples:
         This example runs a tabu search on a binary quadratic model. An initial
         state is manually set to :math:`x=y=0, z=1; a=b=1, c=0` and an updated
@@ -618,10 +624,6 @@ class HybridRunnable(Runnable):
 
         self.sampler = sampler
         self.input, self.output = fields
-
-        # manually add traits
-        self.inputs.add(self.input)
-        self.outputs.add(self.output)
 
     def next(self, state, **sample_kwargs):
         response = self.sampler.sample(state[self.input], **sample_kwargs)

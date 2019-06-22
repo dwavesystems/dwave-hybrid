@@ -37,7 +37,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class Branch(Runnable):
+class Branch(traits.NotValidated, Runnable):
     """Sequentially executed :class:`~hybrid.core.Runnable` components.
 
     Args:
@@ -85,37 +85,6 @@ class Branch(Runnable):
         for component in self.components:
             if not isinstance(component, Runnable):
                 raise TypeError("expected Runnable component, got {!r}".format(component))
-
-        # patch branch's I/O requirements based on the first and last component
-
-        # be conservative in output requirements, but liberal in input requirements
-        #
-        # i.e when calculating input requirements, assume the best case scenario,
-        # that state is accumulated along the branch; but don't assume that for
-        # output
-
-        minimal_inputs = self.components[0].inputs.copy()
-        state = self.components[0].inputs.copy()
-        # consider connections between all connected components (a, b)
-        for a, b in zip(self.components, self.components[1:]):
-            # update the "running" state traits, and minimally acceptable input traits
-            state |= a.outputs
-            missing = b.inputs - state
-            minimal_inputs |= missing
-
-            # btw, check dimensionality compatibility
-            if a.multi_output != b.multi_input:
-                raise TypeError(
-                    "mismatched output/input dimensions between {!r} and {!r}".format(a, b))
-
-        self.inputs = minimal_inputs
-
-        # this the minimum we can guarantee
-        self.outputs = self.components[-1].outputs
-
-        # this must hold
-        self.multi_input = self.components[0].multi_input
-        self.multi_output = self.components[-1].multi_output
 
     def __or__(self, other):
         """Sequential composition of runnable components (L-to-R)
@@ -172,7 +141,7 @@ class Branch(Runnable):
             component.stop()
 
 
-class Branches(Runnable, traits.MIMO):
+class Branches(traits.NotValidated, Runnable):
     """Runs multiple workflows of type :class:`~hybrid.core.Runnable` in
     parallel, blocking until all finish.
 
@@ -216,24 +185,6 @@ class Branches(Runnable, traits.MIMO):
             if not isinstance(branch, Runnable):
                 raise TypeError("expected Runnable branch, got {!r}".format(branch))
 
-        # patch components's I/O requirements based on the subcomponents' requirements
-
-        # ensure i/o dimensionality for all branches is the same
-        first = branches[0]
-        if not all(b.multi_input == first.multi_input for b in branches[1:]):
-            raise TypeError("not all branches have the same input dimensionality")
-        if not all(b.multi_output == first.multi_output for b in branches[1:]):
-            raise TypeError("not all branches have the same output dimensionality")
-
-        # input has to satisfy all branches' input
-        self.inputs = set.union(*(branch.inputs for branch in self.branches))
-        self.multi_input = True
-
-        # output will be one of the branches' output, but the only guarantee we
-        # can make upfront is the largest common subset of all outputs
-        self.outputs = set.intersection(*(branch.outputs for branch in self.branches))
-        self.multi_output = True
-
     def __and__(self, other):
         """Parallel composition of runnable components returns new Branches."""
         if isinstance(other, Branches):
@@ -274,7 +225,7 @@ class Branches(Runnable, traits.MIMO):
             branch.stop()
 
 
-class RacingBranches(Runnable, traits.SIMO):
+class RacingBranches(traits.NotValidated, Runnable):
     """Runs (races) multiple workflows of type :class:`~hybrid.core.Runnable`
     in parallel, stopping all once the first finishes. Returns the results of
     all, in the specified order.
@@ -309,24 +260,6 @@ class RacingBranches(Runnable, traits.SIMO):
 
         if not self.branches:
             raise ValueError("racing branches requires at least one branch")
-
-        # patch components's I/O requirements based on the subcomponents' requirements
-
-        # ensure i/o dimensionality for all branches is the same
-        first = branches[0]
-        if not all(b.multi_input == first.multi_input for b in branches[1:]):
-            raise TypeError("not all branches have the same input dimensionality")
-        if not all(b.multi_output == first.multi_output for b in branches[1:]):
-            raise TypeError("not all branches have the same output dimensionality")
-
-        # RB's input has to satisfy all branches' input
-        self.inputs = set.union(*(branch.inputs for branch in self.branches))
-        self.multi_input = first.multi_input
-
-        # RB's output will be one of the branches' output, but the only guarantee we
-        # can make upfront is the largest common subset of all outputs
-        self.outputs = set.intersection(*(branch.outputs for branch in self.branches))
-        self.multi_output = True
 
     def __str__(self):
         return " !! ".join("({})".format(b) for b in self) or "(zero racing branches)"
@@ -371,7 +304,7 @@ class RacingBranches(Runnable, traits.SIMO):
 Race = RacingBranches
 
 
-class Dup(Runnable, traits.SIMO):
+class Dup(traits.NotValidated, Runnable):
     """Duplicates input :class:`~hybrid.core.State`, n times, into output
     :class:`~hybrid.core.States`.
     """
@@ -387,7 +320,7 @@ class Dup(Runnable, traits.SIMO):
         return States(*[state.updated() for _ in range(self.n)])
 
 
-class ParallelBranches(Runnable, traits.SIMO):
+class ParallelBranches(traits.NotValidated, Runnable):
     """Runs multiple workflows of type :class:`~hybrid.core.Runnable` in
     parallel, blocking until all finish.
 
@@ -428,10 +361,6 @@ class ParallelBranches(Runnable, traits.SIMO):
         self.branches = Branches(*branches)
         self.runnable = Dup(len(tuple(self.branches))) | self.branches
 
-        # propagate on-construction traits verification (optional)
-        self.inputs = self.branches.inputs
-        self.outputs = self.branches.outputs
-
     def __repr__(self):
         return "{}{!r}".format(self.name, tuple(self.branches))
 
@@ -449,7 +378,7 @@ class ParallelBranches(Runnable, traits.SIMO):
 Parallel = ParallelBranches
 
 
-class Map(Runnable, traits.MIMO):
+class Map(traits.NotValidated, Runnable):
     """Runs a specified :class:`~hybrid.core.Runnable` in parallel on all input
     states.
 
@@ -473,11 +402,6 @@ class Map(Runnable, traits.MIMO):
 
         super(Map, self).__init__(**runopts)
         self.runnable = runnable
-
-        # patch components's I/O requirements based on the subcomponents' requirements
-        # TODO: automate
-        self.inputs = runnable.inputs
-        self.outputs = runnable.outputs
 
         # track running computations, so we can stop them on request
         self._futures = []
@@ -504,7 +428,7 @@ class Map(Runnable, traits.MIMO):
             future.cancel()
 
 
-class Reduce(Runnable, traits.MISO):
+class Reduce(traits.NotValidated, Runnable):
     """Fold-left using the specified :class:`~hybrid.core.Runnable` on a
     sequence of input states, producing a single output state.
 
@@ -529,17 +453,6 @@ class Reduce(Runnable, traits.MISO):
         super(Reduce, self).__init__(**runopts)
         self.runnable = runnable
         self.initial_state = initial_state
-
-        # preemptively check runnable's i/o dimensionality
-        if runnable.validate_input and runnable.validate_output:
-            if not runnable.multi_input or runnable.multi_output:
-                raise TypeError("runnables must be of multi-input, single-output type")
-
-        # patch components's I/O requirements based on the subcomponents' requirements
-        self.multi_input = True
-        self.inputs = runnable.inputs
-        self.multi_output = False
-        self.outputs = runnable.outputs
 
     def __str__(self):
         return "Reduce {}".format(self.runnable)
@@ -569,7 +482,7 @@ class Reduce(Runnable, traits.MISO):
         return result
 
 
-class Lambda(Runnable, traits.NotValidated):
+class Lambda(traits.NotValidated, Runnable):
     """Creates a runnable on fly, given just its `next` function (optionally
     `init` and `error` functions can be specified too).
 
@@ -633,7 +546,7 @@ class Lambda(Runnable, traits.NotValidated):
             self.name, self._next, self._error, self._init)
 
 
-class ArgMin(Runnable, traits.MISO):
+class ArgMin(traits.NotValidated, Runnable):
     """Selects the best state from a sequence of :class:`~hybrid.core.States`.
 
     Args:
@@ -698,7 +611,7 @@ class ArgMin(Runnable, traits.MISO):
         return states[min_idx]
 
 
-class TrackMin(Runnable, traits.SISO):
+class TrackMin(traits.NotValidated, Runnable):
     """Tracks and records the best :class:`~hybrid.core.State` according to a
     metric defined with a `key` function; typically this is the minimal state.
 
@@ -770,7 +683,7 @@ class TrackMin(Runnable, traits.SISO):
 
 
 @stoppable
-class LoopUntilNoImprovement(Runnable):
+class LoopUntilNoImprovement(traits.NotValidated, Runnable):
     """Iterates :class:`~hybrid.core.Runnable` for up to `max_iter` times, or
     until a state quality metric, defined by the `key` function, shows no
     improvement for at least `convergence` number of iterations. Alternatively,
@@ -831,18 +744,6 @@ class LoopUntilNoImprovement(Runnable):
         if terminate is not None and not callable(terminate):
             raise TypeError("expecting a predicate on 'key' for 'terminate'")
         self.terminate = terminate
-
-        # preemptively check runnable's i/o dimensionality
-        if runnable.validate_input and runnable.validate_output:
-            if runnable.multi_input != runnable.multi_output:
-                raise TypeError("runnable's input dimensionality does not match "
-                                "the output dimensionality")
-
-        # patch branch's I/O requirements based on the child component's requirements
-        self.inputs = self.runnable.inputs
-        self.multi_input = self.runnable.multi_input
-        self.outputs = self.runnable.outputs
-        self.multi_output = self.runnable.multi_output
 
     def __str__(self):
         return "Loop over {}".format(self.runnable)
@@ -923,7 +824,7 @@ class LoopUntilNoImprovement(Runnable):
 
 
 class Loop(LoopUntilNoImprovement):
-    pass
+    """Alias for :class:`LoopUntilNoImprovement`."""
 
 
 class SimpleIterator(LoopUntilNoImprovement):
@@ -1022,7 +923,7 @@ class LoopWhileNoImprovement(LoopUntilNoImprovement):
         return iterno + 1, cnt, next_input_state
 
 
-class Unwind(Runnable, traits.SIMO):
+class Unwind(traits.NotValidated, Runnable):
     """Iterates :class:`~hybrid.core.Runnable` until :exc:`EndOfStream` is
     raised, collecting all output states along the way.
 
@@ -1037,15 +938,6 @@ class Unwind(Runnable, traits.SIMO):
 
         super(Unwind, self).__init__(**runopts)
         self.runnable = runnable
-
-        # preemptively check runnable's i/o dimensionality
-        if runnable.validate_input and runnable.validate_output:
-            if runnable.multi_input or runnable.multi_output:
-                raise TypeError("single input, single output runnable required")
-
-        # patch branch's I/O requirements based on the child component's requirements
-        self.inputs = self.runnable.inputs
-        self.outputs = self.runnable.outputs
 
     def __str__(self):
         return "Unwind {}".format(self.runnable)
@@ -1071,7 +963,7 @@ class Unwind(Runnable, traits.SIMO):
 
 
 @stoppable
-class Identity(Runnable):
+class Identity(traits.NotValidated, Runnable):
     """Trivial identity runnable. The output is a direct copy of the input."""
 
     def next(self, state, racing_context=False, **runopts):

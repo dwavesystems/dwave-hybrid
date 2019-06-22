@@ -38,14 +38,14 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class IdentityDecomposer(Runnable, traits.ProblemDecomposer):
+class IdentityDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
     """Selects a subproblem that is a full copy of the problem."""
 
     def next(self, state, **runopts):
         return state.updated(subproblem=state.problem)
 
 
-class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
+class EnergyImpactDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
     """Selects a subproblem of variables maximally contributing to the problem
     energy.
 
@@ -283,7 +283,7 @@ class EnergyImpactDecomposer(Runnable, traits.ProblemDecomposer):
         return state.updated(subproblem=subbqm)
 
 
-class RandomSubproblemDecomposer(Runnable, traits.ProblemDecomposer):
+class RandomSubproblemDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
     """Selects a subproblem of `size` random variables.
 
     The selection currently implemented does not ensure that the variables are
@@ -316,8 +316,8 @@ class RandomSubproblemDecomposer(Runnable, traits.ProblemDecomposer):
         return state.updated(subproblem=subbqm)
 
 
-class RoofDualityDecomposer(Runnable, traits.ProblemDecomposer,
-                            traits.ProblemSampler, traits.SamplesProducing):
+class RoofDualityDecomposer(traits.ProblemDecomposer, traits.ProblemSampler,
+                            traits.SISO, Runnable):
     """Selects a subproblem with variables that cannot be fixed by roof duality.
 
     Roof duality finds a lower bound for the minimum of a quadratic polynomial.
@@ -373,7 +373,8 @@ class RoofDualityDecomposer(Runnable, traits.ProblemDecomposer,
         return state.updated(subproblem=subbqm, samples=newsampleset)
 
 
-class TilingChimeraDecomposer(Runnable, traits.ProblemDecomposer, traits.EmbeddingProducing):
+class TilingChimeraDecomposer(traits.ProblemDecomposer, traits.EmbeddingProducing,
+                              traits.SISO, Runnable):
     """Returns sequential Chimera lattices that tile the initial problem.
 
     A Chimera lattice is an m-by-n grid of Chimera tiles, where each tile is a
@@ -419,7 +420,7 @@ class TilingChimeraDecomposer(Runnable, traits.ProblemDecomposer, traits.Embeddi
         return state.updated(subproblem=subbqm, embedding=embedding)
 
 
-class RandomConstraintDecomposer(Runnable, traits.ProblemDecomposer):
+class RandomConstraintDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
     """Selects variables randomly as constrained by groupings.
 
     By grouping related variables, the problem's structure can guide the random

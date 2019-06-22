@@ -46,7 +46,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class QPUSubproblemExternalEmbeddingSampler(Runnable, traits.SubproblemSampler, traits.EmbeddingIntaking):
+class QPUSubproblemExternalEmbeddingSampler(Runnable, traits.SISO, traits.SubproblemSampler, traits.EmbeddingIntaking):
     """A quantum sampler for a subproblem with a defined minor-embedding.
 
     Note:
@@ -97,7 +97,7 @@ class QPUSubproblemExternalEmbeddingSampler(Runnable, traits.SubproblemSampler, 
         return state.updated(subsamples=response)
 
 
-class QPUSubproblemAutoEmbeddingSampler(Runnable, traits.SubproblemSampler):
+class QPUSubproblemAutoEmbeddingSampler(Runnable, traits.SISO, traits.SubproblemSampler):
     """A quantum sampler for a subproblem with automated heuristic
     minor-embedding.
 
@@ -150,7 +150,7 @@ class QPUSubproblemAutoEmbeddingSampler(Runnable, traits.SubproblemSampler):
         return state.updated(subsamples=response)
 
 
-class ReverseAnnealingAutoEmbeddingSampler(Runnable, traits.SubproblemSampler):
+class ReverseAnnealingAutoEmbeddingSampler(Runnable, traits.SISO, traits.SubproblemSampler):
     """A quantum reverse annealing sampler for a subproblem with automated
     heuristic minor-embedding.
 
@@ -209,7 +209,7 @@ class ReverseAnnealingAutoEmbeddingSampler(Runnable, traits.SubproblemSampler):
         return state.updated(subsamples=subsamples)
 
 
-class SimulatedAnnealingSubproblemSampler(Runnable, traits.SubproblemSampler):
+class SimulatedAnnealingSubproblemSampler(Runnable, traits.SISO, traits.SubproblemSampler):
     """A simulated annealing sampler for a subproblem.
 
     Args:
@@ -272,7 +272,7 @@ class InterruptableSimulatedAnnealingSubproblemSampler(SimulatedAnnealingSubprob
     pass
 
 
-class SimulatedAnnealingProblemSampler(Runnable, traits.ProblemSampler):
+class SimulatedAnnealingProblemSampler(Runnable, traits.SISO, traits.ProblemSampler):
     """A simulated annealing sampler for a complete problem.
 
     Args:
@@ -334,7 +334,7 @@ class InterruptableSimulatedAnnealingProblemSampler(SimulatedAnnealingProblemSam
     pass
 
 
-class TabuSubproblemSampler(Runnable, traits.SubproblemSampler):
+class TabuSubproblemSampler(Runnable, traits.SISO, traits.SubproblemSampler):
     """A tabu sampler for a subproblem.
 
     Args:
@@ -380,7 +380,7 @@ class TabuSubproblemSampler(Runnable, traits.SubproblemSampler):
         return state.updated(subsamples=subsamples)
 
 
-class TabuProblemSampler(Runnable, traits.ProblemSampler):
+class TabuProblemSampler(Runnable, traits.SISO, traits.ProblemSampler):
     """A tabu sampler for a binary quadratic problem.
 
     Args:
@@ -461,7 +461,7 @@ class InterruptableTabuSampler(Loop):
             TabuProblemSampler(**tabu), max_time=max_time)
 
 
-class RandomSubproblemSampler(Runnable, traits.SubproblemSampler):
+class RandomSubproblemSampler(Runnable, traits.SISO, traits.SubproblemSampler):
     """A random sample generator for a subproblem."""
 
     def next(self, state, **runopts):
