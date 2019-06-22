@@ -470,9 +470,7 @@ class RandomConstraintDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable
         bqm = state.problem
 
         # get a random constraint to start with.
-        # for some reason random.choice(CG.nodes) does not work, so we rely on the fact that our
-        # graph is index-labeled
-        n = random.choice(range(len(CG)))
+        n = random.choice(list(CG.nodes))
 
         if len(constraints[n]) > size:
             raise NotImplementedError
