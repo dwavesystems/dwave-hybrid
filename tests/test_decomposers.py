@@ -383,6 +383,30 @@ class TestConstraintDecomposer(unittest.TestCase):
         self.assertIn('subproblem', newstate)
         self.assertTrue(len(newstate.subproblem) <= size)  # correct size
 
+    def test_partially_disconnected_constraints(self):
+        bqm = dimod.BinaryQuadraticModel.from_ising({}, {'ab': 1, 'bc': 1, 'ca': 1})
+        size = 2
+        constraints = constraints = ['a', 'b', 'cb']
+
+        rcd = RandomConstraintDecomposer(size, constraints)
+        state = State.from_problem(bqm)
+        newstate = rcd.run(state).result()
+
+        self.assertIn('subproblem', newstate)
+        self.assertTrue(len(newstate.subproblem) <= size)  # correct size
+
+    def test_completely_disconnected_constraints(self):
+        bqm = dimod.BinaryQuadraticModel.from_ising({}, {'ab': 1, 'bc': 1, 'ca': 1})
+        size = 2
+        constraints = constraints = ['a', 'b']
+
+        rcd = RandomConstraintDecomposer(size, constraints)
+        state = State.from_problem(bqm)
+        newstate = rcd.run(state).result()
+
+        self.assertIn('subproblem', newstate)
+        self.assertTrue(len(newstate.subproblem) <= size)  # correct size
+
 
 class TestRoofDualityDecomposer(unittest.TestCase):
     def test_allfixed(self):
