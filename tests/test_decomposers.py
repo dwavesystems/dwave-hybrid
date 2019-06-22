@@ -400,12 +400,10 @@ class TestConstraintDecomposer(unittest.TestCase):
         size = 2
         constraints = constraints = ['a', 'b']
 
-        rcd = RandomConstraintDecomposer(size, constraints)
-        state = State.from_problem(bqm)
-        newstate = rcd.run(state).result()
-
-        self.assertIn('subproblem', newstate)
-        self.assertTrue(len(newstate.subproblem) <= size)  # correct size
+        with self.assertRaises(ValueError):
+            rcd = RandomConstraintDecomposer(size, constraints)
+            state = State.from_problem(bqm)
+            newstate = rcd.run(state).result()
 
 
 class TestRoofDualityDecomposer(unittest.TestCase):

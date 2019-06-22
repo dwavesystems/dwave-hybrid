@@ -463,13 +463,16 @@ class RandomConstraintDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable
                 if any(v in const for v in self.constraints[i]):
                     CG.add_edge(i, ci)
 
+        if len(CG) < 1:
+            raise ValueError("constraint graph empty")
+
     def next(self, state, **runopts):
         CG = self.constraint_graph
         size = self.size
         constraints = self.constraints
         bqm = state.problem
 
-        # get a random constraint to start with.
+        # get a random constraint to start with
         n = random.choice(list(CG.nodes))
 
         if len(constraints[n]) > size:
