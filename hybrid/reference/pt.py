@@ -26,7 +26,7 @@ import hybrid
 __all__ = [
     'FixedTemperatureSampler',
     'SwapReplicaPairRandom', 'SwapReplicasDownsweep',
-    'ParallelTempering'
+    'ParallelTempering', 'HybridizedParallelTempering'
 ]
 
 
@@ -204,6 +204,66 @@ def ParallelTempering(num_sweeps=10000, num_replicas=10,
 
     # fixed temperature sampling on all replicas in parallel
     update = hybrid.Map(FixedTemperatureSampler(num_sweeps=num_sweeps))
+
+    # replica exchange step: do the top-down sweep over adjacent pairs
+    # (good hot samples sink to bottom)
+    swap = SwapReplicasDownsweep()
+
+    # replicas update/swap until Loop termination criteria reached
+    loop = hybrid.Loop(
+        update | swap,
+        max_iter=max_iter, max_time=max_time, convergence=convergence,
+        key=lambda states: states[-1].samples or states[-1].samples.first.energy)
+
+    # collapse all replicas (although the bottom one should be the best)
+    postprocess = hybrid.MergeSamples(aggregate=True)
+
+    workflow = preprocess | loop | postprocess
+
+    return workflow
+
+
+def HybridizedParallelTempering(num_sweeps=10000, num_replicas=10,
+                                max_iter=None, max_time=None, convergence=3):
+    """Parallel tempering workflow generator.
+
+    Args:
+        num_sweeps (int, optional):
+            Number of sweeps in the fixed temperature sampling.
+
+        num_replicas (int, optional):
+            Number of replicas (parallel states / workflow branches).
+
+        max_iter (int/None, optional):
+            Maximum number of iterations of the update/swaps loop.
+
+        max_time (int/None, optional):
+            Maximum wall clock runtime (in seconds) allowed in the update/swaps
+            loop.
+
+        convergence (int/None, optional):
+            Number of times best energy of the coldest replica has to repeat
+            before we terminate.
+
+    Returns:
+        Workflow (:class:`~hybrid.core.Runnable` instance).
+
+    """
+
+    # expand single input state into `num_replicas` replica states
+    preprocess = SpawnParallelTemperingReplicas(num_replicas=num_replicas)
+
+    # QPU branch: limits the PT workflow to QPU-sized problems
+    qpu = (
+        hybrid.IdentityDecomposer()
+        | hybrid.QPUSubproblemAutoEmbeddingSampler()
+        | hybrid.IdentityComposer()
+    )
+
+    # use QPU as the hottest temperature sampler and `num_replicas-1` fixed-temperature-samplers
+    update = hybrid.Branches(
+        qpu,
+        *[FixedTemperatureSampler(num_sweeps=num_sweeps) for _ in range(num_replicas-1)])
 
     # replica exchange step: do the top-down sweep over adjacent pairs
     # (good hot samples sink to bottom)
