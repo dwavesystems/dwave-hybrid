@@ -26,7 +26,7 @@ import neal
 import dimod
 import hybrid
 
-from hybrid.reference.pt import FixedConstantTemperatureSampler
+from hybrid.reference.pt import FixedTemperatureSampler
 from hybrid.reference.pt import SweepDownReplicasSwap
 
 
@@ -35,7 +35,7 @@ problem = sys.argv[1]
 with open(problem) as fp:
     bqm = dimod.BinaryQuadraticModel.from_coo(fp)
 
-print("BQM: {} nodes, {} edges, {:.2f}% density".format(
+print("BQM: {} nodes, {} edges, {:.2f} density".format(
     len(bqm), len(bqm.quadratic), hybrid.bqm_density(bqm)))
 
 
@@ -57,7 +57,7 @@ betas = np.geomspace(beta_hot, beta_cold, n_replicas)
 
 # run replicas update/swap for n_iterations
 # (after each update/sampling step, do n_replicas-1 swap operations)
-update = hybrid.Branches(*[FixedConstantTemperatureSampler(beta, num_sweeps=n_sweeps) for beta in betas])
+update = hybrid.Branches(*[FixedTemperatureSampler(beta=beta, num_sweeps=n_sweeps) for beta in betas])
 swap = SweepDownReplicasSwap(betas)
 workflow = hybrid.Loop(update | swap, max_iter=n_iterations) \
          | hybrid.MergeSamples(aggregate=True)

@@ -28,7 +28,7 @@ import neal
 import dimod
 import hybrid
 
-from hybrid.reference.pt import FixedConstantTemperatureSampler
+from hybrid.reference.pt import FixedTemperatureSampler
 from hybrid.reference.pt import SweepDownReplicasSwap
 
 
@@ -37,7 +37,7 @@ problem = sys.argv[1]
 with open(problem) as fp:
     bqm = dimod.BinaryQuadraticModel.from_coo(fp)
 
-print("BQM: {} nodes, {} edges, {:.2f}% density".format(
+print("BQM: {} nodes, {} edges, {:.2f} density".format(
     len(bqm), len(bqm.quadratic), hybrid.bqm_density(bqm)))
 
 
@@ -63,7 +63,7 @@ qpu = hybrid.IdentityDecomposer() | hybrid.QPUSubproblemAutoEmbeddingSampler() |
 # use QPU as the hottest temperature sampler and `n_replicas-1` fixed-temperature-samplers
 update = hybrid.Branches(
     qpu,
-    *[FixedConstantTemperatureSampler(beta, num_sweeps=n_sweeps) for beta in betas[1:]])
+    *[FixedTemperatureSampler(beta=beta, num_sweeps=n_sweeps) for beta in betas[1:]])
 
 # swap step is `n_replicas-1` pairwise potential swaps
 swap = SweepDownReplicasSwap(betas)

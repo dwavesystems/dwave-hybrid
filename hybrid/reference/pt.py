@@ -24,54 +24,31 @@ import dimod
 import hybrid
 
 __all__ = [
-    'FixedStateTemperatureSampler', 'FixedConstantTemperatureSampler',
+    'FixedTemperatureSampler',
     'RandomPairSampleSwap', 'SweepDownReplicasSwap'
 ]
 
-
-class FixedStateTemperatureSampler(hybrid.traits.SISO, hybrid.Runnable):
+class FixedTemperatureSampler(hybrid.traits.SISO, hybrid.Runnable):
     """Parallel tempering propagate/update step.
 
-    The temperature (`beta`) is supplied in input state, therefore it can be
-    externally (dynamically) changed.
-
-    On each call, run fixed temperature (~`1/state.beta`) simulated annealing
-    for `num_sweeps` (seeded by input sample(s)), effectively producing a new
-    state by sampling from a Boltzmann distribution at the given temperature.
-    """
-
-    def __init__(self, num_sweeps=10000, **runopts):
-        super(FixedStateTemperatureSampler, self).__init__(**runopts)
-        self.num_sweeps = num_sweeps
-
-    def next(self, state, **runopts):
-        new_samples = neal.SimulatedAnnealingSampler().sample(
-            state.problem, initial_states=state.samples,
-            beta_range=(state.beta, state.beta), beta_schedule_type='linear',
-            num_sweeps=self.num_sweeps).aggregate()
-
-        return state.updated(samples=new_samples)
-
-
-class FixedConstantTemperatureSampler(hybrid.traits.SISO, hybrid.Runnable):
-    """Parallel tempering propagate/update step.
-
-    The temperature (`beta`) is fixed upon object construction.
+    The temperature (`beta`) can be specified upon object construction, and/or
+    given externally in the input state.
 
     On each call, run fixed temperature (~`1/beta`) simulated annealing
     for `num_sweeps` (seeded by input sample(s)), effectively producing a new
     state by sampling from a Boltzmann distribution at the given temperature.
     """
 
-    def __init__(self, beta, num_sweeps=10000, **runopts):
-        super(FixedConstantTemperatureSampler, self).__init__(**runopts)
+    def __init__(self, beta=None, num_sweeps=10000, **runopts):
+        super(FixedTemperatureSampler, self).__init__(**runopts)
         self.beta = beta
         self.num_sweeps = num_sweeps
 
     def next(self, state, **runopts):
+        beta = state.get('beta', self.beta)
         new_samples = neal.SimulatedAnnealingSampler().sample(
             state.problem, initial_states=state.samples,
-            beta_range=(self.beta, self.beta), beta_schedule_type='linear',
+            beta_range=(beta, beta), beta_schedule_type='linear',
             num_sweeps=self.num_sweeps).aggregate()
 
         return state.updated(samples=new_samples)
