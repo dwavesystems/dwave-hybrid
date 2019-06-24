@@ -37,10 +37,8 @@ problem = sys.argv[1]
 with open(problem) as fp:
     bqm = dimod.BinaryQuadraticModel.from_coo(fp)
 
-n = len(bqm)
-m = len(bqm.quadratic)
-d = 200.0 * m / n / (n - 1)
-print("BQM: {} nodes, {} edges, {:.2f}% density".format(n, m, d))
+print("BQM: {} nodes, {} edges, {:.2f}% density".format(
+    len(bqm), len(bqm.quadratic), hybrid.bqm_density(bqm)))
 
 
 # PT workflow: temperature/beta is a property of a branch
