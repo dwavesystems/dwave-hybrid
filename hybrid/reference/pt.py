@@ -37,6 +37,14 @@ class FixedTemperatureSampler(hybrid.traits.SISO, hybrid.Runnable):
     On each call, run fixed temperature (~`1/beta`) simulated annealing
     for `num_sweeps` (seeded by input sample(s)), effectively producing a new
     state by sampling from a Boltzmann distribution at the given temperature.
+
+    Args:
+        beta (float, optional):
+            Inverse of constant sampling temperature. If not supplied on
+            construction, it must be present in the input state.
+
+        num_sweeps (int, optional, default=10k):
+            Number of fixed temperature sampling sweeps.
     """
 
     def __init__(self, beta=None, num_sweeps=10000, **runopts):
@@ -63,6 +71,11 @@ class SwapReplicaPairRandom(hybrid.traits.MIMO, hybrid.Runnable):
 
     Betas can be supplied in constructor, or otherwise they have to present in
     the input states.
+
+    Args:
+        betas (list(float), optional):
+            List of betas (inverse temperature), one for each input state. If
+            not supplied, betas have to be present in the input states.
     """
 
     def __init__(self, betas=None, **runopts):
@@ -104,6 +117,11 @@ class SwapReplicasDownsweep(SwapReplicaPairRandom):
 
     Betas can be supplied in constructor, or otherwise they have to present in
     the input states.
+
+    Args:
+        betas (list(float), optional):
+            List of betas (inverse temperature), one for each input state. If
+            not supplied, betas have to be present in the input states.
     """
 
     def __init__(self, betas=None, **runopts):
