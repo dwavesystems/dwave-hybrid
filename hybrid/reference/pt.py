@@ -25,8 +25,10 @@ import hybrid
 
 __all__ = [
     'FixedTemperatureSampler',
-    'SwapReplicaPairRandom', 'SwapReplicasDownsweep'
+    'SwapReplicaPairRandom', 'SwapReplicasDownsweep',
+    'ParallelTempering'
 ]
+
 
 class FixedTemperatureSampler(hybrid.traits.SISO, hybrid.Runnable):
     """Parallel tempering propagate/update step.
@@ -136,3 +138,86 @@ class SwapReplicasDownsweep(SwapReplicaPairRandom):
             states = self.swap_pair(betas, states, i, i + 1)
 
         return states
+
+
+class SpawnParallelTemperingReplicas(hybrid.traits.SIMO, hybrid.Runnable):
+    """Expand the input state into N states enriched with betas. Betas are
+    calculated from the input problem.
+
+    Args:
+        num_replicas (int):
+            Number of replicas (output states) to create off of the input state.
+    """
+
+    def __init__(self, num_replicas, **runopts):
+        super(SpawnParallelTemperingReplicas, self).__init__(**runopts)
+        self.num_replicas = num_replicas
+
+    def next(self, state, **runopts):
+        bqm = state.problem
+
+        # get a reasonable beta range
+        beta_hot, beta_cold = neal.default_beta_range(bqm)
+
+        # generate betas for all branches/replicas
+        betas = np.geomspace(beta_hot, beta_cold, self.num_replicas)
+
+        # create num_replicas with betas spaced with geometric progression
+        states = hybrid.States(*[state.updated(beta=b) for b in betas])
+
+        return states
+
+
+#
+# A few PT workflow generators. Should be treated as Runnable classes
+#
+
+def ParallelTempering(num_sweeps=10000, num_replicas=10,
+                      max_iter=None, max_time=None, convergence=3):
+    """Parallel tempering workflow generator.
+
+    Args:
+        num_sweeps (int, optional):
+            Number of sweeps in the fixed temperature sampling.
+
+        num_replicas (int, optional):
+            Number of replicas (parallel states / workflow branches).
+
+        max_iter (int/None, optional):
+            Maximum number of iterations of the update/swaps loop.
+
+        max_time (int/None, optional):
+            Maximum wall clock runtime (in seconds) allowed in the update/swaps
+            loop.
+
+        convergence (int/None, optional):
+            Number of times best energy of the coldest replica has to repeat
+            before we terminate.
+
+    Returns:
+        Workflow (:class:`~hybrid.core.Runnable` instance).
+
+    """
+
+    # expand single input state into `num_replicas` replica states
+    preprocess = SpawnParallelTemperingReplicas(num_replicas=num_replicas)
+
+    # fixed temperature sampling on all replicas in parallel
+    update = hybrid.Map(FixedTemperatureSampler(num_sweeps=num_sweeps))
+
+    # replica exchange step: do the top-down sweep over adjacent pairs
+    # (good hot samples sink to bottom)
+    swap = SwapReplicasDownsweep()
+
+    # replicas update/swap until Loop termination criteria reached
+    loop = hybrid.Loop(
+        update | swap,
+        max_iter=max_iter, max_time=max_time, convergence=convergence,
+        key=lambda states: states[-1].samples or states[-1].samples.first.energy)
+
+    # collapse all replicas (although the bottom one should be the best)
+    postprocess = hybrid.MergeSamples(aggregate=True)
+
+    workflow = preprocess | loop | postprocess
+
+    return workflow
