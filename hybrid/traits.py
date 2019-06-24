@@ -12,6 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+State traits validation base class and related state validation mixins (i/o
+validation toggle, i/o dimensionality, state structure).
+
+When subclassing (combining with :class:`~hybrid.core.Runnable`), list them in
+the following order, left to right:
+
+    - structure mixins (e.g. `SubsamplesIntaking` and `SubproblemSampler`)
+    - dimensionality mixins (e.g. `MultiInputStates` and `MISO`)
+    - validation toggles (e.g. `InputValidated` and `NotValidated`)
+    - StateTraits base class (not required if any of the above is used)
+    - Runnable base class
+
+For example:
+
+    class MyRunnable(hybrid.traits.SubsamplesIntaking, hybrid.traits.MISO, hybid.Runnable):
+        pass
+
+"""
+
 from collections import Sequence, Mapping
 
 from hybrid.exceptions import StateTraitMissingError, StateDimensionalityError
@@ -81,22 +101,22 @@ class StateTraits(object):
 # I/O validation mixins
 #
 
-class InputValidated(object):
+class InputValidated(StateTraits):
     def __init__(self):
         super(InputValidated, self).__init__()
         self.validate_input = True
 
-class OutputValidated(object):
+class OutputValidated(StateTraits):
     def __init__(self):
         super(OutputValidated, self).__init__()
         self.validate_output = True
 
-class InputNotValidated(object):
+class InputNotValidated(StateTraits):
     def __init__(self):
         super(InputNotValidated, self).__init__()
         self.validate_input = False
 
-class OutputNotValidated(object):
+class OutputNotValidated(StateTraits):
     def __init__(self):
         super(OutputNotValidated, self).__init__()
         self.validate_output = False
@@ -113,22 +133,22 @@ class NotValidated(InputNotValidated, OutputNotValidated):
 # I/O dimensionality mixins. Imply I/O validation.
 #
 
-class SingleInputState(InputValidated):
+class SingleInputState(InputValidated, StateTraits):
     def __init__(self):
         super(SingleInputState, self).__init__()
         self.multi_input = False
 
-class MultiInputStates(InputValidated):
+class MultiInputStates(InputValidated, StateTraits):
     def __init__(self):
         super(MultiInputStates, self).__init__()
         self.multi_input = True
 
-class SingleOutputState(OutputValidated):
+class SingleOutputState(OutputValidated, StateTraits):
     def __init__(self):
         super(SingleOutputState, self).__init__()
         self.multi_output = False
 
-class MultiOutputStates(OutputValidated):
+class MultiOutputStates(OutputValidated, StateTraits):
     def __init__(self):
         super(MultiOutputStates, self).__init__()
         self.multi_output = True
