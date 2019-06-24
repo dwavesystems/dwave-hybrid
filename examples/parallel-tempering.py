@@ -42,7 +42,6 @@ print("BQM: {} nodes, {} edges, {:.2f} density".format(
 
 n_sweeps = 10000
 n_replicas = 10
-n_random_swaps = n_replicas - 1
 n_iterations = 10
 
 # states are randomly initialized
@@ -60,7 +59,7 @@ replicas = hybrid.States(*[state.updated(beta=b) for b in betas])
 # run replicas update/swap for n_iterations
 # (after each update/sampling step, do n_replicas-1 swap operations)
 update = hybrid.Map(FixedTemperatureSampler(num_sweeps=n_sweeps))
-swap = hybrid.Loop(SwapReplicaPairRandom(), max_iter=n_random_swaps)
+swap = hybrid.reference.pt.SwapReplicasDownsweep()
 workflow = hybrid.Loop(update | swap, max_iter=n_iterations) \
          | hybrid.MergeSamples(aggregate=True)
 

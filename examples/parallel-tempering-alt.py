@@ -27,7 +27,7 @@ import dimod
 import hybrid
 
 from hybrid.reference.pt import FixedTemperatureSampler
-from hybrid.reference.pt import SwapReplicasDownsweep
+from hybrid.reference.pt import SwapReplicaPairRandom
 
 
 # load a problem
@@ -43,6 +43,7 @@ print("BQM: {} nodes, {} edges, {:.2f} density".format(
 
 n_sweeps = 10000
 n_replicas = 10
+n_random_swaps = n_replicas - 1
 n_iterations = 10
 
 # replicas are initialized with random samples
@@ -56,9 +57,10 @@ beta_hot, beta_cold = neal.default_beta_range(bqm)
 betas = np.geomspace(beta_hot, beta_cold, n_replicas)
 
 # run replicas update/swap for n_iterations
-# (after each update/sampling step, do n_replicas-1 swap operations)
-update = hybrid.Branches(*[FixedTemperatureSampler(beta=beta, num_sweeps=n_sweeps) for beta in betas])
-swap = SwapReplicasDownsweep(betas=betas)
+# (after each update/sampling step, do n_replicas-1 random adjacent pair swaps)
+update = hybrid.Branches(*[
+    FixedTemperatureSampler(beta=beta, num_sweeps=n_sweeps) for beta in betas])
+swap = hybrid.Loop(SwapReplicaPairRandom(betas=betas), max_iter=n_random_swaps)
 workflow = hybrid.Loop(update | swap, max_iter=n_iterations) \
          | hybrid.MergeSamples(aggregate=True)
 
