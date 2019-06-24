@@ -25,14 +25,14 @@ import hybrid
 
 __all__ = [
     'FixedTemperatureSampler',
-    'RandomPairSampleSwap', 'SweepDownReplicasSwap'
+    'SwapReplicaPairRandom', 'SwapReplicasDownsweep'
 ]
 
 class FixedTemperatureSampler(hybrid.traits.SISO, hybrid.Runnable):
     """Parallel tempering propagate/update step.
 
     The temperature (`beta`) can be specified upon object construction, and/or
-    given externally in the input state.
+    given externally (dynamically) in the input state.
 
     On each call, run fixed temperature (~`1/beta`) simulated annealing
     for `num_sweeps` (seeded by input sample(s)), effectively producing a new
@@ -54,53 +54,25 @@ class FixedTemperatureSampler(hybrid.traits.SISO, hybrid.Runnable):
         return state.updated(samples=new_samples)
 
 
-class RandomPairSampleSwap(hybrid.traits.MIMO, hybrid.Runnable):
+class SwapReplicaPairRandom(hybrid.traits.MIMO, hybrid.Runnable):
     """Parallel tempering swap replicas step.
 
     On each call, choose a random input state (replica), and probabilistically
     accept a swap with the adjacent state (replica). If swap is accepted, **only
-    samples** contained in the selected states exchanged.
+    samples** contained in the selected states are exchanged.
+
+    Betas can be supplied in constructor, or otherwise they have to present in
+    the input states.
     """
 
-    def swap_pair(self, states, i, j):
-        """One pair of states' (i, j) samples probabilistic swap."""
-
-        s_i, s_j = states[i], states[j]
-        beta_diff = s_i.beta - s_j.beta
-        energy_diff = s_i.samples.first.energy - s_j.samples.first.energy
-
-        # since `min(1, math.exp(beta_diff * energy_diff))` can overflow,
-        # we need to move `min` under `exp`
-        w = math.exp(min(0, beta_diff * energy_diff))
-        p = random.uniform(0, 1)
-        if w > p:
-            # swap samples for replicas i and j
-            states[i].samples, states[j].samples = s_j.samples, s_i.samples
-
-        return states
-
-    def next(self, states, **runopts):
-        i = random.choice(range(len(states) - 1))
-        j = i + 1
-
-        return self.swap_pair(states, i, j)
-
-
-class SweepDownReplicasSwap(hybrid.traits.MIMO, hybrid.Runnable):
-    """Parallel tempering swap replicas step.
-
-    On each call, sweep down and probabilistically swap all adjacent pairs
-    of replicas (input states).
-    """
-
-    def __init__(self, betas, **runopts):
-        super(SweepDownReplicasSwap, self).__init__(**runopts)
+    def __init__(self, betas=None, **runopts):
+        super(SwapReplicaPairRandom, self).__init__(**runopts)
         self.betas = betas
 
-    def swap_pair(self, states, i, j):
-        """One pair of states (i, j) probabilistic swap."""
+    def swap_pair(self, betas, states, i, j):
+        """One pair of states' (i, j) samples probabilistic swap."""
 
-        beta_diff = self.betas[i] - self.betas[j]
+        beta_diff = betas[i] - betas[j]
         energy_diff = states[i].samples.first.energy - states[j].samples.first.energy
 
         # since `min(1, math.exp(beta_diff * energy_diff))` can overflow,
@@ -109,12 +81,40 @@ class SweepDownReplicasSwap(hybrid.traits.MIMO, hybrid.Runnable):
         p = random.uniform(0, 1)
         if w > p:
             # swap samples for replicas i and j
-            states[i], states[j] = states[j], states[i]
+            states[i].samples, states[j].samples = states[j].samples, states[i].samples
 
         return states
 
     def next(self, states, **runopts):
+        betas = self.betas
+        if betas is None:
+            betas = [state.beta for state in states]
+
+        i = random.choice(range(len(states) - 1))
+        j = i + 1
+
+        return self.swap_pair(betas, states, i, j)
+
+
+class SwapReplicasDownsweep(SwapReplicaPairRandom):
+    """Parallel tempering swap replicas step.
+
+    On each call, sweep down and probabilistically swap all adjacent pairs
+    of replicas (input states).
+
+    Betas can be supplied in constructor, or otherwise they have to present in
+    the input states.
+    """
+
+    def __init__(self, betas=None, **runopts):
+        super(SwapReplicasDownsweep, self).__init__(betas=betas, **runopts)
+
+    def next(self, states, **runopts):
+        betas = self.betas
+        if betas is None:
+            betas = [state.beta for state in states]
+
         for i in range(len(states) - 1):
-            states = self.swap_pair(states, i, i + 1)
+            states = self.swap_pair(betas, states, i, i + 1)
 
         return states

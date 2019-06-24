@@ -27,7 +27,7 @@ import dimod
 import hybrid
 
 from hybrid.reference.pt import FixedTemperatureSampler
-from hybrid.reference.pt import SweepDownReplicasSwap
+from hybrid.reference.pt import SwapReplicasDownsweep
 
 
 # load a problem
@@ -58,7 +58,7 @@ betas = np.geomspace(beta_hot, beta_cold, n_replicas)
 # run replicas update/swap for n_iterations
 # (after each update/sampling step, do n_replicas-1 swap operations)
 update = hybrid.Branches(*[FixedTemperatureSampler(beta=beta, num_sweeps=n_sweeps) for beta in betas])
-swap = SweepDownReplicasSwap(betas)
+swap = SwapReplicasDownsweep(betas=betas)
 workflow = hybrid.Loop(update | swap, max_iter=n_iterations) \
          | hybrid.MergeSamples(aggregate=True)
 

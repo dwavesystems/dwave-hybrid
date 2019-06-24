@@ -29,7 +29,7 @@ import dimod
 import hybrid
 
 from hybrid.reference.pt import FixedTemperatureSampler
-from hybrid.reference.pt import SweepDownReplicasSwap
+from hybrid.reference.pt import SwapReplicasDownsweep
 
 
 # load a problem
@@ -66,7 +66,7 @@ update = hybrid.Branches(
     *[FixedTemperatureSampler(beta=beta, num_sweeps=n_sweeps) for beta in betas[1:]])
 
 # swap step is `n_replicas-1` pairwise potential swaps
-swap = SweepDownReplicasSwap(betas)
+swap = SwapReplicasDownsweep(betas=betas)
 
 # we'll run update/swap sequence for `n_iterations`
 workflow = hybrid.Loop(update | swap, max_iter=n_iterations) \

@@ -26,7 +26,7 @@ import neal
 import dimod
 import hybrid
 
-from hybrid.reference.pt import FixedTemperatureSampler, RandomPairSampleSwap
+from hybrid.reference.pt import FixedTemperatureSampler, SwapReplicaPairRandom
 
 
 # load a problem
@@ -60,7 +60,7 @@ replicas = hybrid.States(*[state.updated(beta=b) for b in betas])
 # run replicas update/swap for n_iterations
 # (after each update/sampling step, do n_replicas-1 swap operations)
 update = hybrid.Map(FixedTemperatureSampler(num_sweeps=n_sweeps))
-swap = hybrid.Loop(RandomPairSampleSwap(), max_iter=n_random_swaps)
+swap = hybrid.Loop(SwapReplicaPairRandom(), max_iter=n_random_swaps)
 workflow = hybrid.Loop(update | swap, max_iter=n_iterations) \
          | hybrid.MergeSamples(aggregate=True)
 
