@@ -21,6 +21,8 @@ results from QPU sampling a subproblem.
 import dimod
 import hybrid
 
+__all__ = ['KerberosSampler']
+
 
 class KerberosSampler(dimod.Sampler):
     """An opinionated dimod-compatible hybrid asynchronous decomposition sampler
