@@ -55,22 +55,6 @@ _configure_logger(logger)
 _apply_loglevel_from_env(logger)
 
 
-# convenience submodules import
-import hybrid.core
-import hybrid.flow
-import hybrid.traits
-import hybrid.exceptions
-import hybrid.concurrency
-
-import hybrid.samplers
-import hybrid.decomposers
-import hybrid.composers
-
-import hybrid.utils
-import hybrid.profiling
-
-import hybrid.reference
-
 # convenience top-level import
 from hybrid.core import *
 from hybrid.flow import *
@@ -86,3 +70,19 @@ from hybrid.utils import *
 from hybrid.profiling import *
 
 from hybrid.reference import *
+
+# convenience submodules import
+import hybrid.core
+import hybrid.flow
+import hybrid.traits
+import hybrid.exceptions
+import hybrid.concurrency
+
+import hybrid.samplers
+import hybrid.decomposers
+import hybrid.composers
+
+import hybrid.utils
+import hybrid.profiling
+
+import hybrid.reference

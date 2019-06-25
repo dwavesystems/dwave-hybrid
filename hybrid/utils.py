@@ -41,6 +41,16 @@ def cpu_count():    # pragma: no cover
     return 1
 
 
+def bqm_density(bqm):
+    """Calculate BQM's graph density."""
+
+    n = len(bqm)
+    m = len(bqm.quadratic)
+    max_m = n * (n - 1) / 2
+
+    return m / max_m
+
+
 def bqm_reduced_to(bqm, variables, sample, keep_offset=True):
     """Reduce a binary quadratic model by fixing values of some variables.
 
