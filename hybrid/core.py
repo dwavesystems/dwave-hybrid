@@ -518,8 +518,8 @@ class HybridSampler(dimod.Sampler):
     """Produces a `dimod.Sampler` from a `hybrid.Runnable`-based sampler.
 
     Args:
-        runnable_solver (`Runnable`):
-            Hybrid runnable, likely composed, that accepts a binary quadratic
+        workflow (`Runnable`):
+            Hybrid workflow, likely composed, that accepts a binary quadratic
             model in the input state and produces sample(s) in the output state.
 
     Example:
@@ -537,11 +537,11 @@ class HybridSampler(dimod.Sampler):
     properties = None
     parameters = None
 
-    def __init__(self, runnable_solver):
+    def __init__(self, workflow):
         """Construct the sampler off of a (composed) `Runnable` BQM solver."""
-        if not isinstance(runnable_solver, Runnable):
+        if not isinstance(workflow, Runnable):
             raise TypeError("'sampler' should be 'hybrid.Runnable'")
-        self._runnable_solver = runnable_solver
+        self._workflow = workflow
 
         self.parameters = {'initial_sample': []}
         self.properties = {}
@@ -573,7 +573,7 @@ class HybridSampler(dimod.Sampler):
             raise ValueError("size of 'initial_sample' incompatible with 'bqm'")
 
         initial_state = State.from_sample(initial_sample, bqm)
-        final_state = self._runnable_solver.run(initial_state)
+        final_state = self._workflow.run(initial_state)
 
         return dimod.SampleSet.from_future(final_state, result_hook=lambda f: f.result().samples)
 
