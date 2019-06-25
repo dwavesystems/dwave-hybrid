@@ -220,7 +220,7 @@ class KerberosSampler(dimod.Sampler):
         else:
             raise TypeError("'init_sample' should be a SampleSet or a SampleSet generator")
 
-        self.runnable = Kerberos()
+        self.runnable = Kerberos(**kwargs)
 
         samples = []
         energies = []
