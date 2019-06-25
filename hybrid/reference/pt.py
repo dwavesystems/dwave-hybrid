@@ -209,11 +209,15 @@ def ParallelTempering(num_sweeps=10000, num_replicas=10,
     # (good hot samples sink to bottom)
     swap = SwapReplicasDownsweep()
 
+    # loop termination key function
+    def key(states):
+        if states is not None:
+            return states[-1].samples.first.energy
+
     # replicas update/swap until Loop termination criteria reached
     loop = hybrid.Loop(
         update | swap,
-        max_iter=max_iter, max_time=max_time, convergence=convergence,
-        key=lambda states: states[-1].samples or states[-1].samples.first.energy)
+        max_iter=max_iter, max_time=max_time, convergence=convergence, key=key)
 
     # collapse all replicas (although the bottom one should be the best)
     postprocess = hybrid.MergeSamples(aggregate=True)
@@ -269,11 +273,15 @@ def HybridizedParallelTempering(num_sweeps=10000, num_replicas=10,
     # (good hot samples sink to bottom)
     swap = SwapReplicasDownsweep()
 
+    # loop termination key function
+    def key(states):
+        if states is not None:
+            return states[-1].samples.first.energy
+
     # replicas update/swap until Loop termination criteria reached
     loop = hybrid.Loop(
         update | swap,
-        max_iter=max_iter, max_time=max_time, convergence=convergence,
-        key=lambda states: states[-1].samples or states[-1].samples.first.energy)
+        max_iter=max_iter, max_time=max_time, convergence=convergence, key=key)
 
     # collapse all replicas (although the bottom one should be the best)
     postprocess = hybrid.MergeSamples(aggregate=True)
