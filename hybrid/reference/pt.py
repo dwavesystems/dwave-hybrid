@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Parallel tempering support and reference workflow implementation."""
+"""Parallel tempering support and a reference workflow implementation."""
 
 import math
 import random
