@@ -31,7 +31,8 @@ class EnergyWeightedResampler(hybrid.traits.SISO, hybrid.Runnable):
     Args:
         beta (float):
             Inverse of sampling temperature. Can be defined on sampler
-            construction, or in the input state's ``beta`` variable.
+            construction, on run method invocation, or in the input state's
+            ``beta`` variable.
 
     Returns:
         Input state with new samples. The lower the energy of an input sample,
@@ -43,9 +44,10 @@ class EnergyWeightedResampler(hybrid.traits.SISO, hybrid.Runnable):
         self.beta = beta
 
     def next(self, state, **runopts):
-        beta = state.get('beta', self.beta)
+        beta = runopts.get('beta', self.beta)
+        beta = state.get('beta', beta)
         if beta is None:
-            raise ValueError('beta must be given on construction or run-time')
+            raise ValueError('beta must be given on construction or during run-time')
 
         ss = state.samples
 
@@ -55,7 +57,9 @@ class EnergyWeightedResampler(hybrid.traits.SISO, hybrid.Runnable):
 
         # resample
         idx = np.random.choice(len(ss), len(ss), p=p)
-        new_samples = dimod.SampleSet(
-            ss.record[idx], ss.variables, ss.info, ss.vartype)
+        record = ss.record[idx]
+        info = ss.info.copy()
+        info.update(beta=beta)
+        new_samples = dimod.SampleSet(record, ss.variables, info, ss.vartype)
 
         return state.updated(samples=new_samples)
