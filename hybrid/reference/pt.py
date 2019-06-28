@@ -47,18 +47,24 @@ class FixedTemperatureSampler(hybrid.traits.SISO, hybrid.Runnable):
 
         num_sweeps (int, optional, default=10k):
             Number of fixed temperature sampling sweeps.
+
+        num_reads (int, optional, default=len(state.samples)):
+            Number of samples produced. If undefined, inferred from the size of
+            the input sample set.
     """
 
-    def __init__(self, beta=None, num_sweeps=10000, **runopts):
+    def __init__(self, beta=None, num_sweeps=10000, num_reads=None, **runopts):
         super(FixedTemperatureSampler, self).__init__(**runopts)
         self.beta = beta
         self.num_sweeps = num_sweeps
+        self.num_reads = num_reads
 
     def next(self, state, **runopts):
         beta = state.get('beta', self.beta)
         new_samples = neal.SimulatedAnnealingSampler().sample(
             state.problem, initial_states=state.samples,
             beta_range=(beta, beta), beta_schedule_type='linear',
+            num_reads=self.num_reads, initial_states_generator='tile',
             num_sweeps=self.num_sweeps).aggregate()
 
         return state.updated(samples=new_samples)
