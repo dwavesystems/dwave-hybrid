@@ -22,7 +22,8 @@ import hybrid
 
 __all__ = ['EnergyWeightedResampler',
            'ProgressBetaAlongSchedule',
-           'CalculateAnnealingBetaSchedule']
+           'CalculateAnnealingBetaSchedule',
+           'PopulationAnnealing']
 
 
 class EnergyWeightedResampler(hybrid.traits.SISO, hybrid.Runnable):
@@ -128,3 +129,33 @@ class CalculateAnnealingBetaSchedule(hybrid.traits.SISO, hybrid.Runnable):
 
         # store the schedule in output state
         return state.updated(beta_schedule=beta_schedule)
+
+
+def PopulationAnnealing(num_reads=20, num_iter=20, num_sweeps=1000):
+    """Population annealing workflow generator.
+
+    Args:
+        num_reads (int):
+            Size of the population of samples.
+
+        num_iter (int):
+            Number of temperatures over which we iterate fixed-temperature
+            sampling / resampling.
+
+        num_sweeps (int):
+            Number of sweeps in the fixed temperature sampling step.
+
+    Returns:
+        Workflow (:class:`~hybrid.core.Runnable` instance).
+    """
+
+    # PA workflow: after initial beta schedule estimation, we do `num_iter` steps
+    # (one per beta/temperature) of fixed-temperature sampling / weighted resampling
+    workflow = CalculateAnnealingBetaSchedule(length=num_iter) | hybrid.Loop(
+        ProgressBetaAlongSchedule()
+        | hybrid.FixedTemperatureSampler(num_sweeps=num_sweeps, num_reads=num_reads)
+        | EnergyWeightedResampler(),
+        max_iter=num_iter
+    )
+
+    return workflow
