@@ -16,10 +16,11 @@
 
 import numpy as np
 
+import neal
 import dimod
 import hybrid
 
-__all__ = ['EnergyWeightedResampler']
+__all__ = ['EnergyWeightedResampler', 'ProgressBetaAlongSchedule']
 
 
 class EnergyWeightedResampler(hybrid.traits.SISO, hybrid.Runnable):
@@ -63,3 +64,26 @@ class EnergyWeightedResampler(hybrid.traits.SISO, hybrid.Runnable):
         new_samples = dimod.SampleSet(record, ss.variables, info, ss.vartype)
 
         return state.updated(samples=new_samples)
+
+
+class ProgressBetaAlongSchedule(hybrid.traits.SISO, hybrid.Runnable):
+    """Given the beta schedule (on construction or in state on first run),
+    this runnable will set the ``beta`` state variable to a value according to
+    the schedule.
+
+    Args:
+        beta_schedule (iterable(float)):
+            The beta schedule. State's ``beta`` is iterated according to the
+            beta schedule.
+    """
+
+    def __init__(self, beta_schedule=None, **runopts):
+        super(ProgressBetaAlongSchedule, self).__init__(**runopts)
+        self.beta_schedule = beta_schedule
+
+    def init(self, state, **runopts):
+        beta_schedule = state.get('beta_schedule', self.beta_schedule)
+        self.beta_schedule = iter(beta_schedule)
+
+    def next(self, state, **runopts):
+        return state.updated(beta=next(self.beta_schedule))

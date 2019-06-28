@@ -19,7 +19,7 @@ from dwave.system.testing import MockDWaveSampler
 
 import hybrid
 from hybrid.reference.kerberos import KerberosSampler
-from hybrid.reference.pa import EnergyWeightedResampler
+from hybrid.reference.pa import EnergyWeightedResampler, ProgressBetaAlongSchedule
 
 class TestKerberos(unittest.TestCase):
 
@@ -75,3 +75,20 @@ class TestWeightedResampler(unittest.TestCase):
         state.beta = 2
         res = EnergyWeightedResampler().run(state).result()
         self.assertEqual(res.samples.info['beta'], 2)
+
+
+class TestPopulationAnnealingUtils(unittest.TestCase):
+
+    def test_beta_progressor(self):
+        beta_schedule = [1, 2, 3]
+
+        prog = ProgressBetaAlongSchedule(beta_schedule=beta_schedule)
+
+        betas = []
+        while True:
+            try:
+                betas.append(prog.run(hybrid.State()).result().beta)
+            except:
+                break
+
+        self.assertEqual(betas, beta_schedule)
