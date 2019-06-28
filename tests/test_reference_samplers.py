@@ -19,7 +19,11 @@ from dwave.system.testing import MockDWaveSampler
 
 import hybrid
 from hybrid.reference.kerberos import KerberosSampler
-from hybrid.reference.pa import EnergyWeightedResampler, ProgressBetaAlongSchedule
+from hybrid.reference.pa import (
+    EnergyWeightedResampler, ProgressBetaAlongSchedule,
+    CalculateAnnealingBetaSchedule
+)
+
 
 class TestKerberos(unittest.TestCase):
 
@@ -92,3 +96,19 @@ class TestPopulationAnnealingUtils(unittest.TestCase):
                 break
 
         self.assertEqual(betas, beta_schedule)
+
+    def test_beta_schedule_calc_smoketest(self):
+        bqm = dimod.BinaryQuadraticModel.from_ising({'a': 1}, {})
+        state = hybrid.State.from_problem(bqm)
+
+        # linear interp
+        calc = CalculateAnnealingBetaSchedule(length=10, interpolation='linear')
+        res = calc.run(state).result()
+        self.assertIn('beta_schedule', res)
+        self.assertEqual(len(res.beta_schedule), 10)
+
+        # geometric interp
+        calc = CalculateAnnealingBetaSchedule(length=10, interpolation='geometric')
+        res = calc.run(state).result()
+        self.assertIn('beta_schedule', res)
+        self.assertEqual(len(res.beta_schedule), 10)
