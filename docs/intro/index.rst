@@ -23,7 +23,7 @@ points out the way to developing your own components in the framework.
 
 * :ref:`developing` guides you to developing your own hybrid components.
 
-* :ref:`reference_examples` describes some reference workflow examples included in the code.
+* :ref:`reference_examples` describes some workflow examples included in the code.
 
 .. toctree::
    :maxdepth: 2

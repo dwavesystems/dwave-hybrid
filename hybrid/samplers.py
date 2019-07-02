@@ -107,10 +107,9 @@ class QPUSubproblemAutoEmbeddingSampler(traits.SubproblemSampler, traits.SISO, R
         num_reads (int, optional, default=100):
             Number of states (output solutions) to read from the sampler.
 
-        qpu_sampler (:class:`dimod.Sampler`, optional,
-                default=:class:`AutoEmbeddingComposite`(:class:`DWaveSampler`())):
-            Quantum sampler such as a D-Wave system. Subproblems that do not fit
-            the sampler's structure are minor-embedded on the fly with
+        qpu_sampler (:class:`dimod.Sampler`, optional, default=\        :class:`~dwave.system.composites.AutoEmbeddingComposite`\ (\   :class:`~dwave.system.samplers.DWaveSampler`\ ())):
+            Quantum sampler such as a D-Wave system. Subproblems that do not fit the
+            sampler's structure are minor-embedded on the fly with
             :class:`~dwave.system.composites.AutoEmbeddingComposite`.
 
         qpu_params (dict):
@@ -160,10 +159,9 @@ class ReverseAnnealingAutoEmbeddingSampler(traits.SubproblemSampler, traits.SISO
         num_reads (int, optional, default=100):
             Number of states (output solutions) to read from the sampler.
 
-        qpu_sampler (:class:`dimod.Sampler`, optional,
-                default=:class:`AutoEmbeddingComposite`(:class:`DWaveSampler`())):
-            Quantum sampler such as a D-Wave system. Subproblems that do not fit
-            the sampler's structure are minor-embedded on the fly with
+        qpu_sampler (:class:`dimod.Sampler`, optional, default=\        :class:`~dwave.system.composites.AutoEmbeddingComposite`\ (\   :class:`~dwave.system.samplers.DWaveSampler`\ ())):
+            Quantum sampler such as a D-Wave system. Subproblems that do not fit the
+            sampler's structure are minor-embedded on the fly with
             :class:`~dwave.system.composites.AutoEmbeddingComposite`.
 
         anneal_schedule (list(list), optional, default=[[0, 1], [0.5, 0.5], [1, 1]]):
