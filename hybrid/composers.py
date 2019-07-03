@@ -243,13 +243,16 @@ class AggregatedSamples(traits.SamplesProcessor, traits.SISO, Runnable):
         """Multiplies each sample its num_occurrences times."""
 
         record = samples.record
+        labels = samples.variables
+
         sample = np.repeat(record.sample, repeats=record.num_occurrences, axis=0)
         energy = np.repeat(record.energy, repeats=record.num_occurrences, axis=0)
         num_occurrences = np.ones(sum(record.num_occurrences))
 
-        return SampleSet.from_samples(sample, vartype=samples.vartype,
-                                      energy=energy, num_occurrences=num_occurrences,
-                                      info=copy.deepcopy(samples.info))
+        return SampleSet.from_samples(
+            samples_like=(sample, labels), vartype=samples.vartype,
+            energy=energy, num_occurrences=num_occurrences,
+            info=copy.deepcopy(samples.info))
 
     def next(self, state, **runopts):
         aggregate = runopts.pop('aggregate', self.aggregate)

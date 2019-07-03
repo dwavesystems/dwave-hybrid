@@ -189,17 +189,23 @@ class TestAggregatedSamples(unittest.TestCase):
         energies = [1, 2]
         occurrences = [3, 2]
         sampleset = dimod.SampleSet.from_samples(
-            np.array([[1], [2]]), dimod.SPIN,
+            [{'a': 1}, {'a': 2}], dimod.SPIN,
             energy=energies, num_occurrences=occurrences)
         state = State(samples=sampleset)
 
         result = AggregatedSamples(aggregate=False).run(state).result()
 
+        # we'll have n=5 samples
         n = sum(occurrences)
         self.assertEqual(len(result.samples), n)
+
+        # samples, energies and num_occurrences must be expanded
         np.testing.assert_array_equal(result.samples.record.sample,
                                       np.array([[1], [1], [1], [2], [2]]))
         np.testing.assert_array_equal(result.samples.record.energy,
                                       np.array([1, 1, 1, 2, 2]))
         np.testing.assert_array_equal(result.samples.record.num_occurrences,
                                       np.ones(n))
+
+        # variables should stay the same
+        self.assertEqual(list(sampleset.variables), list(result.samples.variables))
