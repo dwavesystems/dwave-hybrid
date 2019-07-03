@@ -13,12 +13,16 @@
 # limitations under the License.
 
 import logging
+import copy
+
+import numpy as np
 
 from hybrid.core import Runnable, SampleSet
 from hybrid.utils import updated_sample, flip_energy_gains, vstack_samplesets
 from hybrid import traits
 
-__all__ = ['IdentityComposer', 'SplatComposer', 'GreedyPathMerge', 'MergeSamples', 'SliceSamples']
+__all__ = ['IdentityComposer', 'SplatComposer', 'GreedyPathMerge',
+           'MergeSamples', 'SliceSamples', 'AggregatedSamples']
 
 logger = logging.getLogger(__name__)
 
@@ -108,7 +112,7 @@ class GreedyPathMerge(traits.SamplesProcessor, traits.MISO, Runnable):
         return state_thesis.updated(samples=synthesis_samples)
 
 
-# TODO: move MergeSamples and SliceSamples to `ops` module?
+# TODO: move MergeSamples, SliceSamples and AggregatedSamples to `processors` module?
 
 class MergeSamples(traits.SamplesProcessor, traits.MISO, Runnable):
     """Merge multiple input states by concatenating samples from all the states
@@ -218,3 +222,44 @@ class SliceSamples(traits.SamplesProcessor, traits.SISO, Runnable):
 
         sliced = state.samples.slice(start, stop, step, sorted_by=sorted_by)
         return state.updated(samples=sliced)
+
+
+class AggregatedSamples(traits.SamplesProcessor, traits.SISO, Runnable):
+    """Aggregates or spreads ("un-aggregates") samples, controlled via
+    ``aggregate`` boolean flag.
+
+    Args:
+        aggregate (bool, default=True):
+            Aggregate samples vs. spread / un-aggregate them.
+
+    """
+
+    def __init__(self, aggregate=True, **runopts):
+        super(AggregatedSamples, self).__init__(**runopts)
+        self.aggregate = aggregate
+
+    @staticmethod
+    def spread(samples):
+        """Multiplies each sample its num_occurrences times."""
+
+        record = samples.record
+        labels = samples.variables
+
+        sample = np.repeat(record.sample, repeats=record.num_occurrences, axis=0)
+        energy = np.repeat(record.energy, repeats=record.num_occurrences, axis=0)
+        num_occurrences = np.ones(sum(record.num_occurrences))
+
+        return SampleSet.from_samples(
+            samples_like=(sample, labels), vartype=samples.vartype,
+            energy=energy, num_occurrences=num_occurrences,
+            info=copy.deepcopy(samples.info))
+
+    def next(self, state, **runopts):
+        aggregate = runopts.pop('aggregate', self.aggregate)
+
+        if aggregate:
+            samples = state.samples.aggregate()
+        else:
+            samples = self.spread(state.samples)
+
+        return state.updated(samples=samples)

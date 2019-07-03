@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Parallel tempering support and reference workflow implementation."""
+"""Parallel tempering support and a reference workflow implementation."""
 
 import math
 import random
@@ -47,19 +47,35 @@ class FixedTemperatureSampler(hybrid.traits.SISO, hybrid.Runnable):
 
         num_sweeps (int, optional, default=10k):
             Number of fixed temperature sampling sweeps.
+
+        num_reads (int, optional, default=len(state.samples)):
+            Number of samples produced. If undefined, inferred from the size of
+            the input sample set.
+
+        aggregate (bool, optional, default=False):
+            Aggregate samples (duplicity stored in ``num_occurrences``).
     """
 
-    def __init__(self, beta=None, num_sweeps=10000, **runopts):
+    def __init__(self, beta=None, num_sweeps=10000, num_reads=None,
+                 aggregate=False, **runopts):
         super(FixedTemperatureSampler, self).__init__(**runopts)
         self.beta = beta
         self.num_sweeps = num_sweeps
+        self.num_reads = num_reads
+        self.aggregate = aggregate
 
     def next(self, state, **runopts):
         beta = state.get('beta', self.beta)
+        aggregate = runopts.pop('aggregate', self.aggregate)
+
         new_samples = neal.SimulatedAnnealingSampler().sample(
             state.problem, initial_states=state.samples,
             beta_range=(beta, beta), beta_schedule_type='linear',
-            num_sweeps=self.num_sweeps).aggregate()
+            num_reads=self.num_reads, initial_states_generator='tile',
+            num_sweeps=self.num_sweeps)
+
+        if aggregate:
+            new_samples = new_samples.aggregate()
 
         return state.updated(samples=new_samples)
 

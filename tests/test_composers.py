@@ -22,7 +22,7 @@ from hybrid.core import State, States, SampleSet
 from hybrid import traits
 from hybrid.composers import (
     IdentityComposer, SplatComposer, GreedyPathMerge,
-    MergeSamples, SliceSamples)
+    MergeSamples, SliceSamples, AggregatedSamples)
 from hybrid.utils import min_sample, max_sample
 
 
@@ -171,3 +171,41 @@ class TestSliceSamples(unittest.TestCase):
 
         mid = SliceSamples(1, -1).run(state, start=3, stop=-3).result()
         self.assertTrue((mid.samples.record.energy == energies[3:-3]).all())
+
+
+class TestAggregatedSamples(unittest.TestCase):
+
+    def test_aggregation(self):
+        energies = list(range(10))
+        sampleset = dimod.SampleSet.from_samples(np.ones((10, 1)), dimod.SPIN, energy=energies)
+        state = State(samples=sampleset)
+
+        result = AggregatedSamples(aggregate=True).run(state).result()
+
+        self.assertEqual(len(result.samples), 1)
+        self.assertEqual(result.samples.record.sample, np.array([1]))
+
+    def test_spread(self):
+        energies = [1, 2]
+        occurrences = [3, 2]
+        sampleset = dimod.SampleSet.from_samples(
+            [{'a': 1}, {'a': 2}], dimod.SPIN,
+            energy=energies, num_occurrences=occurrences)
+        state = State(samples=sampleset)
+
+        result = AggregatedSamples(aggregate=False).run(state).result()
+
+        # we'll have n=5 samples
+        n = sum(occurrences)
+        self.assertEqual(len(result.samples), n)
+
+        # samples, energies and num_occurrences must be expanded
+        np.testing.assert_array_equal(result.samples.record.sample,
+                                      np.array([[1], [1], [1], [2], [2]]))
+        np.testing.assert_array_equal(result.samples.record.energy,
+                                      np.array([1, 1, 1, 2, 2]))
+        np.testing.assert_array_equal(result.samples.record.num_occurrences,
+                                      np.ones(n))
+
+        # variables should stay the same
+        self.assertEqual(list(sampleset.variables), list(result.samples.variables))
