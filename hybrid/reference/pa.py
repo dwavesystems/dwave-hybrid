@@ -70,14 +70,16 @@ class EnergyWeightedResampler(hybrid.traits.SISO, hybrid.Runnable):
 
 
 class ProgressBetaAlongSchedule(hybrid.traits.SISO, hybrid.Runnable):
-    """Given the beta schedule (on construction or in state on first run),
-    this runnable will set the ``beta`` state variable to a value according to
-    the schedule.
+    """Sets ``beta`` state variable to a schedule given on construction or in
+    state at first run.
 
     Args:
         beta_schedule (iterable(float)):
             The beta schedule. State's ``beta`` is iterated according to the
             beta schedule.
+
+    Raises:
+        :exc:`~hybrid.exceptions.EndOfStream` when beta schedule is depleted.
     """
 
     def __init__(self, beta_schedule=None, **runopts):
@@ -89,12 +91,16 @@ class ProgressBetaAlongSchedule(hybrid.traits.SISO, hybrid.Runnable):
         self.beta_schedule = iter(beta_schedule)
 
     def next(self, state, **runopts):
-        return state.updated(beta=next(self.beta_schedule))
+        try:
+            return state.updated(beta=next(self.beta_schedule))
+        except StopIteration:
+            raise hybrid.exceptions.EndOfStream
 
 
 class CalculateAnnealingBetaSchedule(hybrid.traits.SISO, hybrid.Runnable):
-    """Calculate a good estimate of beta schedule for annealing methods, based
-    on magnitudes of biases of the input problem.
+    """Calculate a best-guess beta schedule estimate for annealing methods,
+    based on magnitudes of biases of the input problem, and the requested method
+    of interpolation.
 
     Args:
         length (int):
@@ -106,6 +112,9 @@ class CalculateAnnealingBetaSchedule(hybrid.traits.SISO, hybrid.Runnable):
 
             * linear
             * geometric
+
+    See:
+        :meth:`neal.default_beta_range`.
     """
 
     def __init__(self, length=2, interpolation='geometric', **runopts):
