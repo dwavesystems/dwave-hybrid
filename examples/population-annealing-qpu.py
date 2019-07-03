@@ -46,11 +46,15 @@ num_iter = 20
 num_samples = 20
 
 # QPU initial sampling: limits the PA workflow to QPU-sized problems
-qpu = hybrid.IdentityDecomposer() | hybrid.QPUSubproblemAutoEmbeddingSampler(num_reads=num_samples) | hybrid.IdentityComposer()
+qpu_init = (
+    hybrid.IdentityDecomposer()
+    | hybrid.QPUSubproblemAutoEmbeddingSampler(num_reads=num_samples)
+    | hybrid.IdentityComposer()
+) | hybrid.AggregatedSamples(False)
 
 # PA workflow: after initial beta schedule estimation, we do `num_iter` steps
 # (one per beta/temperature) of fixed-temperature sampling / weighted resampling
-workflow = qpu | CalculateAnnealingBetaSchedule(length=num_iter) | hybrid.Loop(
+workflow = qpu_init | CalculateAnnealingBetaSchedule(length=num_iter) | hybrid.Loop(
     ProgressBetaAlongSchedule() | FixedTemperatureSampler(num_sweeps=num_sweeps) | EnergyWeightedResampler(),
     max_iter=num_iter
 )

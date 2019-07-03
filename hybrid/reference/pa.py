@@ -190,16 +190,16 @@ def HybridizedPopulationAnnealing(num_reads=20, num_iter=20, num_sweeps=1000):
     """
 
     # QPU initial sampling: limits the PA workflow to QPU-sized problems
-    qpu = (
+    qpu_init = (
         hybrid.IdentityDecomposer()
         | hybrid.QPUSubproblemAutoEmbeddingSampler(num_reads=num_reads)
         | hybrid.IdentityComposer()
-    )
+    ) | hybrid.AggregatedSamples(False)
 
     # PA workflow: after initial QPU sampling and initial beta schedule estimation,
     # we do `num_iter` steps (one per beta/temperature) of fixed-temperature
     # sampling / weighted resampling
-    workflow = qpu | CalculateAnnealingBetaSchedule(length=num_iter) | hybrid.Loop(
+    workflow = qpu_init | CalculateAnnealingBetaSchedule(length=num_iter) | hybrid.Loop(
         ProgressBetaAlongSchedule()
         | hybrid.FixedTemperatureSampler(num_sweeps=num_sweeps)
         | EnergyWeightedResampler(),
