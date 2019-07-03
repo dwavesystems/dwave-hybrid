@@ -23,7 +23,8 @@ import hybrid
 __all__ = ['EnergyWeightedResampler',
            'ProgressBetaAlongSchedule',
            'CalculateAnnealingBetaSchedule',
-           'PopulationAnnealing']
+           'PopulationAnnealing',
+           'HybridizedPopulationAnnealing']
 
 
 class EnergyWeightedResampler(hybrid.traits.SISO, hybrid.Runnable):
@@ -163,6 +164,44 @@ def PopulationAnnealing(num_reads=20, num_iter=20, num_sweeps=1000):
     workflow = CalculateAnnealingBetaSchedule(length=num_iter) | hybrid.Loop(
         ProgressBetaAlongSchedule()
         | hybrid.FixedTemperatureSampler(num_sweeps=num_sweeps, num_reads=num_reads)
+        | EnergyWeightedResampler(),
+        max_iter=num_iter
+    )
+
+    return workflow
+
+
+def HybridizedPopulationAnnealing(num_reads=20, num_iter=20, num_sweeps=1000):
+    """Workflow generator for population annealing initialized with QPU samples.
+
+    Args:
+        num_reads (int):
+            Size of the population of samples.
+
+        num_iter (int):
+            Number of temperatures over which we iterate fixed-temperature
+            sampling / resampling.
+
+        num_sweeps (int):
+            Number of sweeps in the fixed temperature sampling step.
+
+    Returns:
+        Workflow (:class:`~hybrid.core.Runnable` instance).
+    """
+
+    # QPU initial sampling: limits the PA workflow to QPU-sized problems
+    qpu = (
+        hybrid.IdentityDecomposer()
+        | hybrid.QPUSubproblemAutoEmbeddingSampler(num_reads=num_reads)
+        | hybrid.IdentityComposer()
+    )
+
+    # PA workflow: after initial QPU sampling and initial beta schedule estimation,
+    # we do `num_iter` steps (one per beta/temperature) of fixed-temperature
+    # sampling / weighted resampling
+    workflow = qpu | CalculateAnnealingBetaSchedule(length=num_iter) | hybrid.Loop(
+        ProgressBetaAlongSchedule()
+        | hybrid.FixedTemperatureSampler(num_sweeps=num_sweeps)
         | EnergyWeightedResampler(),
         max_iter=num_iter
     )
