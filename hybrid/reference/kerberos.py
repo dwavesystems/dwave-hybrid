@@ -117,8 +117,8 @@ class KerberosSampler(dimod.Sampler):
         >>> import dimod
         >>> import hybrid
         >>> response = hybrid.KerberosSampler().sample_ising(
-        ...                     {'a': -0.5, 'b': 1.0}, {('a', 'b'): -1})
-        >>> response.data_vectors['energy']
+        ...                     {'a': -0.5, 'b': 1.0}, {('a', 'b'): -1})    # doctest: +SKIP
+        >>> response.data_vectors['energy']      # doctest: +SKIP
         array([-1.5])
 
     """
