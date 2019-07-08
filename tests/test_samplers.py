@@ -106,7 +106,7 @@ class TestQPUSamplers(unittest.TestCase):
         qpu_params = dict(chain_strength=2, future_proof=True)
 
         workflow = QPUSubproblemAutoEmbeddingSampler(
-            num_reads=10, qpu_sampler=mock_sampler, qpu_params=qpu_params)
+            num_reads=10, qpu_sampler=mock_sampler, sampling_params=qpu_params)
 
         # run mock sampling
         workflow.run(init).result()

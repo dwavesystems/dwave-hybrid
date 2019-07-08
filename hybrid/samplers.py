@@ -61,14 +61,15 @@ class QPUSubproblemExternalEmbeddingSampler(traits.SubproblemSampler,
         qpu_sampler (:class:`dimod.Sampler`, optional, default=DWaveSampler()):
             Quantum sampler such as a D-Wave system.
 
-        qpu_params (dict):
+        sampling_params (dict):
             Dictionary of keyword arguments with values that will be used
-            on every call of the QPU sampler.
+            on every call of the (external-embedding-wrapped QPU) sampler.
 
     See :ref:`samplers-examples`.
     """
 
-    def __init__(self, num_reads=100, qpu_sampler=None, qpu_params=None, **runopts):
+    def __init__(self, num_reads=100, qpu_sampler=None, sampling_params=None,
+                 **runopts):
         super(QPUSubproblemExternalEmbeddingSampler, self).__init__(**runopts)
 
         self.num_reads = num_reads
@@ -77,20 +78,20 @@ class QPUSubproblemExternalEmbeddingSampler(traits.SubproblemSampler,
             qpu_sampler = DWaveSampler()
         self.sampler = qpu_sampler
 
-        if qpu_params is None:
-            qpu_params = {}
-        self.qpu_params = qpu_params
+        if sampling_params is None:
+            sampling_params = {}
+        self.sampling_params = sampling_params
 
     def __repr__(self):
         return ("{self}(num_reads={self.num_reads!r}, "
                        "qpu_sampler={self.sampler!r}, "
-                       "qpu_params={self.qpu_params!r})").format(self=self)
+                       "sampling_params={self.sampling_params!r})").format(self=self)
 
     def next(self, state, **runopts):
         num_reads = runopts.get('num_reads', self.num_reads)
-        qpu_params = runopts.get('qpu_params', self.qpu_params)
+        sampling_params = runopts.get('sampling_params', self.sampling_params)
 
-        params = qpu_params.copy()
+        params = sampling_params.copy()
         params.update(num_reads=num_reads)
 
         sampler = FixedEmbeddingComposite(self.sampler, embedding=state.embedding)
@@ -112,7 +113,7 @@ class QPUSubproblemAutoEmbeddingSampler(traits.SubproblemSampler, traits.SISO, R
             sampler's structure are minor-embedded on the fly with
             :class:`~dwave.system.composites.AutoEmbeddingComposite`.
 
-        qpu_params (dict):
+        sampling_params (dict):
             Dictionary of keyword arguments with values that will be used
             on every call of the (embedding-wrapped QPU) sampler.
 
@@ -124,7 +125,7 @@ class QPUSubproblemAutoEmbeddingSampler(traits.SubproblemSampler, traits.SISO, R
     See :ref:`samplers-examples`.
     """
 
-    def __init__(self, num_reads=100, qpu_sampler=None, qpu_params=None,
+    def __init__(self, num_reads=100, qpu_sampler=None, sampling_params=None,
                  auto_embedding_params=None, **runopts):
         super(QPUSubproblemAutoEmbeddingSampler, self).__init__(**runopts)
 
@@ -139,20 +140,20 @@ class QPUSubproblemAutoEmbeddingSampler(traits.SubproblemSampler, traits.SISO, R
         # embed on fly and only if needed
         self.sampler = AutoEmbeddingComposite(qpu_sampler, **auto_embedding_params)
 
-        if qpu_params is None:
-            qpu_params = {}
-        self.qpu_params = qpu_params
+        if sampling_params is None:
+            sampling_params = {}
+        self.sampling_params = sampling_params
 
     def __repr__(self):
         return ("{self}(num_reads={self.num_reads!r}, "
                        "qpu_sampler={self.sampler!r}, "
-                       "qpu_params={self.qpu_params!r})").format(self=self)
+                       "sampling_params={self.sampling_params!r})").format(self=self)
 
     def next(self, state, **runopts):
         num_reads = runopts.get('num_reads', self.num_reads)
-        qpu_params = runopts.get('qpu_params', self.qpu_params)
+        sampling_params = runopts.get('sampling_params', self.sampling_params)
 
-        params = qpu_params.copy()
+        params = sampling_params.copy()
         params.update(num_reads=num_reads)
 
         response = self.sampler.sample(state.subproblem, **params)
