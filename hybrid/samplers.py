@@ -49,7 +49,7 @@ logger = logging.getLogger(__name__)
 class QPUSubproblemExternalEmbeddingSampler(traits.SubproblemSampler,
                                             traits.EmbeddingIntaking,
                                             traits.SISO, Runnable):
-    """A quantum sampler for a subproblem with a defined minor-embedding.
+    r"""A quantum sampler for a subproblem with a defined minor-embedding.
 
     Note:
         Externally supplied embedding must be present in the input state.
@@ -58,7 +58,7 @@ class QPUSubproblemExternalEmbeddingSampler(traits.SubproblemSampler,
         num_reads (int, optional, default=100):
             Number of states (output solutions) to read from the sampler.
 
-        qpu_sampler (:class:`dimod.Sampler`, optional, default=DWaveSampler()):
+        qpu_sampler (:class:`dimod.Sampler`, optional, default=\ :class:`~dwave.system.samplers.DWaveSampler`\ ()):
             Quantum sampler such as a D-Wave system.
 
         sampling_params (dict):
@@ -108,7 +108,7 @@ class QPUSubproblemAutoEmbeddingSampler(traits.SubproblemSampler, traits.SISO, R
         num_reads (int, optional, default=100):
             Number of states (output solutions) to read from the sampler.
 
-        qpu_sampler (:class:`dimod.Sampler`, optional, default=\ :class:`~dwave.system.composites.AutoEmbeddingComposite`\ (\ :class:`~dwave.system.samplers.DWaveSampler`\ ())):
+        qpu_sampler (:class:`dimod.Sampler`, optional, default=\ :class:`~dwave.system.samplers.DWaveSampler`\ ()):
             Quantum sampler such as a D-Wave system. Subproblems that do not fit the
             sampler's structure are minor-embedded on the fly with
             :class:`~dwave.system.composites.AutoEmbeddingComposite`.
@@ -177,7 +177,7 @@ class ReverseAnnealingAutoEmbeddingSampler(traits.SubproblemSampler, traits.SISO
             points. For more details, see
             :meth:`~dwave.system.DWaveSampler.validate_anneal_schedule`.
 
-        qpu_sampler (:class:`dimod.Sampler`, optional, default=\ :class:`~dwave.system.composites.AutoEmbeddingComposite`\ (\ :class:`~dwave.system.samplers.DWaveSampler`\ ())):
+        qpu_sampler (:class:`dimod.Sampler`, optional, default=\ :class:`~dwave.system.samplers.DWaveSampler`\ ()):
             Quantum sampler such as a D-Wave system. Subproblems that do not fit the
             sampler's structure are minor-embedded on the fly with
             :class:`~dwave.system.composites.AutoEmbeddingComposite`.
