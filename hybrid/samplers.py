@@ -114,12 +114,18 @@ class QPUSubproblemAutoEmbeddingSampler(traits.SubproblemSampler, traits.SISO, R
 
         qpu_params (dict):
             Dictionary of keyword arguments with values that will be used
-            on every call of the QPU sampler.
+            on every call of the (embedding-wrapped QPU) sampler.
+
+        auto_embedding_params (dict, optional):
+            If provided, parameters are passed to the
+            :class:`~dwave.system.composites.AutoEmbeddingComposite` constructor
+            as keyword arguments.
 
     See :ref:`samplers-examples`.
     """
 
-    def __init__(self, num_reads=100, qpu_sampler=None, qpu_params=None, **runopts):
+    def __init__(self, num_reads=100, qpu_sampler=None, qpu_params=None,
+                 auto_embedding_params=None, **runopts):
         super(QPUSubproblemAutoEmbeddingSampler, self).__init__(**runopts)
 
         self.num_reads = num_reads
@@ -127,8 +133,11 @@ class QPUSubproblemAutoEmbeddingSampler(traits.SubproblemSampler, traits.SISO, R
         if qpu_sampler is None:
             qpu_sampler = DWaveSampler()
 
+        if auto_embedding_params is None:
+            auto_embedding_params = {}
+
         # embed on fly and only if needed
-        self.sampler = AutoEmbeddingComposite(qpu_sampler)
+        self.sampler = AutoEmbeddingComposite(qpu_sampler, **auto_embedding_params)
 
         if qpu_params is None:
             qpu_params = {}
