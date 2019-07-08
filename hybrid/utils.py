@@ -82,8 +82,9 @@ def bqm_reduced_to(bqm, variables, sample, keep_offset=True):
         >>> import dimod
         >>> bqm = dimod.BQM({}, {'ab': -1, 'bc': -1, 'ca': -1}, 0, 'BINARY')
         >>> sample = {'a': 1, 'b': 1, 'c': 0}
-        >>> bqm_reduced_to(bqm, ['a', 'b'], sample)
-        BinaryQuadraticModel({'a': 0, 'b': 0}, {('a', 'b'): -1}, 0, Vartype.BINARY)
+        >>> subbqm = bqm_reduced_to(bqm, ['a', 'b'], sample)
+        >>> len(subbqm)
+        2
 
     """
 
