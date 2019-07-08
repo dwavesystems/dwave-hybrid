@@ -97,7 +97,7 @@ def Kerberos(max_iter=100, max_time=None, convergence=3, energy_threshold=None,
         hybrid.EnergyImpactDecomposer(
             size=max_subproblem_size, rolling=True, rolling_history=0.3, traversal='bfs')
             | hybrid.QPUSubproblemAutoEmbeddingSampler(
-                num_reads=qpu_reads, qpu_sampler=qpu_sampler, qpu_params=qpu_params)
+                num_reads=qpu_reads, qpu_sampler=qpu_sampler, sampling_params=qpu_params)
             | hybrid.SplatComposer()
     ) | hybrid.ArgMin()
 
