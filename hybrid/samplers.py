@@ -100,14 +100,14 @@ class QPUSubproblemExternalEmbeddingSampler(traits.SubproblemSampler,
 
 
 class QPUSubproblemAutoEmbeddingSampler(traits.SubproblemSampler, traits.SISO, Runnable):
-    """A quantum sampler for a subproblem with automated heuristic
+    r"""A quantum sampler for a subproblem with automated heuristic
     minor-embedding.
 
     Args:
         num_reads (int, optional, default=100):
             Number of states (output solutions) to read from the sampler.
 
-        qpu_sampler (:class:`dimod.Sampler`, optional, default=\        :class:`~dwave.system.composites.AutoEmbeddingComposite`\ (\   :class:`~dwave.system.samplers.DWaveSampler`\ ())):
+        qpu_sampler (:class:`dimod.Sampler`, optional, default=\ :class:`~dwave.system.composites.AutoEmbeddingComposite`\ (\ :class:`~dwave.system.samplers.DWaveSampler`\ ())):
             Quantum sampler such as a D-Wave system. Subproblems that do not fit the
             sampler's structure are minor-embedded on the fly with
             :class:`~dwave.system.composites.AutoEmbeddingComposite`.
@@ -152,14 +152,14 @@ class QPUSubproblemAutoEmbeddingSampler(traits.SubproblemSampler, traits.SISO, R
 
 
 class ReverseAnnealingAutoEmbeddingSampler(traits.SubproblemSampler, traits.SISO, Runnable):
-    """A quantum reverse annealing sampler for a subproblem with automated
+    r"""A quantum reverse annealing sampler for a subproblem with automated
     heuristic minor-embedding.
 
     Args:
         num_reads (int, optional, default=100):
             Number of states (output solutions) to read from the sampler.
 
-        qpu_sampler (:class:`dimod.Sampler`, optional, default=\        :class:`~dwave.system.composites.AutoEmbeddingComposite`\ (\   :class:`~dwave.system.samplers.DWaveSampler`\ ())):
+        qpu_sampler (:class:`dimod.Sampler`, optional, default=\ :class:`~dwave.system.composites.AutoEmbeddingComposite`\ (\ :class:`~dwave.system.samplers.DWaveSampler`\ ())):
             Quantum sampler such as a D-Wave system. Subproblems that do not fit the
             sampler's structure are minor-embedded on the fly with
             :class:`~dwave.system.composites.AutoEmbeddingComposite`.
