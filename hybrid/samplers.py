@@ -134,15 +134,14 @@ class QPUSubproblemAutoEmbeddingSampler(traits.SubproblemSampler, traits.SISO, R
         if qpu_sampler is None:
             qpu_sampler = DWaveSampler()
 
-        if auto_embedding_params is None:
-            auto_embedding_params = {}
-
-        # embed on fly and only if needed
-        self.sampler = AutoEmbeddingComposite(qpu_sampler, **auto_embedding_params)
-
         if sampling_params is None:
             sampling_params = {}
         self.sampling_params = sampling_params
+
+        # embed on the fly and only if needed
+        if auto_embedding_params is None:
+            auto_embedding_params = {}
+        self.sampler = AutoEmbeddingComposite(qpu_sampler, **auto_embedding_params)
 
     def __repr__(self):
         return ("{self}(num_reads={self.num_reads!r}, "
@@ -169,11 +168,6 @@ class ReverseAnnealingAutoEmbeddingSampler(traits.SubproblemSampler, traits.SISO
         num_reads (int, optional, default=100):
             Number of states (output solutions) to read from the sampler.
 
-        qpu_sampler (:class:`dimod.Sampler`, optional, default=\ :class:`~dwave.system.composites.AutoEmbeddingComposite`\ (\ :class:`~dwave.system.samplers.DWaveSampler`\ ())):
-            Quantum sampler such as a D-Wave system. Subproblems that do not fit the
-            sampler's structure are minor-embedded on the fly with
-            :class:`~dwave.system.composites.AutoEmbeddingComposite`.
-
         anneal_schedule (list(list), optional, default=[[0, 1], [0.5, 0.5], [1, 1]]):
             An anneal schedule defined by a series of pairs of floating-point
             numbers identifying points in the schedule at which to change slope.
@@ -182,9 +176,25 @@ class ReverseAnnealingAutoEmbeddingSampler(traits.SubproblemSampler, traits.SISO
             schedule is the piecewise-linear curve that connects the provided
             points. For more details, see
             :meth:`~dwave.system.DWaveSampler.validate_anneal_schedule`.
+
+        qpu_sampler (:class:`dimod.Sampler`, optional, default=\ :class:`~dwave.system.composites.AutoEmbeddingComposite`\ (\ :class:`~dwave.system.samplers.DWaveSampler`\ ())):
+            Quantum sampler such as a D-Wave system. Subproblems that do not fit the
+            sampler's structure are minor-embedded on the fly with
+            :class:`~dwave.system.composites.AutoEmbeddingComposite`.
+
+        sampling_params (dict):
+            Dictionary of keyword arguments with values that will be used
+            on every call of the (embedding-wrapped QPU) sampler.
+
+        auto_embedding_params (dict, optional):
+            If provided, parameters are passed to the
+            :class:`~dwave.system.composites.AutoEmbeddingComposite` constructor
+            as keyword arguments.
+
     """
 
-    def __init__(self, num_reads=100, qpu_sampler=None, anneal_schedule=None, **runopts):
+    def __init__(self, num_reads=100, anneal_schedule=None, qpu_sampler=None,
+                 sampling_params=None, auto_embedding_params=None, **runopts):
         super(ReverseAnnealingAutoEmbeddingSampler, self).__init__(**runopts)
 
         self.num_reads = num_reads
@@ -195,27 +205,40 @@ class ReverseAnnealingAutoEmbeddingSampler(traits.SubproblemSampler, traits.SISO
 
         if qpu_sampler is None:
             qpu_sampler = DWaveSampler(
-                solver={'max_anneal_schedule_points__gte': len(self.anneal_schedule)})
+                solver=dict(max_anneal_schedule_points__gte=len(self.anneal_schedule)))
 
         # validate schedule, raising `ValueError` on invalid schedule or
         # `RuntimeError` if anneal schedule not supported by QPU (this could
         # happen only if user provided the `qpu_sampler`)
         qpu_sampler.validate_anneal_schedule(anneal_schedule)
 
-        # embed on fly and only if needed
-        self.sampler = AutoEmbeddingComposite(qpu_sampler)
+        if sampling_params is None:
+            sampling_params = {}
+        self.sampling_params = sampling_params
+
+        # embed on the fly and only if needed
+        if auto_embedding_params is None:
+            auto_embedding_params = {}
+        self.sampler = AutoEmbeddingComposite(qpu_sampler, **auto_embedding_params)
 
     def __repr__(self):
         return ("{self}(num_reads={self.num_reads!r}, "
+                       "anneal_schedule={self.anneal_schedule!r}, "
                        "qpu_sampler={self.sampler!r}, "
-                       "anneal_schedule={self.anneal_schedule!r})").format(self=self)
+                       "sampling_params={self.sampling_params!r})").format(self=self)
 
     def next(self, state, **runopts):
+        num_reads = runopts.get('num_reads', self.num_reads)
+        anneal_schedule = runopts.get('anneal_schedule', self.anneal_schedule)
+        sampling_params = runopts.get('sampling_params', self.sampling_params)
+
+        params = sampling_params.copy()
+        params.update(num_reads=num_reads, anneal_schedule=anneal_schedule)
+
         # TODO: handle more than just the first subsample (not yet supported via API)
         subsamples = self.sampler.sample(
-            state.subproblem, num_reads=self.num_reads,
-            initial_state=state.subsamples.first.sample,
-            anneal_schedule=self.anneal_schedule)
+            state.subproblem, initial_state=state.subsamples.first.sample, **params)
+
         return state.updated(subsamples=subsamples)
 
 
