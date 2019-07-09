@@ -751,7 +751,7 @@ class LoopUntilNoImprovement(traits.NotValidated, Runnable):
     def __repr__(self):
         return ("{self.name}(runnable={self.runnable!r}, max_iter={self.max_iter!r}, "
                 "convergence={self.convergence!r}, max_time={self.max_time!r}, "
-                "key={self.key!r}, terminate={self.key!r})").format(self=self)
+                "key={self.key!r}, terminate={self.terminate!r})").format(self=self)
 
     def __iter__(self):
         return iter((self.runnable,))
