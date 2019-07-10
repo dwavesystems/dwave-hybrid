@@ -239,8 +239,9 @@ class EnergyImpactDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
         sample = state.samples.change_vartype(bqm.vartype).first.sample
 
         size = self.size
-        if self.size > len(bqm):
-            logger.debug("subproblem size greater than the problem size, adapting to problem size")
+        if size > len(bqm):
+            logger.debug("{} subproblem size greater than the problem size, "
+                         "adapting to problem size".format(self.name))
             size = len(bqm)
 
         bqm_changed = bqm != self._rolling_bqm
@@ -259,8 +260,8 @@ class EnergyImpactDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
 
         if self.rolling:
             if len(self._unrolled_vars) >= self.rolling_history * len(bqm):
-                logger.debug("Rolling reset at unrolled history size = %d",
-                             len(self._unrolled_vars))
+                logger.debug("{} reset rolling at unrolled history size {}".format(
+                    self.name, len(self._unrolled_vars)))
                 self._rewind_rolling(state)
                 # reset before exception, to be ready on a subsequent call
                 if not silent_rewind:
@@ -270,10 +271,10 @@ class EnergyImpactDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
         next_vars = self.traverse(bqm, sample,
                                   ordered_priority=self._variable_priority,
                                   visited=self._unrolled_vars,
-                                  size=self.size)
+                                  size=size)
 
-        logger.debug("Selected %d subproblem variables: %r",
-                     len(next_vars), next_vars)
+        logger.debug("{} selected {} subproblem variables: {!r}".format(
+            self.name, len(next_vars), next_vars))
 
         if self.rolling:
             self._unrolled_vars.update(next_vars)
@@ -307,12 +308,19 @@ class RandomSubproblemDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable
     def next(self, state, **runopts):
         bqm = state.problem
 
-        if self.size > len(bqm):
-            raise ValueError("subproblem size cannot be greater than the problem size")
+        size = self.size
+        if size > len(bqm):
+            logger.debug("{} subproblem size greater than the problem size, "
+                         "adapting to problem size".format(self.name))
+            size = len(bqm)
 
-        variables = select_random_subgraph(bqm, self.size)
+        variables = select_random_subgraph(bqm, size)
         sample = state.samples.change_vartype(bqm.vartype).first.sample
         subbqm = bqm_induced_by(bqm, variables, sample)
+
+        logger.debug("{} selected {} subproblem variables: {!r}".format(
+            self.name, len(variables), variables))
+
         return state.updated(subproblem=subbqm)
 
 
