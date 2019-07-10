@@ -68,7 +68,7 @@ class EnergyImpactDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
             selected by rolling down the list of all variables sorted by
             decreasing impact.
 
-        rolling_history (float, optional, default=0.1):
+        rolling_history (float, optional, default=1.0):
             Fraction of the problem size, as a float in range 0.0 to 1.0, that
             should participate in the rolling selection. Once reached,
             subproblem unrolling is reset.
@@ -187,7 +187,7 @@ class EnergyImpactDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
         return variables
 
     def __init__(self, size, min_gain=None,
-                 rolling=True, rolling_history=0.1, silent_rewind=True,
+                 rolling=True, rolling_history=1.0, silent_rewind=True,
                  traversal='energy', **runopts):
 
         traversers = {
