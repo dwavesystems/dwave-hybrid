@@ -208,6 +208,9 @@ class Branches(traits.NotValidated, Runnable):
             branch.run(state.updated(), **runopts)
                 for branch, state in zip(self.branches, states)]
 
+        logger.debug("{} running {} branches in parallel".format(
+            self.name, len(futures)))
+
         # wait for all branches to finish
         concurrent.futures.wait(
             futures,
@@ -317,6 +320,7 @@ class Dup(traits.NotValidated, Runnable):
         return "{}(n={!r})".format(self.name, self.n)
 
     def next(self, state, **runopts):
+        logger.debug("{} cloning input state {} time(s)".format(self.name, self.n))
         return States(*[state.updated() for _ in range(self.n)])
 
 
@@ -418,6 +422,9 @@ class Map(traits.NotValidated, Runnable):
     def next(self, states, **runopts):
         self._futures = [self.runnable.run(state, **runopts) for state in states]
 
+        logger.debug("{} running {!r} on {} input states".format(
+            self.name, self.runnable, len(states)))
+
         concurrent.futures.wait(self._futures,
                                 return_when=concurrent.futures.ALL_COMPLETED)
 
@@ -466,6 +473,9 @@ class Reduce(traits.NotValidated, Runnable):
 
     def next(self, states, **runopts):
         """Collapse all `states` to a single output state using the `self.runnable`."""
+
+        logger.debug("{} collapsing {} input states with {!r}".format(
+            self.name, len(states), self.runnable))
 
         states = iter(states)
 
@@ -952,12 +962,16 @@ class Unwind(traits.NotValidated, Runnable):
         output = States()
         runopts.update(executor=immediate_executor, silent_rewind=False)
 
+        logger.debug("{} unwinding {!r}".format(self.name, self.runnable))
+
         while True:
             try:
                 state = self.runnable.run(state, **runopts).result()
                 output.append(state)
             except EndOfStream:
                 break
+
+        logger.debug("{} collected {} states".format(self.name, len(output)))
 
         return output
 
