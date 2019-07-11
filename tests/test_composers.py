@@ -47,9 +47,10 @@ class TestIdentityComposer(unittest.TestCase):
             IdentityComposer().run(State()).result()
         with self.assertRaises(traits.StateTraitMissingError):
             IdentityComposer().run(State(problem=True)).result()
+        with self.assertRaises(traits.StateTraitMissingError):
+            IdentityComposer().run(State(problem=True, samples=True)).result()
         self.assertTrue(
-            # problem and samples are included by default
-            IdentityComposer().run(State(subsamples=True)).result())
+            IdentityComposer().run(State(problem=True, samples=True, subsamples=True)).result())
 
 
 class TestSplatComposer(unittest.TestCase):

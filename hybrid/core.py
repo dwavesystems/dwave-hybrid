@@ -98,7 +98,8 @@ class SampleSet(dimod.SampleSet):
 class State(PliableDict):
     """Computation state passed along a branch between connected components.
 
-    State is a `dict` subclass and contains at least keys `samples`, `problem`.
+    State is a :class:`dict` subclass and usually contains at least two keys:
+    ``samples`` and ``problem``.
 
     Examples:
         >>> import dimod           # Create a binary quadratic model
@@ -114,8 +115,6 @@ class State(PliableDict):
         at least two keys: `samples` and `problem`.
         """
         super(State, self).__init__(*args, **kwargs)
-        self.setdefault('samples', None)
-        self.setdefault('problem', None)
 
     def copy(self):
         """Simple deep copy of itself. Functionally identical to
@@ -133,11 +132,11 @@ class State(PliableDict):
         Example:
 
             >>> state = State()
-            >>> state     # doctest: +SKIP
-            {problem': None, 'samples': None}
+            >>> state
+            {}
             >>> newstate = state.updated(problem="test")
-            >>> newstate  # doctest: +SKIP
-            {problem': 'test', 'samples': None}
+            >>> newstate
+            {'problem': 'test'}
         """
 
         overwrite = lambda a,b: b

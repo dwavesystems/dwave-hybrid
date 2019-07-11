@@ -29,7 +29,7 @@ class TestRunnableTraits(unittest.TestCase):
             def next(self, state):
                 return State()
 
-        self.assertTrue(Component().run(State(subproblem=None)).result())
+        self.assertEqual(Component().run(State(subproblem=None)).result(), State())
 
     def test_invalid_input(self):
         class Component(traits.SubproblemIntaking, Runnable):
@@ -89,43 +89,43 @@ class TestMultipleTraits(unittest.TestCase):
         self.assertTrue(Component().run(State()).result().problem)
         self.assertTrue(Component().run(State()).result().embedding)
 
-    def test_composed_traits(self):
+    def test_composed_traits_input_validation(self):
         class Component(traits.ProblemDecomposer, Runnable):
             def next(self, state):
                 return state.updated(subproblem=True)
 
-        self.assertTrue(Component().run(State(problem=True)).result().subproblem)
-
         with self.assertRaises(traits.StateTraitMissingError):
-            s = State()
-            del s['problem']
-            Component().run(s).result()
+            Component().run(State()).result()
+        with self.assertRaises(traits.StateTraitMissingError):
+            Component().run(State(problem=True)).result()
+        self.assertTrue(
+            Component().run(State(problem=True, samples=True)).result().subproblem)
 
-    def test_problem_decomposer_traits(self):
+    def test_composed_traits_output_validation(self):
         # ProblemDecomposer ~ ProblemIntaking, SamplesIntaking, SubproblemProducing
-
         class Component(traits.ProblemDecomposer, Runnable):
             def next(self, state):
                 return state
 
         with self.assertRaises(traits.StateTraitMissingError):
-            Component().run(State()).result()
+            Component().run(State(problem=True, samples=True)).result()
         self.assertTrue(
-            # problem and samples are included by default
-            Component().run(State(subproblem=True)).result())
+            Component().run(State(problem=True, samples=True, subproblem=True)).result())
 
     def test_subsamples_composer_traits(self):
         # SubsamplesComposer ~ SamplesIntaking, SubsamplesIntaking, ProblemIntaking, SamplesProducing
-
         class Component(traits.SubsamplesComposer, Runnable):
             def next(self, state):
                 return state
 
         with self.assertRaises(traits.StateTraitMissingError):
             Component().run(State()).result()
+        with self.assertRaises(traits.StateTraitMissingError):
+            Component().run(State(problem=True)).result()
+        with self.assertRaises(traits.StateTraitMissingError):
+            Component().run(State(problem=True, samples=True)).result()
         self.assertTrue(
-            # problem and samples are included by default
-            Component().run(State(subsamples=True)).result())
+            Component().run(State(problem=True, samples=True, subsamples=True)).result())
 
 
 class TestMultipleStateTraits(unittest.TestCase):
