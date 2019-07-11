@@ -46,8 +46,13 @@ class SplatComposer(traits.SubsamplesComposer, traits.SISO, Runnable):
         # TODO: generalize
         sample = next(iter(state.samples.change_vartype(state.subsamples.vartype).samples()))
         subsample = next(iter(state.subsamples.samples()))
+        sample_energy = state.problem.energy(sample)
         composed_sample = updated_sample(sample, subsample)
         composed_energy = state.problem.energy(composed_sample)
+        logger.debug("{name} subsample (len={sslen}) -> sample (len={slen}), "
+                     "sample energy changed {old_en} -> {new_en}".format(
+                         name=self.name, sslen=len(subsample), slen=len(sample),
+                         old_en=sample_energy, new_en=composed_energy))
         return state.updated(
             samples=SampleSet.from_samples(composed_sample, state.samples.vartype, composed_energy))
 
@@ -153,8 +158,13 @@ class MergeSamples(traits.SamplesProcessor, traits.MISO, Runnable):
 
         samples = vstack_samplesets(*[s.samples for s in states])
 
+        logger.debug("{name} merging {n} input states into an output state "
+                     "with a sample set of size {k}".format(
+                         name=self.name, n=len(states), k=len(samples)))
+
         if runopts.pop('aggregate', self.aggregate):
             samples = samples.aggregate()
+            logger.debug("{name} output samples aggregated".format(name=self.name))
 
         return states.first.updated(samples=samples)
 
@@ -220,7 +230,11 @@ class SliceSamples(traits.SamplesProcessor, traits.SISO, Runnable):
         step = runopts.pop('step', self.slice.step)
         sorted_by = runopts.pop('sorted_by', self.sorted_by)
 
+        logger.debug("{} applying slice({}, {}, {}) sorted_by={!r}".format(
+            self.name, start, stop, step, sorted_by))
+
         sliced = state.samples.slice(start, stop, step, sorted_by=sorted_by)
+
         return state.updated(samples=sliced)
 
 
@@ -255,7 +269,8 @@ class AggregatedSamples(traits.SamplesProcessor, traits.SISO, Runnable):
             info=copy.deepcopy(samples.info))
 
     def next(self, state, **runopts):
-        aggregate = runopts.pop('aggregate', self.aggregate)
+        aggregate = bool(runopts.pop('aggregate', self.aggregate))
+        logger.debug("{}(aggregate={})".format(self.name, aggregate))
 
         if aggregate:
             samples = state.samples.aggregate()

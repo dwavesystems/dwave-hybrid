@@ -314,10 +314,6 @@ class TestRandomSubproblemDecomposer(unittest.TestCase):
     def test_look_and_feel(self):
         self.assertEqual(repr(RandomSubproblemDecomposer(7)), 'RandomSubproblemDecomposer(size=7)')
 
-    def test_validation(self):
-        with self.assertRaises(ValueError):
-            RandomSubproblemDecomposer(len(self.bqm)+1).run(self.state).result()
-
 
 class TestConstraintDecomposer(unittest.TestCase):
     def test_typical_construction(self):
