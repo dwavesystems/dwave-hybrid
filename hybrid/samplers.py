@@ -160,7 +160,9 @@ class QPUSubproblemAutoEmbeddingSampler(traits.SubproblemSampler, traits.SISO, R
         return state.updated(subsamples=response)
 
 
-class ReverseAnnealingAutoEmbeddingSampler(traits.SubproblemSampler, traits.SISO, Runnable):
+class ReverseAnnealingAutoEmbeddingSampler(traits.SubproblemSampler,
+                                           traits.SubsamplesIntaking,
+                                           traits.SISO, Runnable):
     r"""A quantum reverse annealing sampler for a subproblem with automated
     heuristic minor-embedding.
 
