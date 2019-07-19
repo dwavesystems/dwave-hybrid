@@ -976,9 +976,19 @@ class Unwind(traits.NotValidated, Runnable):
         return output
 
 
-@stoppable
 class Identity(traits.NotValidated, Runnable):
     """Trivial identity runnable. The output is a direct copy of the input."""
+
+    def next(self, state, **runopts):
+        return state.updated()
+
+
+@stoppable
+class InterruptableIdentity(traits.NotValidated, Runnable):
+    """Trivial interruptable identity runnable. The output is a direct copy of
+    the input, with a distinction from :class:`.Identity` that it will halt when
+    used in :class:`.Race` (to prevent short-circuiting racing branches).
+    """
 
     def next(self, state, racing_context=False, **runopts):
         # in a racing context, we don't want to be the winning branch
