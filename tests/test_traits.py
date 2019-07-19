@@ -252,16 +252,16 @@ class TestFlowComponentsTraits(unittest.TestCase):
         self.assertEqual(r[1].subsamples, 2)
 
     def test_loop(self):
-        class Identity(traits.MIMO, Runnable):
-            def next(self, states):
-                return states
+        class MIMOIdent(traits.MIMO, Runnable):
+            def next(self, state):
+                return state
 
-        prog = Loop(Identity(), max_iter=10, convergence=10, key=lambda _: None)
-        ss = States(State(idx=0), State(idx=1))
+        wrk = Loop(MIMOIdent(), max_iter=10, convergence=10, key=lambda _: None)
+        inp = States(State(idx=0), State(idx=1))
 
-        res = prog.run(ss).result()
-        self.assertEqual(res[0].idx, 0)
-        self.assertEqual(res[1].idx, 1)
+        out = wrk.run(inp).result()
+        self.assertEqual(out[0].idx, 0)
+        self.assertEqual(out[1].idx, 1)
 
         with self.assertRaises(traits.StateDimensionalityError):
-            prog.run(State()).result()
+            wrk.run(State()).result()

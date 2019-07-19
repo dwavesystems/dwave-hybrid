@@ -20,6 +20,12 @@ Parallel Tempering
 .. automodule:: hybrid.reference.pt
    :members:
 
+Population Annealing
+====================
+
+.. automodule:: hybrid.reference.pa
+   :members:
+
 qbsolv
 ======
 

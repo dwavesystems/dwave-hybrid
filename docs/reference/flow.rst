@@ -14,6 +14,10 @@ Classes
 .. autoclass:: ArgMin
 .. autoclass:: Branch
 .. autoclass:: Branches
+.. autoclass:: Const
+.. autoclass:: Dup
+.. autoclass:: Identity
+.. autoclass:: InterruptableIdentity
 .. autoclass:: Lambda
 .. autoclass:: Loop
 .. autoclass:: LoopUntilNoImprovement
@@ -24,7 +28,7 @@ Classes
 .. autoclass:: Reduce
 .. autoclass:: TrackMin
 .. autoclass:: Unwind
-.. autoclass:: Dup
+
 
 Methods
 =======

@@ -27,7 +27,7 @@ from hybrid.flow import (
     Branch, Branches, RacingBranches, ParallelBranches,
     ArgMin, Map, Reduce, Lambda, Unwind, TrackMin,
     LoopUntilNoImprovement, LoopWhileNoImprovement, SimpleIterator, Loop,
-    Identity, Dup, Const
+    Identity, InterruptableIdentity, Dup, Const
 )
 from hybrid.core import State, States, Runnable, Present
 from hybrid.utils import min_sample, max_sample
@@ -272,7 +272,7 @@ class TestRacingBranches(unittest.TestCase):
         self.assertEqual([s.x for s in res], [2, 1, 2])
 
         # "endomorphic case"
-        rb = RacingBranches(Identity(), Slow(), Fast(), Slow())
+        rb = RacingBranches(InterruptableIdentity(), Slow(), Fast(), Slow())
         res = rb.run(State(x=0)).result()
         self.assertEqual([s.x for s in res], [0, 2, 1, 2])
 
@@ -864,8 +864,28 @@ class TestIdentity(unittest.TestCase):
         self.assertEqual(inp, out)
         self.assertFalse(out is inp)
 
+    def test_input_type_invariant(self):
+        inp1 = State(x=1)
+        self.assertEqual(Identity().run(inp1).result(), inp1)
+
+        inp2 = States(State(x=1), State(x=2))
+        self.assertEqual(Identity().run(inp2).result(), inp2)
+
+
+class TestInterruptableIdentity(unittest.TestCase):
+
+    def test_basic(self):
+        ident = InterruptableIdentity()
+        state = State(x=1, y='a', z=[1,2,3])
+
+        inp = copy.deepcopy(state)
+        out = ident.run(state).result()
+
+        self.assertEqual(inp, out)
+        self.assertFalse(out is inp)
+
     def test_interruptable(self):
-        ident = Identity()
+        ident = InterruptableIdentity()
         state = State(x=1)
         out = ident.run(state, racing_context=True)
 
@@ -885,10 +905,10 @@ class TestIdentity(unittest.TestCase):
 
     def test_input_type_invariant(self):
         inp1 = State(x=1)
-        self.assertEqual(Identity().run(inp1).result(), inp1)
+        self.assertEqual(InterruptableIdentity().run(inp1).result(), inp1)
 
         inp2 = States(State(x=1), State(x=2))
-        self.assertEqual(Identity().run(inp2).result(), inp2)
+        self.assertEqual(InterruptableIdentity().run(inp2).result(), inp2)
 
 
 class TestConst(unittest.TestCase):

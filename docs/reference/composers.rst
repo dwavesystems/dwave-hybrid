@@ -9,6 +9,7 @@ Composers
 Class
 =====
 
+.. autoclass:: IdentityComposer
 .. autoclass:: SplatComposer
 .. autoclass:: GreedyPathMerge
 

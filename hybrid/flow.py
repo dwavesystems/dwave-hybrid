@@ -31,7 +31,7 @@ __all__ = [
     'Branch', 'Branches', 'RacingBranches', 'Race', 'ParallelBranches', 'Parallel',
     'Map', 'Reduce', 'Lambda', 'ArgMin', 'Unwind', 'TrackMin',
     'Loop', 'LoopUntilNoImprovement', 'LoopWhileNoImprovement',
-    'Identity', 'Dup', 'Const'
+    'Identity', 'InterruptableIdentity', 'Dup', 'Const'
 ]
 
 logger = logging.getLogger(__name__)
@@ -976,9 +976,19 @@ class Unwind(traits.NotValidated, Runnable):
         return output
 
 
-@stoppable
 class Identity(traits.NotValidated, Runnable):
     """Trivial identity runnable. The output is a direct copy of the input."""
+
+    def next(self, state, **runopts):
+        return state.updated()
+
+
+@stoppable
+class InterruptableIdentity(traits.NotValidated, Runnable):
+    """Trivial interruptable identity runnable. The output is a direct copy of
+    the input, with a distinction from :class:`.Identity` that it will halt when
+    used in :class:`.Race` (to prevent short-circuiting racing branches).
+    """
 
     def next(self, state, racing_context=False, **runopts):
         # in a racing context, we don't want to be the winning branch
@@ -1000,8 +1010,9 @@ class Const(traits.NotValidated, Runnable):
         Tabu sampler call in order to avoid using existing samples as initial
         states. Instead, Tabu will use randomly generated initial states.
 
+        >>> import hybrid
         >>> random_tabu = hybrid.Const(samples=None) \
-        ...             | hybrid.TabuProblemSampler(initial_states_generator='random')
+                        | hybrid.TabuProblemSampler(initial_states_generator='random')
     """
 
     def __init__(self, **consts):
