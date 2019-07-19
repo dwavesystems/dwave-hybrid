@@ -27,7 +27,7 @@ from hybrid.flow import (
     Branch, Branches, RacingBranches, ParallelBranches,
     ArgMin, Map, Reduce, Lambda, Unwind, TrackMin,
     LoopUntilNoImprovement, LoopWhileNoImprovement, SimpleIterator, Loop,
-    Identity, Dup
+    Identity, Dup, Const
 )
 from hybrid.core import State, States, Runnable, Present
 from hybrid.utils import min_sample, max_sample
@@ -889,3 +889,36 @@ class TestIdentity(unittest.TestCase):
 
         inp2 = States(State(x=1), State(x=2))
         self.assertEqual(Identity().run(inp2).result(), inp2)
+
+
+class TestConst(unittest.TestCase):
+
+    def test_nop(self):
+        """For empty Const, cutput is a deepcopy of input, otherwise identical."""
+
+        const = Const()
+        inp = State()
+        out = const.run(inp).result()
+
+        self.assertEqual(inp, out)
+        self.assertFalse(inp is out)
+
+    def test_set_state_var(self):
+        """State variable is properly set/reset/updated."""
+
+        self.assertEqual(Const(x=1).run(State()).result().x, 1)
+        self.assertEqual(Const(x=1).run(State(x=0)).result().x, 1)
+        self.assertEqual(Const(x=None).run(State(x=0)).result().x, None)
+
+    def test_set_states_var(self):
+        """All States have variable set."""
+
+        wrk = Const(x=1)
+        inp = States(State(), State(x=0), State(x=None))
+        exp = States(State(x=1), State(x=1), State(x=1))
+        self.assertEqual(wrk.run(inp).result(), exp)
+
+        wrk = Const(x=None)
+        inp = States(State(), State(x=1))
+        exp = States(State(x=None), State(x=None))
+        self.assertEqual(wrk.run(inp).result(), exp)
