@@ -31,7 +31,7 @@ __all__ = [
     'Branch', 'Branches', 'RacingBranches', 'Race', 'ParallelBranches', 'Parallel',
     'Map', 'Reduce', 'Lambda', 'ArgMin', 'Unwind', 'TrackMin',
     'Loop', 'LoopUntilNoImprovement', 'LoopWhileNoImprovement',
-    'Identity', 'Dup'
+    'Identity', 'Dup', 'Const'
 ]
 
 logger = logging.getLogger(__name__)
@@ -986,3 +986,27 @@ class Identity(traits.NotValidated, Runnable):
             self.stop_signal.wait()
 
         return state.updated()
+
+
+class Const(traits.NotValidated, Runnable):
+    """Set state variables to constant values.
+
+    Args:
+        **consts (dict, optional):
+            Mapping of state variables to constant values, as keyword arguments.
+
+    Example:
+        This example defines a workflow that resets the set of samples before a
+        Tabu sampler call in order to avoid using existing samples as initial
+        states. Instead, Tabu will use randomly generated initial states.
+
+        >>> random_tabu = hybrid.Const(samples=None) \
+        ...             | hybrid.TabuProblemSampler(initial_states_generator='random')
+    """
+
+    def __init__(self, **consts):
+        super(Const, self).__init__()
+        self.consts = consts
+
+    def next(self, state, **runopts):
+        return state.updated(**self.consts)
