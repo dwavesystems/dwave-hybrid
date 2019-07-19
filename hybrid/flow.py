@@ -1010,8 +1010,9 @@ class Const(traits.NotValidated, Runnable):
         Tabu sampler call in order to avoid using existing samples as initial
         states. Instead, Tabu will use randomly generated initial states.
 
+        >>> import hybrid
         >>> random_tabu = hybrid.Const(samples=None) \
-        ...             | hybrid.TabuProblemSampler(initial_states_generator='random')
+                        | hybrid.TabuProblemSampler(initial_states_generator='random')
     """
 
     def __init__(self, **consts):
