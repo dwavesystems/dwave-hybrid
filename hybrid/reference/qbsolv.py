@@ -34,7 +34,7 @@ def SimplifiedQbsolv(max_iter=10, max_time=None, convergence=3,
 
     workflow = hybrid.Loop(
         hybrid.Race(
-            hybrid.Identity(),
+            hybrid.InterruptableIdentity(),
             hybrid.InterruptableTabuSampler(),
             hybrid.EnergyImpactDecomposer(
                 size=max_subproblem_size, rolling=True, rolling_history=0.15)

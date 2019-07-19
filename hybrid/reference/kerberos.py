@@ -89,7 +89,7 @@ def Kerberos(max_iter=100, max_time=None, convergence=3, energy_threshold=None,
         energy_reached = lambda en: en <= energy_threshold
 
     iteration = hybrid.Race(
-        hybrid.Identity(),
+        hybrid.InterruptableIdentity(),
         hybrid.InterruptableTabuSampler(
             timeout=tabu_timeout),
         hybrid.InterruptableSimulatedAnnealingProblemSampler(

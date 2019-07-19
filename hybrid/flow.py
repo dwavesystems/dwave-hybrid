@@ -31,7 +31,7 @@ __all__ = [
     'Branch', 'Branches', 'RacingBranches', 'Race', 'ParallelBranches', 'Parallel',
     'Map', 'Reduce', 'Lambda', 'ArgMin', 'Unwind', 'TrackMin',
     'Loop', 'LoopUntilNoImprovement', 'LoopWhileNoImprovement',
-    'Identity', 'Dup', 'Const'
+    'Identity', 'InterruptableIdentity', 'Dup', 'Const'
 ]
 
 logger = logging.getLogger(__name__)

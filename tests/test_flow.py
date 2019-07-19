@@ -272,7 +272,7 @@ class TestRacingBranches(unittest.TestCase):
         self.assertEqual([s.x for s in res], [2, 1, 2])
 
         # "endomorphic case"
-        rb = RacingBranches(Identity(), Slow(), Fast(), Slow())
+        rb = RacingBranches(InterruptableIdentity(), Slow(), Fast(), Slow())
         res = rb.run(State(x=0)).result()
         self.assertEqual([s.x for s in res], [0, 2, 1, 2])
 
