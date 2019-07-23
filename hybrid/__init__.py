@@ -71,6 +71,8 @@ from hybrid.profiling import *
 
 from hybrid.reference import *
 
+from hybrid.package_info import *
+
 # convenience submodules import
 import hybrid.core
 import hybrid.flow

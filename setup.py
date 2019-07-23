@@ -42,10 +42,10 @@ classifiers = [
 ]
 
 setup(
-    name=package_info['__packagename__'],
+    name=package_info['__package_name__'],
     version=package_info['__version__'],
     author=package_info['__author__'],
-    author_email=package_info['__authoremail__'],
+    author_email=package_info['__author_email__'],
     description=package_info['__description__'],
     long_description=open('README.rst', encoding='utf-8').read(),
     url=package_info['__url__'],

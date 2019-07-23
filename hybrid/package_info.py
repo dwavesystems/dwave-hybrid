@@ -12,11 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-__packagename__ = 'dwave-hybrid'
+__all__ = [
+    '__package_name__', '__title__', '__version__',
+    '__author__', '__author_email__', '__description__',
+    '__url__', '__license__', '__copyright__'
+]
+
+__package_name__ = 'dwave-hybrid'
 __title__ = 'D-Wave Hybrid'
 __version__ = '0.3.1'
 __author__ = 'D-Wave Systems Inc.'
-__authoremail__ = 'radomir@dwavesys.com'
+__author_email__ = 'radomir@dwavesys.com'
 __description__ = 'Hybrid Asynchronous Decomposition Solver Framework'
 __url__ = 'https://github.com/dwavesystems/dwave-hybrid'
 __license__ = 'Apache 2.0'
