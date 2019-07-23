@@ -998,6 +998,38 @@ class InterruptableIdentity(traits.NotValidated, Runnable):
         return state.updated()
 
 
+@stoppable
+class Wait(traits.NotValidated, Runnable):
+    """Run indefinitely (effectively blocking branch execution). Has to be
+    explicitly stopped.
+
+    Example:
+        To effectively exclude one branch from the race, i.e. prevent premature
+        stopping of the race between the remaining branches, use :class:`.Wait`
+        as the last element in a (fast-executing) racing branch::
+
+            hybrid.Race(
+                hybrid.Identity() | hybrid.Wait(),
+                hybrid.InterruptableTabuSampler(),
+                hybrid.SimulatedAnnealingProblemSampler()
+            )
+
+        This is functionally identical to:
+
+            hybrid.Parallel(
+                hybrid.Identity(),
+                hybrid.Race(
+                    hybrid.InterruptableTabuSampler(),
+                    hybrid.SimulatedAnnealingProblemSampler()
+                )
+            )
+    """
+
+    def next(self, state, **runopts):
+        self.stop_signal.wait()
+        return state
+
+
 class Const(traits.NotValidated, Runnable):
     """Set state variables to constant values.
 
