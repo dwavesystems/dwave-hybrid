@@ -164,13 +164,13 @@ class Branches(traits.NotValidated, Runnable):
 
     Examples:
         This example runs two branches, a classical tabu search and a random
-        sampler, until both terminate.
+        sampler, until both terminate::
 
-        >>> Branches(TabuSubproblemSampler(), RandomSubproblemSampler())    # doctest: +SKIP
+            Branches(TabuSubproblemSampler(), RandomSubproblemSampler())
 
-        Alternatively:
+        Alternatively::
 
-        >>> TabuSubproblemSampler() & RandomSubproblemSampler()     # doctest: +SKIP
+            TabuSubproblemSampler() & RandomSubproblemSampler()
 
     """
 
@@ -248,7 +248,9 @@ class RacingBranches(traits.NotValidated, Runnable):
         This example runs two branches: a classical tabu search interrupted by
         samples of subproblems returned from a D-Wave system.
 
-        >>> RacingBranches(                     # doctest: +SKIP
+        ::
+
+            RacingBranches(
                 InterruptableTabuSampler(),
                 EnergyImpactDecomposer(size=2)
                 | QPUSubproblemAutoEmbeddingSampler()
@@ -351,9 +353,9 @@ class ParallelBranches(traits.NotValidated, Runnable):
 
     Examples:
         This example runs two branches, a classical tabu search and a random
-        sampler, until both terminate.
+        sampler, until both terminate::
 
-        >>> Parallel(                     # doctest: +SKIP
+            Parallel(
                 TabuSubproblemSampler(),
                 RandomSubproblemSampler()
             ) | ArgMin()
@@ -521,12 +523,12 @@ class Lambda(traits.NotValidated, Runnable):
         variables `a` and `b`, storing them in `c`.
 
         >>> Lambda(lambda _, s: s.updated(c=s.a * s.b)).run(State(a=2, b=3)).result()     # doctest: +SKIP
-        {'a': 2, 'b': 3, 'c': 6, ...}
+        {'a': 2, 'b': 3, 'c': 6}
 
         This example applies `x += 1` to a sequence of input states.
 
-        >>> Map(Lambda(lambda _, s: s.updated(x=s.x + 1))).run(States(State(x=0), State(x=1))).result()   # doctest: +SKIP
-        [{'problem': None, 'x': 1, 'samples': None}, {'problem': None, 'x': 2, 'samples': None}]
+        >>> Map(Lambda(lambda _, s: s.updated(x=s.x + 1))).run(States(State(x=0), State(x=1))).result()
+        [{'x': 1}, {'x': 2}]
     """
 
     def __init__(self, next, error=None, init=None, **runopts):
@@ -575,9 +577,9 @@ class ArgMin(traits.NotValidated, Runnable):
     Examples:
         This example runs two branches---a classical tabu search interrupted by
         samples of subproblems returned from a D-Wave system--- and selects the
-        state with the minimum-energy sample.
+        state with the minimum-energy sample::
 
-        >>> RacingBranches(                     # doctest: +SKIP
+            RacingBranches(
                 InterruptableTabuSampler(),
                 EnergyImpactDecomposer(size=2)
                 | QPUSubproblemAutoEmbeddingSampler()
@@ -1040,11 +1042,10 @@ class Const(traits.NotValidated, Runnable):
     Example:
         This example defines a workflow that resets the set of samples before a
         Tabu sampler call in order to avoid using existing samples as initial
-        states. Instead, Tabu will use randomly generated initial states.
+        states. Instead, Tabu will use randomly generated initial states::
 
-        >>> import hybrid
-        >>> random_tabu = hybrid.Const(samples=None) \
-                        | hybrid.TabuProblemSampler(initial_states_generator='random')
+            random_tabu = Const(samples=None) | TabuProblemSampler(initial_states_generator='random')
+
     """
 
     def __init__(self, **consts):
