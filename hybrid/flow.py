@@ -145,8 +145,9 @@ class Branches(traits.NotValidated, Runnable):
     """Runs multiple workflows of type :class:`~hybrid.core.Runnable` in
     parallel, blocking until all finish.
 
-    Branches operates similarly to :class:`~hybrid.flow.Parallel`, but each
-    branch runs on a separate input :class:`~hybrid.core.State`.
+    Branches operates similarly to :class:`~hybrid.flow.ParallelBranches`,
+    but each branch runs on a separate input :class:`~hybrid.core.State`
+    (while parallel branches all use the same input state).
 
     Args:
         *branches ([:class:`~hybrid.core.Runnable`]):
@@ -446,7 +447,7 @@ class Reduce(traits.NotValidated, Runnable):
             A runnable used as the fold-left operator. It should accept a
             2-State input and produce a single State on output.
 
-        initial_state (:class:`State`, optional, default=None):
+        initial_state (:class:`~hybrid.core.State`, optional, default=None):
             Optional starting state into which input states will be folded in.
             If undefined, the first input state is used as the `initial_state`.
 
@@ -936,12 +937,12 @@ class LoopWhileNoImprovement(LoopUntilNoImprovement):
 
 
 class Unwind(traits.NotValidated, Runnable):
-    """Iterates :class:`~hybrid.core.Runnable` until :exc:`EndOfStream` is
+    """Iterates :class:`~hybrid.core.Runnable` until :exc:`.EndOfStream` is
     raised, collecting all output states along the way.
 
     Note:
         the child runnable is called with run option ``silent_rewind=False``,
-        and it is expected to raise :exc:`EndOfStream` on unwind completion.
+        and it is expected to raise :exc:`.EndOfStream` on unwind completion.
     """
 
     def __init__(self, runnable, **runopts):
@@ -1020,8 +1021,8 @@ class Identity(traits.NotValidated, Runnable):
 def InterruptableIdentity(**runopts):
     """Trivial interruptable identity runnable. The output is a direct copy of
     the input, with a distinction from :class:`.Identity` that it will halt
-    until explicitly stopped (useful for example in :class:`.Race` to prevent
-    short-circuiting of racing branches with the identity branch).
+    until explicitly stopped (useful for example in :class:`.RacingBranches`
+    to prevent short-circuiting of racing branches with the identity branch).
     """
     return Identity(**runopts) | Wait(**runopts)
 

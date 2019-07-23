@@ -17,13 +17,15 @@ Classes
 .. autoclass:: Const
 .. autoclass:: Dup
 .. autoclass:: Identity
-.. autoclass:: InterruptableIdentity
+.. autofunction:: InterruptableIdentity
 .. autoclass:: Lambda
 .. autoclass:: Loop
 .. autoclass:: LoopUntilNoImprovement
 .. autoclass:: LoopWhileNoImprovement
 .. autoclass:: Map
+.. autoclass:: Parallel
 .. autoclass:: ParallelBranches
+.. autoclass:: Race
 .. autoclass:: RacingBranches
 .. autoclass:: Reduce
 .. autoclass:: TrackMin
