@@ -27,7 +27,7 @@ from hybrid.flow import (
     Branch, Branches, RacingBranches, ParallelBranches,
     ArgMin, Map, Reduce, Lambda, Unwind, TrackMin,
     LoopUntilNoImprovement, LoopWhileNoImprovement, SimpleIterator, Loop,
-    Identity, InterruptableIdentity, Dup, Const
+    Identity, InterruptableIdentity, Dup, Const, Wait
 )
 from hybrid.core import State, States, Runnable, Present
 from hybrid.utils import min_sample, max_sample
@@ -909,6 +909,41 @@ class TestInterruptableIdentity(unittest.TestCase):
 
         inp2 = States(State(x=1), State(x=2))
         self.assertEqual(InterruptableIdentity().run(inp2).result(), inp2)
+
+
+class TestWait(unittest.TestCase):
+
+    def test_basic(self):
+        wait = Wait()
+        state = State(x=1)
+        out = wait.run(state)
+
+        # wait block should not finish
+        done, not_done = futures.wait({out}, timeout=0.1)
+        self.assertEqual(len(done), 0)
+        self.assertEqual(len(not_done), 1)
+
+        # until we stop it
+        wait.stop()
+
+        done, not_done = futures.wait({out}, timeout=0.1)
+        self.assertEqual(len(done), 1)
+        self.assertEqual(len(not_done), 0)
+
+        self.assertEqual(out.result().x, 1)
+
+    def test_input_type_invariant(self):
+        inp = State(x=1)
+        w = Wait()
+        r = w.run(inp)
+        w.stop()
+        self.assertEqual(r.result(), inp)
+
+        inp = States(State(x=1), State(x=2))
+        w = Wait()
+        r = w.run(inp)
+        w.stop()
+        self.assertEqual(r.result(), inp)
 
 
 class TestConst(unittest.TestCase):
