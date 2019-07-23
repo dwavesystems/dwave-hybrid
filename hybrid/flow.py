@@ -31,7 +31,7 @@ __all__ = [
     'Branch', 'Branches', 'RacingBranches', 'Race', 'ParallelBranches', 'Parallel',
     'Map', 'Reduce', 'Lambda', 'ArgMin', 'Unwind', 'TrackMin',
     'Loop', 'LoopUntilNoImprovement', 'LoopWhileNoImprovement',
-    'Identity', 'InterruptableIdentity', 'Dup', 'Const'
+    'Identity', 'InterruptableIdentity', 'Dup', 'Const', 'Wait'
 ]
 
 logger = logging.getLogger(__name__)
@@ -1008,19 +1008,19 @@ class Wait(traits.NotValidated, Runnable):
         stopping of the race between the remaining branches, use :class:`.Wait`
         as the last element in a (fast-executing) racing branch::
 
-            hybrid.Race(
-                hybrid.Identity() | hybrid.Wait(),
-                hybrid.InterruptableTabuSampler(),
-                hybrid.SimulatedAnnealingProblemSampler()
+            Race(
+                Identity() | Wait(),
+                InterruptableTabuSampler(),
+                SimulatedAnnealingProblemSampler()
             )
 
-        This is functionally identical to:
+        This is functionally identical to::
 
-            hybrid.Parallel(
-                hybrid.Identity(),
-                hybrid.Race(
-                    hybrid.InterruptableTabuSampler(),
-                    hybrid.SimulatedAnnealingProblemSampler()
+            Parallel(
+                Identity(),
+                Race(
+                    InterruptableTabuSampler(),
+                    SimulatedAnnealingProblemSampler()
                 )
             )
     """

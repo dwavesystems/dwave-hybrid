@@ -28,6 +28,7 @@ Classes
 .. autoclass:: Reduce
 .. autoclass:: TrackMin
 .. autoclass:: Unwind
+.. autoclass:: Wait
 
 
 Methods
