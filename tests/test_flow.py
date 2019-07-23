@@ -105,11 +105,11 @@ class TestBranch(unittest.TestCase):
             def halt(self):
                 self.stopped = True
 
-        branch = Branch([Stoppable()])
+        branch = Stoppable() | Stoppable()
         branch.run(State())
         branch.stop()
 
-        self.assertTrue(next(iter(branch)).stopped)
+        self.assertTrue(all(c.stopped for c in branch.components))
 
 
 class TestBranches(unittest.TestCase):
@@ -879,7 +879,9 @@ class TestInterruptableIdentity(unittest.TestCase):
         state = State(x=1, y='a', z=[1,2,3])
 
         inp = copy.deepcopy(state)
-        out = ident.run(state).result()
+        fut = ident.run(state)
+        ident.stop()
+        out = fut.result()
 
         self.assertEqual(inp, out)
         self.assertFalse(out is inp)
@@ -887,7 +889,7 @@ class TestInterruptableIdentity(unittest.TestCase):
     def test_interruptable(self):
         ident = InterruptableIdentity()
         state = State(x=1)
-        out = ident.run(state, racing_context=True)
+        out = ident.run(state)
 
         # ident block should not finish
         done, not_done = futures.wait({out}, timeout=0.1)
@@ -904,11 +906,19 @@ class TestInterruptableIdentity(unittest.TestCase):
         self.assertEqual(out.result().x, 1)
 
     def test_input_type_invariant(self):
-        inp1 = State(x=1)
-        self.assertEqual(InterruptableIdentity().run(inp1).result(), inp1)
+        inp = State(x=1)
+        ii = InterruptableIdentity()
+        fut = ii.run(inp)
+        ii.stop()
+        out = fut.result()
+        self.assertEqual(out, inp)
 
-        inp2 = States(State(x=1), State(x=2))
-        self.assertEqual(InterruptableIdentity().run(inp2).result(), inp2)
+        inp = States(State(x=1), State(x=2))
+        ii = InterruptableIdentity()
+        fut = ii.run(inp)
+        ii.stop()
+        out = fut.result()
+        self.assertEqual(out, inp)
 
 
 class TestWait(unittest.TestCase):
