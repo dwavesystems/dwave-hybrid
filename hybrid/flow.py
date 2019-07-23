@@ -31,7 +31,7 @@ __all__ = [
     'Branch', 'Branches', 'RacingBranches', 'Race', 'ParallelBranches', 'Parallel',
     'Map', 'Reduce', 'Lambda', 'ArgMin', 'Unwind', 'TrackMin',
     'Loop', 'LoopUntilNoImprovement', 'LoopWhileNoImprovement',
-    'Identity', 'InterruptableIdentity', 'Dup', 'Const'
+    'Identity', 'InterruptableIdentity', 'Dup', 'Const', 'Wait'
 ]
 
 logger = logging.getLogger(__name__)
@@ -145,8 +145,9 @@ class Branches(traits.NotValidated, Runnable):
     """Runs multiple workflows of type :class:`~hybrid.core.Runnable` in
     parallel, blocking until all finish.
 
-    Branches operates similarly to :class:`~hybrid.flow.Parallel`, but each
-    branch runs on a separate input :class:`~hybrid.core.State`.
+    Branches operates similarly to :class:`~hybrid.flow.ParallelBranches`,
+    but each branch runs on a separate input :class:`~hybrid.core.State`
+    (while parallel branches all use the same input state).
 
     Args:
         *branches ([:class:`~hybrid.core.Runnable`]):
@@ -164,13 +165,13 @@ class Branches(traits.NotValidated, Runnable):
 
     Examples:
         This example runs two branches, a classical tabu search and a random
-        sampler, until both terminate.
+        sampler, until both terminate::
 
-        >>> Branches(TabuSubproblemSampler(), RandomSubproblemSampler())    # doctest: +SKIP
+            Branches(TabuSubproblemSampler(), RandomSubproblemSampler())
 
-        Alternatively:
+        Alternatively::
 
-        >>> TabuSubproblemSampler() & RandomSubproblemSampler()     # doctest: +SKIP
+            TabuSubproblemSampler() & RandomSubproblemSampler()
 
     """
 
@@ -248,7 +249,9 @@ class RacingBranches(traits.NotValidated, Runnable):
         This example runs two branches: a classical tabu search interrupted by
         samples of subproblems returned from a D-Wave system.
 
-        >>> RacingBranches(                     # doctest: +SKIP
+        ::
+
+            RacingBranches(
                 InterruptableTabuSampler(),
                 EnergyImpactDecomposer(size=2)
                 | QPUSubproblemAutoEmbeddingSampler()
@@ -351,9 +354,9 @@ class ParallelBranches(traits.NotValidated, Runnable):
 
     Examples:
         This example runs two branches, a classical tabu search and a random
-        sampler, until both terminate.
+        sampler, until both terminate::
 
-        >>> Parallel(                     # doctest: +SKIP
+            Parallel(
                 TabuSubproblemSampler(),
                 RandomSubproblemSampler()
             ) | ArgMin()
@@ -444,7 +447,7 @@ class Reduce(traits.NotValidated, Runnable):
             A runnable used as the fold-left operator. It should accept a
             2-State input and produce a single State on output.
 
-        initial_state (:class:`State`, optional, default=None):
+        initial_state (:class:`~hybrid.core.State`, optional, default=None):
             Optional starting state into which input states will be folded in.
             If undefined, the first input state is used as the `initial_state`.
 
@@ -521,12 +524,12 @@ class Lambda(traits.NotValidated, Runnable):
         variables `a` and `b`, storing them in `c`.
 
         >>> Lambda(lambda _, s: s.updated(c=s.a * s.b)).run(State(a=2, b=3)).result()     # doctest: +SKIP
-        {'a': 2, 'b': 3, 'c': 6, ...}
+        {'a': 2, 'b': 3, 'c': 6}
 
         This example applies `x += 1` to a sequence of input states.
 
-        >>> Map(Lambda(lambda _, s: s.updated(x=s.x + 1))).run(States(State(x=0), State(x=1))).result()   # doctest: +SKIP
-        [{'problem': None, 'x': 1, 'samples': None}, {'problem': None, 'x': 2, 'samples': None}]
+        >>> Map(Lambda(lambda _, s: s.updated(x=s.x + 1))).run(States(State(x=0), State(x=1))).result()
+        [{'x': 1}, {'x': 2}]
     """
 
     def __init__(self, next, error=None, init=None, **runopts):
@@ -575,9 +578,9 @@ class ArgMin(traits.NotValidated, Runnable):
     Examples:
         This example runs two branches---a classical tabu search interrupted by
         samples of subproblems returned from a D-Wave system--- and selects the
-        state with the minimum-energy sample.
+        state with the minimum-energy sample::
 
-        >>> RacingBranches(                     # doctest: +SKIP
+            RacingBranches(
                 InterruptableTabuSampler(),
                 EnergyImpactDecomposer(size=2)
                 | QPUSubproblemAutoEmbeddingSampler()
@@ -934,12 +937,12 @@ class LoopWhileNoImprovement(LoopUntilNoImprovement):
 
 
 class Unwind(traits.NotValidated, Runnable):
-    """Iterates :class:`~hybrid.core.Runnable` until :exc:`EndOfStream` is
+    """Iterates :class:`~hybrid.core.Runnable` until :exc:`.EndOfStream` is
     raised, collecting all output states along the way.
 
     Note:
         the child runnable is called with run option ``silent_rewind=False``,
-        and it is expected to raise :exc:`EndOfStream` on unwind completion.
+        and it is expected to raise :exc:`.EndOfStream` on unwind completion.
     """
 
     def __init__(self, runnable, **runopts):
@@ -976,6 +979,38 @@ class Unwind(traits.NotValidated, Runnable):
         return output
 
 
+@stoppable
+class Wait(traits.NotValidated, Runnable):
+    """Run indefinitely (effectively blocking branch execution). Has to be
+    explicitly stopped.
+
+    Example:
+        To effectively exclude one branch from the race, i.e. prevent premature
+        stopping of the race between the remaining branches, use :class:`.Wait`
+        as the last element in a (fast-executing) racing branch::
+
+            Race(
+                Identity() | Wait(),
+                InterruptableTabuSampler(),
+                SimulatedAnnealingProblemSampler()
+            )
+
+        This is functionally identical to::
+
+            Parallel(
+                Identity(),
+                Race(
+                    InterruptableTabuSampler(),
+                    SimulatedAnnealingProblemSampler()
+                )
+            )
+    """
+
+    def next(self, state, **runopts):
+        self.stop_signal.wait()
+        return state.updated()
+
+
 class Identity(traits.NotValidated, Runnable):
     """Trivial identity runnable. The output is a direct copy of the input."""
 
@@ -983,19 +1018,13 @@ class Identity(traits.NotValidated, Runnable):
         return state.updated()
 
 
-@stoppable
-class InterruptableIdentity(traits.NotValidated, Runnable):
+def InterruptableIdentity(**runopts):
     """Trivial interruptable identity runnable. The output is a direct copy of
-    the input, with a distinction from :class:`.Identity` that it will halt when
-    used in :class:`.Race` (to prevent short-circuiting racing branches).
+    the input, with a distinction from :class:`.Identity` that it will halt
+    until explicitly stopped (useful for example in :class:`.RacingBranches`
+    to prevent short-circuiting of racing branches with the identity branch).
     """
-
-    def next(self, state, racing_context=False, **runopts):
-        # in a racing context, we don't want to be the winning branch
-        if racing_context:
-            self.stop_signal.wait()
-
-        return state.updated()
+    return Identity(**runopts) | Wait(**runopts)
 
 
 class Const(traits.NotValidated, Runnable):
@@ -1008,11 +1037,10 @@ class Const(traits.NotValidated, Runnable):
     Example:
         This example defines a workflow that resets the set of samples before a
         Tabu sampler call in order to avoid using existing samples as initial
-        states. Instead, Tabu will use randomly generated initial states.
+        states. Instead, Tabu will use randomly generated initial states::
 
-        >>> import hybrid
-        >>> random_tabu = hybrid.Const(samples=None) \
-                        | hybrid.TabuProblemSampler(initial_states_generator='random')
+            random_tabu = Const(samples=None) | TabuProblemSampler(initial_states_generator='random')
+
     """
 
     def __init__(self, **consts):
