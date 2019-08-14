@@ -20,7 +20,11 @@ jobs:
             - env
       - run: env/bin/pip install .
       - run: env/bin/coverage run -m unittest discover
-      - run: env/bin/codecov
+      - run:
+          name: codecov
+          command: |
+            . env/bin/activate
+            codecov   # calls `coverage xml`, so we must activate venv
       - run:
           name: doctest
           command: |
