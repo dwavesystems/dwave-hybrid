@@ -10,9 +10,13 @@
     :target: https://ci.appveyor.com/project/dwave-adtt/dwave-hybrid/branch/master
     :alt: Windows build status
 
+.. image:: https://codecov.io/gh/codecov/dwave-hybrid/branch/master/graph/badge.svg
+    :target: https://codecov.io/gh/codecov/dwave-hybrid
+    :alt: Code coverage
+
 .. image:: https://readthedocs.com/projects/d-wave-systems-dwave-hybrid/badge/?version=latest
     :target: https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/
-    :alt: Documentation Status
+    :alt: Documentation status
 
 
 =============
