@@ -17,7 +17,7 @@ Classes
 .. autoclass:: Const
 .. autoclass:: Dup
 .. autoclass:: Identity
-.. autofunction:: InterruptableIdentity
+.. autoclass:: BlockingIdentity
 .. autoclass:: Lambda
 .. autoclass:: Loop
 .. autoclass:: LoopUntilNoImprovement

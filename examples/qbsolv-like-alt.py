@@ -52,7 +52,7 @@ random = hybrid.Map(
 subsampler = hybrid.Parallel(qpu, random) | hybrid.ArgMin()
 
 iteration = hybrid.Race(
-    hybrid.InterruptableIdentity(),
+    hybrid.Identity() | hybrid.Wait(),
     hybrid.InterruptableTabuSampler(),
     subproblems | subsampler
 ) | hybrid.ArgMin()
