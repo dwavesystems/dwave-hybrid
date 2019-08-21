@@ -649,14 +649,18 @@ class TrackMin(traits.NotValidated, Runnable):
             If `output=True`, then this defines the variable/key name in the
             input state that shall be included in the output state.
 
-        output_key (str, optional, default='best_samples')
+        output_key (str, optional, default='samples')
             If `output=True`, then the key under which the `input_key` from the
             best state seen so far is stored in the output state.
+
+    Note:
+        If `output` option is turned on, and `output_key` is not changed, the
+        output will by default change the state's `samples` on output.
 
     """
 
     def __init__(self, key=None, output=False, input_key='samples',
-                 output_key='best_samples', **runopts):
+                 output_key='samples', **runopts):
         super(TrackMin, self).__init__(**runopts)
         if key is None:
             key = 'samples.first.energy'
