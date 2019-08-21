@@ -31,7 +31,6 @@ with open(problem) as fp:
 
 # construct a workflow that races Simulated Annealing against SA/Tabu on a subproblem
 iteration = hybrid.Race(
-    hybrid.InterruptableIdentity(),
     hybrid.SimulatedAnnealingProblemSampler(),
     hybrid.EnergyImpactDecomposer(size=50)
         | hybrid.RacingBranches(

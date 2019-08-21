@@ -31,7 +31,6 @@ with open(problem) as fp:
 # define the workflow
 workflow = hybrid.Loop(
     hybrid.Race(
-        hybrid.InterruptableIdentity(),
         hybrid.InterruptableTabuSampler(),
         hybrid.EnergyImpactDecomposer(size=50, rolling=True, traversal='bfs')
         | hybrid.QPUSubproblemAutoEmbeddingSampler()
