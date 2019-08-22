@@ -34,13 +34,12 @@ def SimplifiedQbsolv(max_iter=10, max_time=None, convergence=3,
 
     workflow = hybrid.Loop(
         hybrid.Race(
-            hybrid.BlockingIdentity(),
             hybrid.InterruptableTabuSampler(),
             hybrid.EnergyImpactDecomposer(
                 size=max_subproblem_size, rolling=True, rolling_history=0.15)
             | hybrid.QPUSubproblemAutoEmbeddingSampler()
             | hybrid.SplatComposer()
-        ) | hybrid.ArgMin(),
+        ) | hybrid.ArgMin() | hybrid.TrackMin(output=True),
         max_iter=max_iter, max_time=max_time,
         convergence=convergence, terminate=energy_reached)
 
