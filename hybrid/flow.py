@@ -706,7 +706,8 @@ class LoopUntilNoImprovement(traits.NotValidated, Runnable):
     improvement for at least `convergence` number of iterations. Alternatively,
     maximum allowed runtime can be defined with `max_time`, or a custom
     termination Boolean function can be given with `terminate` (a predicate
-    on `key`).
+    on `key`). Loop is always terminated on :exc:`EndOfStream` raised by body
+    runnable.
 
     Args:
         runnable (:class:`~hybrid.core.Runnable`):
@@ -809,7 +810,13 @@ class LoopUntilNoImprovement(traits.NotValidated, Runnable):
         runopts['executor'] = immediate_executor
 
         while not self.stop_signal.is_set():
-            output_state = self.runnable.run(input_state, **runopts).result()
+
+            try:
+                output_state = self.runnable.run(input_state, **runopts).result()
+            except EndOfStream as exc:
+                logger.debug("{name} Iteration(iterno={iterno}) terminating due "
+                             "to {exc!r}".format(name=self.name, iterno=iterno, exc=exc))
+                break
 
             if self.convergence or self.terminate:
                 input_key = self.key(input_state)
