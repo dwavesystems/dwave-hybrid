@@ -14,12 +14,12 @@
 
 from __future__ import division
 
+import six
 import random
 
-import six
-import dimod
 import numpy
 
+import dimod
 from dwave_networkx.algorithms import canonical_chimera_labeling
 
 
@@ -557,17 +557,19 @@ def max_sample(bqm):
 
 
 def hstack_samplesets(base, *others, **kwargs):
-    """Horizontally combine the first sample in `base` sampleset with first
-    samples in all other samplesets provided in `*others`.
+    """Horizontally combine samples in `base` sampleset with samples in all the
+    other samplesets provided in `*others`.
 
     Set of variables in the resulting sampleset is union of all variables in
     all joined samplesets.
 
+    Number of samples in the resulting sampleset is set to the number of samples
+    in the smallest input sampleset.
+
     Resulting sampleset inherits vartype from `bqm` (or `base` sampleset if
-    `bqm` is undefined), it contains only one sample, and has energy calculated
-    on `bqm` (or zero if `bqm` is undefined).
+    `bqm` is undefined), and has energy calculated on `bqm` (or zero if `bqm` is
+    undefined).
     """
-    # TODO: support multiple samples per sampleset, not just the first!
 
     bqm = kwargs.pop('bqm', None)
 
@@ -576,16 +578,31 @@ def hstack_samplesets(base, *others, **kwargs):
     else:
         vartype = bqm.vartype
 
-    sample = dict(base.change_vartype(vartype).first.sample)
+    samplesets = [base] + list(others)
+
+    # calculate final set of variables
+    variables = base.variables
     for sampleset in others:
-        sample.update(sampleset.change_vartype(vartype).first.sample)
+        variables |= sampleset.variables
+
+    # calculate final number of samples
+    num_samples = min(len(sampleset) for sampleset in samplesets)
+
+    # prepare empty result sampleset
+    samples = numpy.empty((num_samples, len(variables)))
+
+    # copy over samplesets, one by one, from left to right
+    for ss in samplesets:
+        ss.change_vartype(vartype)
+        mask = [variables.index[v] for v in ss.variables]
+        samples[:, mask] = ss.record.sample[:num_samples]
 
     if bqm is None:
         energies = 0
     else:
-        energies = bqm.energies(sample)
+        energies = bqm.energies((samples, variables))
 
-    return dimod.SampleSet.from_samples(sample, energy=energies, vartype=vartype)
+    return dimod.SampleSet.from_samples((samples, variables), energy=energies, vartype=vartype)
 
 
 def vstack_samplesets(*samplesets):
