@@ -600,7 +600,7 @@ def hstack_samplesets(base, *others, **kwargs):
     if bqm is None:
         energies = 0
     else:
-        energies = bqm.energies(samples)
+        energies = bqm.energies((samples, variables))
 
     return dimod.SampleSet.from_samples((samples, variables), energy=energies, vartype=vartype)
 

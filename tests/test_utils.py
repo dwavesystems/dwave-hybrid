@@ -14,6 +14,8 @@
 
 import unittest
 
+import numpy
+
 import dimod
 import dwave_networkx as dnx
 
@@ -202,3 +204,11 @@ class TestSampleSetUtils(unittest.TestCase):
             [{'a': 0, 'b': 1, 'c': 0}, {'a': 1, 'b': 1, 'c': 1}], vartype='BINARY', energy=0)
 
         self.assertEqual(hstack_samplesets(ab, bc), exp)
+
+    def test_hstack_from_bqm(self):
+        bqm = dimod.BQM.from_ising({'a': 1}, {})
+        ss = dimod.SampleSet.from_samples({'a': 0}, vartype='BINARY', energy=0)
+
+        res = hstack_samplesets(ss, bqm=bqm)
+        self.assertEqual(res.vartype, dimod.SPIN)
+        numpy.testing.assert_array_equal(res.record.energy, numpy.array([-1]))
