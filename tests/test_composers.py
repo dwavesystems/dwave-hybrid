@@ -55,12 +55,16 @@ class TestIdentityComposer(unittest.TestCase):
 
 class TestSplatComposer(unittest.TestCase):
     problem = dimod.BinaryQuadraticModel({}, {'ab': 1, 'bc': 1, 'ca': 1}, 0, dimod.SPIN)
-    samples = [{'a': 1, 'b': 1, 'c': 1}]
+    samples = [{'a': +1, 'b': +1, 'c': +1},
+               {'a': -1, 'b': -1, 'c': -1}]
     subproblem = dimod.BinaryQuadraticModel({}, {'bc': 1}, 0, dimod.SPIN)
-    subsamples = [{'b': -1, 'c': 1}]
+    subsamples = [{'b': -1, 'c': +1},
+                  {'b': +1, 'c': +1}]
+    composed = [{'a': +1, 'b': -1, 'c': +1},
+                {'a': -1, 'b': +1, 'c': +1}]
 
     def test_default(self):
-        """First subsample is combined with the first sample."""
+        """All subsamples are combined with all the samples."""
 
         state = State.from_samples(self.samples, self.problem).updated(
             subproblem=self.subproblem,
@@ -68,9 +72,8 @@ class TestSplatComposer(unittest.TestCase):
 
         nextstate = SplatComposer().next(state)
 
-        sample = {'a': 1, 'b': -1, 'c': 1}
         self.assertEqual(nextstate.samples,
-                         SampleSet.from_samples_bqm(sample, self.problem))
+                         SampleSet.from_samples_bqm(self.composed, self.problem))
 
     def test_traits_enforced(self):
         """Sample composers require `problem`, `samples` and `subsamples`."""
