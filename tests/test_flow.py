@@ -621,6 +621,19 @@ class TestLoopUntilNoImprovement(unittest.TestCase):
         with self.assertRaises(StateDimensionalityError):
             LoopUntilNoImprovement(simo()).run(States()).result()
 
+    def test_end_of_stream_termination(self):
+        class Inc(Runnable):
+            def next(self, state, **kw):
+                cnt = state.cnt + 1
+                if cnt > state.maxcnt:
+                    raise EndOfStream
+                return state.updated(cnt=cnt)
+
+        loop = LoopWhileNoImprovement(Inc())
+        state = loop.run(State(cnt=0, maxcnt=3)).result()
+
+        self.assertEqual(state.cnt, 3)
+
 
 class TestLoopWhileNoImprovement(unittest.TestCase):
 
