@@ -18,7 +18,7 @@ import copy
 import numpy as np
 
 from hybrid.core import Runnable, SampleSet
-from hybrid.utils import updated_sample, flip_energy_gains, vstack_samplesets
+from hybrid.utils import flip_energy_gains, vstack_samplesets, hstack_samplesets
 from hybrid import traits
 
 __all__ = ['IdentityComposer', 'SplatComposer', 'GreedyPathMerge',
@@ -41,20 +41,20 @@ class SplatComposer(traits.SubsamplesComposer, traits.SISO, Runnable):
     """
 
     def next(self, state, **runopts):
-        # update the first sample in `state.sampleset`, inplace
-        # XXX: assume one global sample, one subsample
-        # TODO: generalize
-        sample = next(iter(state.samples.change_vartype(state.subsamples.vartype).samples()))
-        subsample = next(iter(state.subsamples.samples()))
-        sample_energy = state.problem.energy(sample)
-        composed_sample = updated_sample(sample, subsample)
-        composed_energy = state.problem.energy(composed_sample)
-        logger.debug("{name} subsample (len={sslen}) -> sample (len={slen}), "
-                     "sample energy changed {old_en} -> {new_en}".format(
-                         name=self.name, sslen=len(subsample), slen=len(sample),
-                         old_en=sample_energy, new_en=composed_energy))
-        return state.updated(
-            samples=SampleSet.from_samples(composed_sample, state.samples.vartype, composed_energy))
+        # update as many samples possible with partial samples from `state.subsamples`
+        # the resulting number of samples will be limited with `len(state.subsamples)`
+
+        samples = hstack_samplesets(state.samples, state.subsamples, bqm=state.problem)
+
+        logger.debug("{name} subsamples (shape={ss_shape!r}) -> samples (shape={s_shape!r}), "
+                     "sample energies changed {old_en} -> {new_en}".format(
+                         name=self.name,
+                         ss_shape=state.subsamples.record.shape,
+                         s_shape=state.samples.record.shape,
+                         old_en=state.samples.record.energy,
+                         new_en=samples.record.energy))
+
+        return state.updated(samples=samples)
 
 
 class GreedyPathMerge(traits.SamplesProcessor, traits.MISO, Runnable):
