@@ -30,7 +30,6 @@ with open(problem) as fp:
 
 # run Tabu in parallel with QPU, but post-process QPU samples with very short Tabu
 iteration = hybrid.Race(
-    hybrid.InterruptableIdentity(),
     hybrid.InterruptableTabuSampler(),
     hybrid.EnergyImpactDecomposer(size=50)
     | hybrid.QPUSubproblemAutoEmbeddingSampler(num_reads=100)

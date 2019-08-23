@@ -31,7 +31,7 @@ __all__ = [
     'Branch', 'Branches', 'RacingBranches', 'Race', 'ParallelBranches', 'Parallel',
     'Map', 'Reduce', 'Lambda', 'ArgMin', 'Unwind', 'TrackMin',
     'Loop', 'LoopUntilNoImprovement', 'LoopWhileNoImprovement',
-    'Identity', 'InterruptableIdentity', 'Dup', 'Const', 'Wait'
+    'Identity', 'BlockingIdentity', 'Dup', 'Const', 'Wait'
 ]
 
 logger = logging.getLogger(__name__)
@@ -649,14 +649,18 @@ class TrackMin(traits.NotValidated, Runnable):
             If `output=True`, then this defines the variable/key name in the
             input state that shall be included in the output state.
 
-        output_key (str, optional, default='best_samples')
+        output_key (str, optional, default='samples')
             If `output=True`, then the key under which the `input_key` from the
             best state seen so far is stored in the output state.
+
+    Note:
+        If `output` option is turned on, and `output_key` is not changed, the
+        output will by default change the state's `samples` on output.
 
     """
 
     def __init__(self, key=None, output=False, input_key='samples',
-                 output_key='best_samples', **runopts):
+                 output_key='samples', **runopts):
         super(TrackMin, self).__init__(**runopts)
         if key is None:
             key = 'samples.first.energy'
@@ -1018,13 +1022,20 @@ class Identity(traits.NotValidated, Runnable):
         return state.updated()
 
 
-def InterruptableIdentity(**runopts):
-    """Trivial interruptable identity runnable. The output is a direct copy of
-    the input, with a distinction from :class:`.Identity` that it will halt
-    until explicitly stopped (useful for example in :class:`.RacingBranches`
-    to prevent short-circuiting of racing branches with the identity branch).
+class BlockingIdentity(Wait):
+    """Trivial identity runnable that blocks indefinitely before producing
+    output, but is interruptable. The output is a direct copy of
+    the input, but to receive the output, the block has to be explicitly stopped
+    (useful for example in :class:`.RacingBranches` to prevent short-circuiting
+    of racing branches with the identity branch).
+
+    ::
+
+        BlockingIdentity := Identity | Wait
+
+    Due to nature of :class:`.Identity`, :class:`.BlockingIdentity` is
+    functionally equivalent to :class:`.Wait`.
     """
-    return Identity(**runopts) | Wait(**runopts)
 
 
 class Const(traits.NotValidated, Runnable):

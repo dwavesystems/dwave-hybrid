@@ -27,7 +27,7 @@ from hybrid.flow import (
     Branch, Branches, RacingBranches, ParallelBranches,
     ArgMin, Map, Reduce, Lambda, Unwind, TrackMin,
     LoopUntilNoImprovement, LoopWhileNoImprovement, SimpleIterator, Loop,
-    Identity, InterruptableIdentity, Dup, Const, Wait
+    Identity, BlockingIdentity, Dup, Const, Wait
 )
 from hybrid.core import State, States, Runnable, Present
 from hybrid.utils import min_sample, max_sample
@@ -272,7 +272,7 @@ class TestRacingBranches(unittest.TestCase):
         self.assertEqual([s.x for s in res], [2, 1, 2])
 
         # "endomorphic case"
-        rb = RacingBranches(InterruptableIdentity(), Slow(), Fast(), Slow())
+        rb = RacingBranches(BlockingIdentity(), Slow(), Fast(), Slow())
         res = rb.run(State(x=0)).result()
         self.assertEqual([s.x for s in res], [0, 2, 1, 2])
 
@@ -872,10 +872,10 @@ class TestIdentity(unittest.TestCase):
         self.assertEqual(Identity().run(inp2).result(), inp2)
 
 
-class TestInterruptableIdentity(unittest.TestCase):
+class TestBlockingIdentity(unittest.TestCase):
 
     def test_basic(self):
-        ident = InterruptableIdentity()
+        ident = BlockingIdentity()
         state = State(x=1, y='a', z=[1,2,3])
 
         inp = copy.deepcopy(state)
@@ -887,7 +887,7 @@ class TestInterruptableIdentity(unittest.TestCase):
         self.assertFalse(out is inp)
 
     def test_interruptable(self):
-        ident = InterruptableIdentity()
+        ident = BlockingIdentity()
         state = State(x=1)
         out = ident.run(state)
 
@@ -907,14 +907,14 @@ class TestInterruptableIdentity(unittest.TestCase):
 
     def test_input_type_invariant(self):
         inp = State(x=1)
-        ii = InterruptableIdentity()
+        ii = BlockingIdentity()
         fut = ii.run(inp)
         ii.stop()
         out = fut.result()
         self.assertEqual(out, inp)
 
         inp = States(State(x=1), State(x=2))
-        ii = InterruptableIdentity()
+        ii = BlockingIdentity()
         fut = ii.run(inp)
         ii.stop()
         out = fut.result()

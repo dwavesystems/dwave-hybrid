@@ -30,12 +30,11 @@ with open(problem) as fp:
 
 # define the workflow
 iteration = hybrid.Race(
-    hybrid.InterruptableIdentity(),
     hybrid.InterruptableTabuSampler(),
     hybrid.EnergyImpactDecomposer(size=50, rolling=True, rolling_history=0.15)
     | hybrid.QPUSubproblemAutoEmbeddingSampler()
     | hybrid.SplatComposer()
-) | hybrid.ArgMin()
+) | hybrid.ArgMin() | hybrid.TrackMin(output=True)
 
 main = hybrid.Loop(iteration, max_iter=10, convergence=3)
 
