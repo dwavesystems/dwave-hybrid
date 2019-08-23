@@ -17,8 +17,10 @@ import unittest
 import dimod
 import dwave_networkx as dnx
 
+from hybrid.core import SampleSet
 from hybrid.utils import (
-    chimera_tiles, flip_energy_gains, select_localsearch_adversaries)
+    chimera_tiles, flip_energy_gains, select_localsearch_adversaries,
+    hstack_samplesets)
 
 
 class TestEnergyFlipGainUtils(unittest.TestCase):
@@ -147,3 +149,56 @@ class TestChimeraTiles(unittest.TestCase):
         self.assertEqual(set().union(*tiles.values()), set(bqm))  # all of the nodes are present
         for embedding in tiles.values():
             self.assertTrue(set(chain[0] for chain in embedding.values()).issubset(set(range(ti*tj*tt*2))))
+
+
+class TestSampleSetUtils(unittest.TestCase):
+
+    def test_hstack_empty(self):
+        s1 = SampleSet.empty()
+        s2 = SampleSet.empty()
+        exp = SampleSet.empty()
+
+        res = hstack_samplesets(s1, s2)
+        self.assertEqual(res, exp)
+
+    def test_hstack_one(self):
+        ss = dimod.SampleSet.from_samples({'a': 1}, vartype='BINARY', energy=0)
+        emp = SampleSet.empty()
+
+        self.assertEqual(hstack_samplesets(ss), ss)
+        self.assertEqual(hstack_samplesets(ss, emp), ss)
+        self.assertEqual(hstack_samplesets(emp, ss), ss)
+        self.assertEqual(hstack_samplesets(ss, ss), ss)
+
+    def test_hstack_combine(self):
+        s1 = dimod.SampleSet.from_samples({'a': 1}, vartype='BINARY', energy=0)
+        s2 = dimod.SampleSet.from_samples({'b': 1}, vartype='BINARY', energy=0)
+        exp = dimod.SampleSet.from_samples({'a': 1, 'b': 1}, vartype='BINARY', energy=0)
+
+        self.assertEqual(hstack_samplesets(s1, s2), exp)
+        self.assertEqual(hstack_samplesets(s2, s1), exp)
+
+    def test_hstack_clamp(self):
+        s1 = dimod.SampleSet.from_samples([{'a': 1}, {'a': 0}], vartype='BINARY', energy=0)
+        s2 = dimod.SampleSet.from_samples({'b': 1}, vartype='BINARY', energy=0)
+        exp = dimod.SampleSet.from_samples({'a': 1, 'b': 1}, vartype='BINARY', energy=0)
+
+        self.assertEqual(hstack_samplesets(s1, s2), exp)
+        self.assertEqual(hstack_samplesets(s2, s1), exp)
+
+    def test_hstack_update(self):
+        s1 = dimod.SampleSet.from_samples({'a': 1}, vartype='BINARY', energy=0)
+        s2 = dimod.SampleSet.from_samples({'a': 0}, vartype='BINARY', energy=0)
+
+        self.assertEqual(hstack_samplesets(s1, s2), s2)
+        self.assertEqual(hstack_samplesets(s2, s1), s1)
+
+    def test_hstack_multisample_multivar(self):
+        ab = dimod.SampleSet.from_samples(
+            [{'a': 0, 'b': 1}, {'a': 1, 'b': 0}], vartype='BINARY', energy=0)
+        bc = dimod.SampleSet.from_samples(
+            [{'b': 1, 'c': 0}, {'b': 1, 'c': 1}], vartype='BINARY', energy=0)
+        exp = dimod.SampleSet.from_samples(
+            [{'a': 0, 'b': 1, 'c': 0}, {'a': 1, 'b': 1, 'c': 1}], vartype='BINARY', energy=0)
+
+        self.assertEqual(hstack_samplesets(ab, bc), exp)
