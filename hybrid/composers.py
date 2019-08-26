@@ -12,17 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
 import copy
+import random
+import logging
 
 import numpy as np
+import networkx as nx
+import dimod
 
-from hybrid.core import Runnable, SampleSet
+from hybrid.core import Runnable, SampleSet, States
 from hybrid.utils import flip_energy_gains, vstack_samplesets, hstack_samplesets
 from hybrid import traits
 
 __all__ = ['IdentityComposer', 'SplatComposer', 'GreedyPathMerge',
-           'MergeSamples', 'SliceSamples', 'AggregatedSamples']
+           'MergeSamples', 'SliceSamples', 'AggregatedSamples',
+           'IsoenergeticClusterMove', 'ICM']
 
 logger = logging.getLogger(__name__)
 
@@ -278,3 +282,60 @@ class AggregatedSamples(traits.SamplesProcessor, traits.SISO, Runnable):
             samples = self.spread(state.samples)
 
         return state.updated(samples=samples)
+
+
+class IsoenergeticClusterMove(traits.SamplesProcessor, traits.ProblemSampler,
+                              traits.MIMO, Runnable):
+
+    def next(self, states):
+        """Recombine the two first samples in the first two input states."""
+
+        if len(states) > 2:
+            raise ValueError("exactly two input states required")
+
+        inp1, inp2 = states
+        bqm = inp1.problem
+
+        ss1 = inp1.samples.change_vartype(dimod.BINARY, inplace=False)
+        ss2 = inp2.samples.change_vartype(dimod.BINARY, inplace=False)
+
+        # sanity check: we operate on the same set of variables
+        if ss1.variables ^ ss2.variables:
+            raise ValueError("input samples not over the same set of variables")
+
+        # reorder variables, if necessary
+        # (use sequence comparison, not set)
+        variables = list(ss1.variables)
+        if ss2.variables != variables:
+            reorder = [ss2.variables.index(v) for v in variables]
+            record = ss2.record[:, reorder]
+            ss2 = dimod.SampleSet(record, variables, ss2.info, ss2.vartype)
+
+        # samples' symmetric difference (XOR)
+        # (form clusters of input variables differing)
+        sample1 = ss1.record.sample[0]
+        sample2 = ss2.record.sample[0]
+        symdiff = sample1 ^ sample2
+
+        # for cluster detection we'll use a reduced problem graph
+        graph = bqm.to_networkx_graph()
+        gaps = np.array(variables)[symdiff == 0]
+        graph.remove_nodes_from(gaps)
+
+        # pick a random differing variable, and its cluster
+        node = random.choice(list(graph.nodes))
+        cluster = nx.node_connected_component(graph, node)
+
+        # flip variables from `cluster` in both input samples
+        flipper = np.array([1 if v in cluster else 0 for v in variables])
+        ss1.record.sample[0] ^= flipper
+        ss2.record.sample[0] ^= flipper
+
+        # change vartype back to input's type
+        ss1.change_vartype(inp1.samples.vartype)
+        ss2.change_vartype(inp2.samples.vartype)
+
+        return States(inp1.updated(samples=ss1), inp2.updated(samples=ss2))
+
+
+ICM = IsoenergeticClusterMove
