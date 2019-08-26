@@ -319,7 +319,10 @@ class IsoenergeticClusterMove(traits.SamplesProcessor, traits.ProblemSampler,
 
         # for cluster detection we'll use a reduced problem graph
         graph = bqm.to_networkx_graph()
-        gaps = np.array(variables)[symdiff == 0]
+        # note: instead of numpy mask indexing of `gaps`, we enumerate
+        # non-cluster variables manually to avoid conversion of potentially
+        # unhashable variable names to numpy types
+        gaps = [v for v, d in zip(variables, symdiff) if d == 0]
         graph.remove_nodes_from(gaps)
 
         # pick a random differing variable, and its cluster
