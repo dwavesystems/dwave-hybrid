@@ -338,6 +338,10 @@ class IsoenergeticClusterMove(traits.SamplesProcessor, traits.ProblemSampler,
         ss1.change_vartype(inp1.samples.vartype)
         ss2.change_vartype(inp2.samples.vartype)
 
+        # update sampleset's energies
+        ss1.record.energy = bqm.energies(ss1)
+        ss2.record.energy = bqm.energies(ss2)
+
         return States(inp1.updated(samples=ss1), inp2.updated(samples=ss2))
 
 
