@@ -16,13 +16,14 @@ import itertools
 import unittest
 
 import numpy as np
+import networkx as nx
 import dimod
 
 from hybrid.core import State, States, SampleSet
 from hybrid import traits
 from hybrid.composers import (
     IdentityComposer, SplatComposer, GreedyPathMerge,
-    MergeSamples, SliceSamples, AggregatedSamples)
+    MergeSamples, SliceSamples, AggregatedSamples, IsoenergeticClusterMove)
 from hybrid.utils import min_sample, max_sample
 
 
@@ -213,3 +214,83 @@ class TestAggregatedSamples(unittest.TestCase):
 
         # variables should stay the same
         self.assertEqual(list(sampleset.variables), list(result.samples.variables))
+
+
+class TestICM(unittest.TestCase):
+
+    def test_validation(self):
+        bqm1 = dimod.BinaryQuadraticModel({'a': 1}, {}, 0, dimod.SPIN)
+        bqm2 = dimod.BinaryQuadraticModel({'b': 1}, {}, 0, dimod.SPIN)
+        s1 = State.from_sample({'a': +1}, bqm1)
+        s2 = State.from_sample({'b': -1}, bqm2)
+
+        # two input states required
+        with self.assertRaises(ValueError):
+            inp = States(s1, s1, s1)
+            IsoenergeticClusterMove().run(inp).result()
+
+        # variables must match
+        with self.assertRaises(ValueError):
+            inp = States(s1, s2)
+            IsoenergeticClusterMove().run(inp).result()
+
+    def test_triangle_flip(self):
+        bqm = dimod.BQM.from_qubo({'ab': 1, 'bc': 1, 'ca': 1})
+        s1 = State.from_samples({'a': 0, 'b': 1, 'c': 1}, bqm)
+        s2 = State.from_samples({'a': 1, 'b': 0, 'c': 1}, bqm)
+
+        icm = IsoenergeticClusterMove()
+        res = icm.run(States(s1, s2)).result()
+
+        # Expected: ('a', 'b') identified as (the sole) cluster, selected,
+        # resulting in variables {'a', 'b'} flipped. Effectively, input states
+        # are simply swapped.
+        self.assertEqual(res[0].samples, s2.samples)
+        self.assertEqual(res[1].samples, s1.samples)
+
+    def test_ising_triangle_flip(self):
+        bqm = dimod.BQM.from_ising({}, {'ab': 1, 'bc': 1, 'ca': 1})
+        s1 = State.from_samples({'a': -1, 'b': +1, 'c': +1}, bqm)
+        s2 = State.from_samples({'a': +1, 'b': -1, 'c': +1}, bqm)
+
+        icm = IsoenergeticClusterMove()
+        res = icm.run(States(s1, s2)).result()
+
+        # Expected: ('a', 'b') identified as (the sole) cluster, selected,
+        # resulting in variables {'a', 'b'} flipped. Effectively, input states
+        # are simply swapped.
+        self.assertEqual(res[0].samples, s2.samples)
+        self.assertEqual(res[1].samples, s1.samples)
+
+    def test_small_lattice(self):
+        graph = nx.generators.lattice.grid_2d_graph(5, 5)
+        bqm = dimod.generators.uniform(graph, vartype=dimod.BINARY, low=1, high=1)
+        nodes = sorted(bqm.variables)
+
+        s1 = State.from_samples(dict(zip(nodes, [0, 1, 0, 1, 1,
+                                                 0, 0, 0, 1, 0,
+                                                 0, 0, 0, 0, 1,
+                                                 0, 0, 1, 1, 0,
+                                                 1, 0, 1, 0, 0])), bqm)
+        s2 = State.from_samples(dict(zip(nodes, [0, 1, 1, 0, 0,
+                                                 0, 0, 0, 1, 1,
+                                                 0, 1, 1, 0, 1,
+                                                 0, 1, 0, 0, 0,
+                                                 1, 0, 0, 1, 0])), bqm)
+
+        expected1 = State.from_samples(dict(zip(nodes, [0, 1, 0, 1, 1,
+                                                        0, 0, 0, 1, 0,
+                                                        0, 1, 1, 0, 1,
+                                                        0, 1, 0, 0, 0,
+                                                        1, 0, 0, 1, 0])), bqm)
+        expected2 = State.from_samples(dict(zip(nodes, [0, 1, 1, 0, 0,
+                                                        0, 0, 0, 1, 1,
+                                                        0, 0, 0, 0, 1,
+                                                        0, 0, 1, 1, 0,
+                                                        1, 0, 1, 0, 0])), bqm)
+
+        icm = IsoenergeticClusterMove()
+        res = icm.run(States(s1, s2)).result()
+
+        self.assertEqual(res[0].samples, expected1.samples)
+        self.assertEqual(res[1].samples, expected2.samples)
