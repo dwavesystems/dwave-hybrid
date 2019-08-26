@@ -286,6 +286,26 @@ class AggregatedSamples(traits.SamplesProcessor, traits.SISO, Runnable):
 
 class IsoenergeticClusterMove(traits.SamplesProcessor, traits.ProblemSampler,
                               traits.MIMO, Runnable):
+    """Isoenergetic cluster move (ICM), also know as Houdayer move, is a
+    recombination operation that takes two samples and randomly selects a
+    connected cluster of spins in which the individuals differ, then flips this
+    cluster in each individual to create two new samples. Isoenergetic cluster
+    moves identify clusters of spins that would reasonably be grouped together.
+
+    Args:
+        seed (int, default=None/current time):
+            Pseudo-random number generator seed.
+
+    Input:
+        :class:`~hybrid.core.States`:
+            Two states with at least one sample each. First state should also
+            contain a relevant problem.
+
+    Output:
+        :class:`~hybrid.core.States`:
+            Two states from input with new first sample in each.
+
+    """
 
     def __init__(self, seed=None, **runopts):
         super(IsoenergeticClusterMove, self).__init__(**runopts)
