@@ -287,6 +287,13 @@ class AggregatedSamples(traits.SamplesProcessor, traits.SISO, Runnable):
 class IsoenergeticClusterMove(traits.SamplesProcessor, traits.ProblemSampler,
                               traits.MIMO, Runnable):
 
+    def __init__(self, seed=None, **runopts):
+        super(IsoenergeticClusterMove, self).__init__(**runopts)
+
+        # initialize random seed and store it for reference
+        self.seed = seed
+        random.seed(seed)
+
     def next(self, states):
         """Recombine the two first samples in the first two input states."""
 
