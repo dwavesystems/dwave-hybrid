@@ -47,14 +47,14 @@ class TestWeightedResampler(unittest.TestCase):
         state = hybrid.State(samples=skewed)
 
         # cold sampling
-        res = EnergyWeightedResampler(beta=1).run(state).result()
+        res = EnergyWeightedResampler(beta=1, seed=1234).run(state).result()
         samples = res.samples.aggregate()
 
         self.assertEqual(len(samples), 1)
         self.assertDictEqual(dict(list(samples.samples())[0]), winner)
 
         # hot sampling
-        res = EnergyWeightedResampler(beta=0).run(state).result()
+        res = EnergyWeightedResampler(beta=0, seed=1234).run(state).result()
         samples = res.samples.aggregate()
 
         self.assertGreater(len(samples), 1)

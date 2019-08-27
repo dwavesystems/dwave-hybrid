@@ -54,25 +54,31 @@ class FixedTemperatureSampler(hybrid.traits.SISO, hybrid.Runnable):
 
         aggregate (bool, optional, default=False):
             Aggregate samples (duplicity stored in ``num_occurrences``).
+
+        seed (int, optional, default=None):
+            Pseudo-random number generator seed.
+
     """
 
     def __init__(self, beta=None, num_sweeps=10000, num_reads=None,
-                 aggregate=False, **runopts):
+                 aggregate=False, seed=None, **runopts):
         super(FixedTemperatureSampler, self).__init__(**runopts)
         self.beta = beta
         self.num_sweeps = num_sweeps
         self.num_reads = num_reads
         self.aggregate = aggregate
+        self.seed = seed
 
     def next(self, state, **runopts):
         beta = state.get('beta', self.beta)
+        seed = runopts.pop('seed', self.seed)
         aggregate = runopts.pop('aggregate', self.aggregate)
 
         new_samples = neal.SimulatedAnnealingSampler().sample(
             state.problem, initial_states=state.samples,
             beta_range=(beta, beta), beta_schedule_type='linear',
             num_reads=self.num_reads, initial_states_generator='tile',
-            num_sweeps=self.num_sweeps)
+            num_sweeps=self.num_sweeps, seed=seed)
 
         if aggregate:
             new_samples = new_samples.aggregate()
@@ -94,11 +100,17 @@ class SwapReplicaPairRandom(hybrid.traits.MIMO, hybrid.Runnable):
         betas (list(float), optional):
             List of betas (inverse temperature), one for each input state. If
             not supplied, betas have to be present in the input states.
+
+        seed (int, default=None):
+            Pseudo-random number generator seed.
+
     """
 
-    def __init__(self, betas=None, **runopts):
+    def __init__(self, betas=None, seed=None, **runopts):
         super(SwapReplicaPairRandom, self).__init__(**runopts)
         self.betas = betas
+        self.seed = seed
+        self.random = random.Random(seed)
 
     def swap_pair(self, betas, states, i, j):
         """One pair of states' (i, j) samples probabilistic swap."""
@@ -109,7 +121,7 @@ class SwapReplicaPairRandom(hybrid.traits.MIMO, hybrid.Runnable):
         # since `min(1, math.exp(beta_diff * energy_diff))` can overflow,
         # we need to move `min` under `exp`
         w = math.exp(min(0, beta_diff * energy_diff))
-        p = random.uniform(0, 1)
+        p = self.random.uniform(0, 1)
         if w > p:
             # swap samples for replicas i and j
             states[i].samples, states[j].samples = states[j].samples, states[i].samples
@@ -121,7 +133,7 @@ class SwapReplicaPairRandom(hybrid.traits.MIMO, hybrid.Runnable):
         if betas is None:
             betas = [state.beta for state in states]
 
-        i = random.choice(range(len(states) - 1))
+        i = self.random.choice(range(len(states) - 1))
         j = i + 1
 
         return self.swap_pair(betas, states, i, j)
