@@ -289,7 +289,7 @@ class TestICM(unittest.TestCase):
                                                         0, 0, 1, 1, 0,
                                                         1, 0, 1, 0, 0])), bqm)
 
-        icm = IsoenergeticClusterMove(seed=0)
+        icm = IsoenergeticClusterMove(seed=1234)
         res = icm.run(States(s1, s2)).result()
 
         self.assertEqual(res[0].samples, expected1.samples)
