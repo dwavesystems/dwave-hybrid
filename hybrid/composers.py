@@ -293,7 +293,7 @@ class IsoenergeticClusterMove(traits.SamplesProcessor, traits.ProblemSampler,
     moves identify clusters of spins that would reasonably be grouped together.
 
     Args:
-        seed (int, default=None/current time):
+        seed (int, optional, default=None/current time):
             Pseudo-random number generator seed.
 
     Input:
@@ -312,7 +312,7 @@ class IsoenergeticClusterMove(traits.SamplesProcessor, traits.ProblemSampler,
 
         # initialize random seed and store it for reference
         self.seed = seed
-        random.seed(seed)
+        self.random = random.Random(seed)
 
     def next(self, states):
         """Recombine the two first samples in the first two input states."""
@@ -353,7 +353,7 @@ class IsoenergeticClusterMove(traits.SamplesProcessor, traits.ProblemSampler,
         graph.remove_nodes_from(gaps)
 
         # pick a random differing variable, and its cluster
-        node = random.choice(list(graph.nodes))
+        node = self.random.choice(list(graph.nodes))
         cluster = nx.node_connected_component(graph, node)
 
         # flip variables from `cluster` in both input samples
