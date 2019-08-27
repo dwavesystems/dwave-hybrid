@@ -17,6 +17,8 @@ import unittest
 
 import numpy as np
 import networkx as nx
+from plucky import pluck
+
 import dimod
 
 from hybrid.core import State, States, SampleSet
@@ -278,19 +280,56 @@ class TestICM(unittest.TestCase):
                                                  0, 1, 0, 0, 0,
                                                  1, 0, 0, 1, 0])), bqm)
 
-        expected1 = State.from_samples(dict(zip(nodes, [0, 1, 0, 1, 1,
-                                                        0, 0, 0, 1, 0,
-                                                        0, 1, 1, 0, 1,
-                                                        0, 1, 0, 0, 0,
-                                                        1, 0, 0, 1, 0])), bqm)
-        expected2 = State.from_samples(dict(zip(nodes, [0, 1, 1, 0, 0,
-                                                        0, 0, 0, 1, 1,
-                                                        0, 0, 0, 0, 1,
-                                                        0, 0, 1, 1, 0,
-                                                        1, 0, 1, 0, 0])), bqm)
+        exp1 = SampleSet.from_samples_bqm(dict(zip(nodes, [0, 1, 0, 1, 1,
+                                                           0, 0, 0, 1, 0,
+                                                           0, 1, 1, 0, 1,
+                                                           0, 1, 0, 0, 0,
+                                                           1, 0, 0, 1, 0])), bqm)
+        exp2 = SampleSet.from_samples_bqm(dict(zip(nodes, [0, 1, 1, 0, 0,
+                                                           0, 0, 0, 1, 1,
+                                                           0, 0, 0, 0, 1,
+                                                           0, 0, 1, 1, 0,
+                                                           1, 0, 1, 0, 0])), bqm)
 
         icm = IsoenergeticClusterMove(seed=1234)
         res = icm.run(States(s1, s2)).result()
 
-        self.assertEqual(res[0].samples, expected1.samples)
-        self.assertEqual(res[1].samples, expected2.samples)
+        self.assertEqual(res[0].samples, exp1)
+        self.assertEqual(res[1].samples, exp2)
+
+    def test_bimodal_cluster_sampling_statistics(self):
+        bqm = dimod.BQM.from_qubo({'ab': 1, 'bd': 1, 'dc': 1, 'ca': 1})
+        nodes = sorted(bqm.variables)
+
+        s1 = State.from_samples(dict(zip(nodes, [0, 1,
+                                                 0, 0])), bqm)
+        s2 = State.from_samples(dict(zip(nodes, [0, 0,
+                                                 1, 0])), bqm)
+
+        exp1 = SampleSet.from_samples_bqm(dict(zip(nodes, [0, 0,
+                                                           0, 0])), bqm)
+        exp2 = SampleSet.from_samples_bqm(dict(zip(nodes, [0, 1,
+                                                           1, 0])), bqm)
+
+        icm = IsoenergeticClusterMove(seed=None)
+        inp = States(s1, s2)
+        exp = [exp1, exp2]
+
+        # split between [exp1, exp2] and [exp2, exp1] as output samples
+        # should be ~50%
+        cnt = 0
+        n = 100
+        for _ in range(n):
+            res = icm.run(inp).result()
+            r1, r2 = pluck(res, 'samples')
+
+            # test responses are valid
+            self.assertIn(r1, exp)
+            self.assertIn(r2, exp)
+
+            # count responses
+            if r1 == exp1 and r2 == exp2:
+                cnt += 1
+
+        self.assertLess(cnt, 0.75 * n)
+        self.assertGreater(cnt, 0.25 * n)
