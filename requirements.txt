@@ -1,7 +1,7 @@
 six
-dimod>=0.8.11,<0.8.15
+dimod>=0.8.11
 minorminer>=0.1.7
-dwave-system>=0.7.4
+dwave-system>=0.7.6
 dwave-neal>=0.5.1
 dwave-tabu>=0.2.0
 numpy==1.15.4
