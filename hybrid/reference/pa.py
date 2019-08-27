@@ -39,14 +39,19 @@ class EnergyWeightedResampler(hybrid.traits.SISO, hybrid.Runnable):
             construction, on run method invocation, or in the input state's
             ``beta`` variable.
 
+        seed (int, default=None):
+            Pseudo-random number generator seed.
+
     Returns:
         Input state with new samples. The lower the energy of an input sample,
         the higher will be its relative frequency in the output sample set. 
     """
 
-    def __init__(self, beta=None, **runopts):
+    def __init__(self, beta=None, seed=None, **runopts):
         super(EnergyWeightedResampler, self).__init__(**runopts)
         self.beta = beta
+        self.seed = seed
+        self.random = np.random.RandomState(seed)
 
     def next(self, state, **runopts):
         beta = runopts.get('beta', self.beta)
@@ -61,7 +66,7 @@ class EnergyWeightedResampler(hybrid.traits.SISO, hybrid.Runnable):
         p = w / sum(w)
 
         # resample
-        idx = np.random.choice(len(ss), len(ss), p=p)
+        idx = self.random.choice(len(ss), len(ss), p=p)
         record = ss.record[idx]
         info = ss.info.copy()
         info.update(beta=beta)
