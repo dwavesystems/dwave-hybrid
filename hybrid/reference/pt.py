@@ -54,25 +54,31 @@ class FixedTemperatureSampler(hybrid.traits.SISO, hybrid.Runnable):
 
         aggregate (bool, optional, default=False):
             Aggregate samples (duplicity stored in ``num_occurrences``).
+
+        seed (int, optional, default=None):
+            Pseudo-random number generator seed.
+
     """
 
     def __init__(self, beta=None, num_sweeps=10000, num_reads=None,
-                 aggregate=False, **runopts):
+                 aggregate=False, seed=None, **runopts):
         super(FixedTemperatureSampler, self).__init__(**runopts)
         self.beta = beta
         self.num_sweeps = num_sweeps
         self.num_reads = num_reads
         self.aggregate = aggregate
+        self.seed = seed
 
     def next(self, state, **runopts):
         beta = state.get('beta', self.beta)
+        seed = runopts.pop('seed', self.seed)
         aggregate = runopts.pop('aggregate', self.aggregate)
 
         new_samples = neal.SimulatedAnnealingSampler().sample(
             state.problem, initial_states=state.samples,
             beta_range=(beta, beta), beta_schedule_type='linear',
             num_reads=self.num_reads, initial_states_generator='tile',
-            num_sweeps=self.num_sweeps)
+            num_sweeps=self.num_sweeps, seed=seed)
 
         if aggregate:
             new_samples = new_samples.aggregate()
