@@ -286,11 +286,13 @@ class AggregatedSamples(traits.SamplesProcessor, traits.SISO, Runnable):
 
 class IsoenergeticClusterMove(traits.SamplesProcessor, traits.ProblemSampler,
                               traits.MIMO, Runnable):
-    """Isoenergetic cluster move (ICM), also know as Houdayer move, is a
-    recombination operation that takes two samples and randomly selects a
-    connected cluster of spins in which the individuals differ, then flips this
-    cluster in each individual to create two new samples. Isoenergetic cluster
-    moves identify clusters of spins that would reasonably be grouped together.
+    """Isoenergetic cluster move (ICM), also know as Houdayer move.
+
+    ICM creates two new samples from a pair of samples by identifying, among
+    connected variables, clusters with exactly complementary values and swapping
+    one such randomly chosen cluster between the two samples. The total energy
+    of the two samples remains unchanged, yet such moves on variables reasonably
+    grouped together can enable better exploration of the solution space.
 
     Args:
         seed (int, optional, default=None/current time):
@@ -303,7 +305,7 @@ class IsoenergeticClusterMove(traits.SamplesProcessor, traits.ProblemSampler,
 
     Output:
         :class:`~hybrid.core.States`:
-            Two states from input with new first sample in each.
+            Two states from input with updated first sample in each.
 
     """
 
@@ -315,7 +317,7 @@ class IsoenergeticClusterMove(traits.SamplesProcessor, traits.ProblemSampler,
         self.random = random.Random(seed)
 
     def next(self, states):
-        """Recombine the two first samples in the first two input states."""
+        """ICM between two first samples in the first two input states."""
 
         if len(states) > 2:
             raise ValueError("exactly two input states required")
@@ -339,20 +341,20 @@ class IsoenergeticClusterMove(traits.SamplesProcessor, traits.ProblemSampler,
             ss2 = dimod.SampleSet(record, variables, ss2.info, ss2.vartype)
 
         # samples' symmetric difference (XOR)
-        # (form clusters of input variables differing)
+        # (form clusters of input variables with opposite values)
         sample1 = ss1.record.sample[0]
         sample2 = ss2.record.sample[0]
         symdiff = sample1 ^ sample2
 
         # for cluster detection we'll use a reduced problem graph
         graph = bqm.to_networkx_graph()
-        # note: instead of numpy mask indexing of `gaps`, we enumerate
+        # note: instead of numpy mask indexing of `notcluster`, we enumerate
         # non-cluster variables manually to avoid conversion of potentially
         # unhashable variable names to numpy types
-        gaps = [v for v, d in zip(variables, symdiff) if d == 0]
-        graph.remove_nodes_from(gaps)
+        notcluster = [v for v, d in zip(variables, symdiff) if d == 0]
+        graph.remove_nodes_from(notcluster)
 
-        # pick a random differing variable, and its cluster
+        # pick a random variable that belongs to a cluster, then select the cluster
         node = self.random.choice(list(graph.nodes))
         cluster = nx.node_connected_component(graph, node)
 
