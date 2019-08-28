@@ -1,3 +1,5 @@
+# encoding: utf-8
+
 # Copyright 2018 D-Wave Systems Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,7 +28,7 @@ from hybrid import traits
 from hybrid.composers import (
     IdentityComposer, SplatComposer, GreedyPathMerge,
     MergeSamples, SliceSamples, AggregatedSamples, IsoenergeticClusterMove)
-from hybrid.utils import min_sample, max_sample
+from hybrid.utils import min_sample, max_sample, random_sample
 
 
 class TestIdentityComposer(unittest.TestCase):
@@ -353,3 +355,21 @@ class TestICM(unittest.TestCase):
 
         self.assertLess(cnt, 0.75 * n)
         self.assertGreater(cnt, 0.25 * n)
+
+    def test_large_sparse(self):
+        "Total energy is preserved after ICM on random samples over random graph."
+
+        # random Erdős-Rényi sparse graph with 100 nodes and 10% density
+        graph = nx.generators.fast_gnp_random_graph(n=100, p=0.1)
+        bqm = dimod.generators.uniform(graph=graph, vartype=dimod.SPIN)
+        nodes = sorted(bqm.variables)
+
+        # random input samples
+        s1 = State.from_problem(bqm, samples=random_sample)
+        s2 = State.from_problem(bqm, samples=random_sample)
+        inp = States(s1, s2)
+
+        icm = IsoenergeticClusterMove()
+        res = icm.run(inp).result()
+
+        self.assertAlmostEqual(self.total_energy(inp), self.total_energy(res))
