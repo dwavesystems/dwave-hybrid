@@ -220,6 +220,11 @@ class TestAggregatedSamples(unittest.TestCase):
 
 class TestICM(unittest.TestCase):
 
+    @staticmethod
+    def total_energy(states):
+        """Combined energy of all samples in all states."""
+        return sum(float(sum(state.samples.record.energy)) for state in states)
+
     def test_validation(self):
         bqm1 = dimod.BinaryQuadraticModel({'a': 1}, {}, 0, dimod.SPIN)
         bqm2 = dimod.BinaryQuadraticModel({'b': 1}, {}, 0, dimod.SPIN)
@@ -242,13 +247,17 @@ class TestICM(unittest.TestCase):
         s2 = State.from_samples({'a': 1, 'b': 0, 'c': 1}, bqm)
 
         icm = IsoenergeticClusterMove()
-        res = icm.run(States(s1, s2)).result()
+        inp = States(s1, s2)
+        res = icm.run(inp).result()
 
         # Expected: ('a', 'b') identified as (the sole) cluster, selected,
         # resulting in variables {'a', 'b'} flipped. Effectively, input states
         # are simply swapped.
         self.assertEqual(res[0].samples, s2.samples)
         self.assertEqual(res[1].samples, s1.samples)
+
+        # verify total samples energy doesn't change after ICM
+        self.assertEqual(self.total_energy(inp), self.total_energy(res))
 
     def test_ising_triangle_flip(self):
         bqm = dimod.BQM.from_ising({}, {'ab': 1, 'bc': 1, 'ca': 1})
@@ -256,13 +265,17 @@ class TestICM(unittest.TestCase):
         s2 = State.from_samples({'a': +1, 'b': -1, 'c': +1}, bqm)
 
         icm = IsoenergeticClusterMove()
-        res = icm.run(States(s1, s2)).result()
+        inp = States(s1, s2)
+        res = icm.run(inp).result()
 
         # Expected: ('a', 'b') identified as (the sole) cluster, selected,
         # resulting in variables {'a', 'b'} flipped. Effectively, input states
         # are simply swapped.
         self.assertEqual(res[0].samples, s2.samples)
         self.assertEqual(res[1].samples, s1.samples)
+
+        # verify total samples energy doesn't change after ICM
+        self.assertEqual(self.total_energy(inp), self.total_energy(res))
 
     def test_small_lattice(self):
         graph = nx.generators.lattice.grid_2d_graph(5, 5)
@@ -292,10 +305,14 @@ class TestICM(unittest.TestCase):
                                                            1, 0, 1, 0, 0])), bqm)
 
         icm = IsoenergeticClusterMove(seed=1234)
-        res = icm.run(States(s1, s2)).result()
+        inp = States(s1, s2)
+        res = icm.run(inp).result()
 
         self.assertEqual(res[0].samples, exp1)
         self.assertEqual(res[1].samples, exp2)
+
+        # verify total samples energy doesn't change after ICM
+        self.assertEqual(self.total_energy(inp), self.total_energy(res))
 
     def test_bimodal_cluster_sampling_statistics(self):
         bqm = dimod.BQM.from_qubo({'ab': 1, 'bd': 1, 'dc': 1, 'ca': 1})
@@ -326,6 +343,9 @@ class TestICM(unittest.TestCase):
             # test responses are valid
             self.assertIn(r1, exp)
             self.assertIn(r2, exp)
+
+            # verify total samples energy doesn't change after ICM
+            self.assertEqual(self.total_energy(inp), self.total_energy(res))
 
             # count responses
             if r1 == exp1 and r2 == exp2:
