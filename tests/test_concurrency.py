@@ -75,24 +75,24 @@ class TestMultithreading(unittest.TestCase, RunTimeAssertionMixin):
 
     @unittest.skipUnless(cpu_count() >= 2, "at least two threads required")
     def test_concurrent_sa_samples(self):
-        s1 = hybrid.SimulatedAnnealingProblemSampler(num_reads=1000, num_sweeps=10000)
-        s2 = hybrid.SimulatedAnnealingProblemSampler(num_reads=1000, num_sweeps=10000)
+        s1 = hybrid.SimulatedAnnealingProblemSampler(num_reads=100, num_sweeps=1000)
+        s2 = hybrid.SimulatedAnnealingProblemSampler(num_reads=100, num_sweeps=1000)
         p = hybrid.Parallel(s1, s2)
 
-        bqm = dimod.BinaryQuadraticModel({'a': 1}, {}, 0, 'BINARY')
+        bqm = dimod.generators.uniform(graph=100, vartype=dimod.SPIN)
         state = hybrid.State.from_problem(bqm)
 
-        def time_runnable(runnable, init):
-            runnable.run(init).result()
-            return sum(runnable.timers['dispatch.next'])
+        def time_workflow(workflow, init):
+            workflow.run(init).result()
+            return sum(workflow.timers['dispatch.next'])
 
-        t_s1 = time_runnable(s1, state)
-        t_s2 = time_runnable(s2, state)
-        t_p = time_runnable(p, state)
+        t_s1 = time_workflow(s1, state)
+        t_s2 = time_workflow(s2, state)
+        t_p = time_workflow(p, state)
 
-        # parallel execution must not be slower than the longest running branch + 75%
+        # parallel execution must not be slower than the longest running branch + 50%
         # NOTE: the extremely weak upper bound was chosen so we don't fail on the
         # unreliable/inconsistent CI VMs, and yet to show some concurrency does exist
-        t_expected_max = max(t_s1, t_s2) * 1.75
+        t_expected_max = max(t_s1, t_s2) * 1.5
 
         self.assertLess(t_p, t_expected_max)
