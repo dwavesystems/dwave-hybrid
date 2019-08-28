@@ -1,3 +1,5 @@
+# encoding: utf-8
+
 # Copyright 2018 D-Wave Systems Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,14 +18,17 @@ import itertools
 import unittest
 
 import numpy as np
+import networkx as nx
+from plucky import pluck
+
 import dimod
 
 from hybrid.core import State, States, SampleSet
 from hybrid import traits
 from hybrid.composers import (
     IdentityComposer, SplatComposer, GreedyPathMerge,
-    MergeSamples, SliceSamples, AggregatedSamples)
-from hybrid.utils import min_sample, max_sample
+    MergeSamples, SliceSamples, AggregatedSamples, IsoenergeticClusterMove)
+from hybrid.utils import min_sample, max_sample, random_sample
 
 
 class TestIdentityComposer(unittest.TestCase):
@@ -213,3 +218,158 @@ class TestAggregatedSamples(unittest.TestCase):
 
         # variables should stay the same
         self.assertEqual(list(sampleset.variables), list(result.samples.variables))
+
+
+class TestICM(unittest.TestCase):
+
+    @staticmethod
+    def total_energy(states):
+        """Combined energy of all samples in all states."""
+        return sum(float(sum(state.samples.record.energy)) for state in states)
+
+    def test_validation(self):
+        bqm1 = dimod.BinaryQuadraticModel({'a': 1}, {}, 0, dimod.SPIN)
+        bqm2 = dimod.BinaryQuadraticModel({'b': 1}, {}, 0, dimod.SPIN)
+        s1 = State.from_sample({'a': +1}, bqm1)
+        s2 = State.from_sample({'b': -1}, bqm2)
+
+        # two input states required
+        with self.assertRaises(ValueError):
+            inp = States(s1, s1, s1)
+            IsoenergeticClusterMove().run(inp).result()
+
+        # variables must match
+        with self.assertRaises(ValueError):
+            inp = States(s1, s2)
+            IsoenergeticClusterMove().run(inp).result()
+
+    def test_triangle_flip(self):
+        bqm = dimod.BQM.from_qubo({'ab': 1, 'bc': 1, 'ca': 1})
+        s1 = State.from_samples({'a': 0, 'b': 1, 'c': 1}, bqm)
+        s2 = State.from_samples({'a': 1, 'b': 0, 'c': 1}, bqm)
+
+        icm = IsoenergeticClusterMove()
+        inp = States(s1, s2)
+        res = icm.run(inp).result()
+
+        # Expected: ('a', 'b') identified as (the sole) cluster, selected,
+        # resulting in variables {'a', 'b'} flipped. Effectively, input states
+        # are simply swapped.
+        self.assertEqual(res[0].samples, s2.samples)
+        self.assertEqual(res[1].samples, s1.samples)
+
+        # verify total samples energy doesn't change after ICM
+        self.assertEqual(self.total_energy(inp), self.total_energy(res))
+
+    def test_ising_triangle_flip(self):
+        bqm = dimod.BQM.from_ising({}, {'ab': 1, 'bc': 1, 'ca': 1})
+        s1 = State.from_samples({'a': -1, 'b': +1, 'c': +1}, bqm)
+        s2 = State.from_samples({'a': +1, 'b': -1, 'c': +1}, bqm)
+
+        icm = IsoenergeticClusterMove()
+        inp = States(s1, s2)
+        res = icm.run(inp).result()
+
+        # Expected: ('a', 'b') identified as (the sole) cluster, selected,
+        # resulting in variables {'a', 'b'} flipped. Effectively, input states
+        # are simply swapped.
+        self.assertEqual(res[0].samples, s2.samples)
+        self.assertEqual(res[1].samples, s1.samples)
+
+        # verify total samples energy doesn't change after ICM
+        self.assertEqual(self.total_energy(inp), self.total_energy(res))
+
+    def test_small_lattice(self):
+        graph = nx.generators.lattice.grid_2d_graph(5, 5)
+        bqm = dimod.generators.uniform(graph, vartype=dimod.BINARY, low=1, high=1)
+        nodes = sorted(bqm.variables)
+
+        s1 = State.from_samples(dict(zip(nodes, [0, 1, 0, 1, 1,
+                                                 0, 0, 0, 1, 0,
+                                                 0, 0, 0, 0, 1,
+                                                 0, 0, 1, 1, 0,
+                                                 1, 0, 1, 0, 0])), bqm)
+        s2 = State.from_samples(dict(zip(nodes, [0, 1, 1, 0, 0,
+                                                 0, 0, 0, 1, 1,
+                                                 0, 1, 1, 0, 1,
+                                                 0, 1, 0, 0, 0,
+                                                 1, 0, 0, 1, 0])), bqm)
+
+        exp1 = SampleSet.from_samples_bqm(dict(zip(nodes, [0, 1, 0, 1, 1,
+                                                           0, 0, 0, 1, 0,
+                                                           0, 1, 1, 0, 1,
+                                                           0, 1, 0, 0, 0,
+                                                           1, 0, 0, 1, 0])), bqm)
+        exp2 = SampleSet.from_samples_bqm(dict(zip(nodes, [0, 1, 1, 0, 0,
+                                                           0, 0, 0, 1, 1,
+                                                           0, 0, 0, 0, 1,
+                                                           0, 0, 1, 1, 0,
+                                                           1, 0, 1, 0, 0])), bqm)
+
+        icm = IsoenergeticClusterMove(seed=1234)
+        inp = States(s1, s2)
+        res = icm.run(inp).result()
+
+        self.assertEqual(res[0].samples, exp1)
+        self.assertEqual(res[1].samples, exp2)
+
+        # verify total samples energy doesn't change after ICM
+        self.assertEqual(self.total_energy(inp), self.total_energy(res))
+
+    def test_bimodal_cluster_sampling_statistics(self):
+        bqm = dimod.BQM.from_qubo({'ab': 1, 'bd': 1, 'dc': 1, 'ca': 1})
+        nodes = sorted(bqm.variables)
+
+        s1 = State.from_samples(dict(zip(nodes, [0, 1,
+                                                 0, 0])), bqm)
+        s2 = State.from_samples(dict(zip(nodes, [0, 0,
+                                                 1, 0])), bqm)
+
+        exp1 = SampleSet.from_samples_bqm(dict(zip(nodes, [0, 0,
+                                                           0, 0])), bqm)
+        exp2 = SampleSet.from_samples_bqm(dict(zip(nodes, [0, 1,
+                                                           1, 0])), bqm)
+
+        icm = IsoenergeticClusterMove(seed=None)
+        inp = States(s1, s2)
+        exp = [exp1, exp2]
+
+        # split between [exp1, exp2] and [exp2, exp1] as output samples
+        # should be ~50%
+        cnt = 0
+        n = 100
+        for _ in range(n):
+            res = icm.run(inp).result()
+            r1, r2 = pluck(res, 'samples')
+
+            # test responses are valid
+            self.assertIn(r1, exp)
+            self.assertIn(r2, exp)
+
+            # verify total samples energy doesn't change after ICM
+            self.assertEqual(self.total_energy(inp), self.total_energy(res))
+
+            # count responses
+            if r1 == exp1 and r2 == exp2:
+                cnt += 1
+
+        self.assertLess(cnt, 0.75 * n)
+        self.assertGreater(cnt, 0.25 * n)
+
+    def test_large_sparse(self):
+        "Total energy is preserved after ICM on random samples over random graph."
+
+        # random Erdős-Rényi sparse graph with 100 nodes and 10% density
+        graph = nx.generators.fast_gnp_random_graph(n=100, p=0.1)
+        bqm = dimod.generators.uniform(graph=graph, vartype=dimod.SPIN)
+        nodes = sorted(bqm.variables)
+
+        # random input samples
+        s1 = State.from_problem(bqm, samples=random_sample)
+        s2 = State.from_problem(bqm, samples=random_sample)
+        inp = States(s1, s2)
+
+        icm = IsoenergeticClusterMove()
+        res = icm.run(inp).result()
+
+        self.assertAlmostEqual(self.total_energy(inp), self.total_energy(res))

@@ -12,17 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
 import copy
+import random
+import logging
 
 import numpy as np
+import networkx as nx
+import dimod
 
-from hybrid.core import Runnable, SampleSet
+from hybrid.core import Runnable, SampleSet, States
 from hybrid.utils import flip_energy_gains, vstack_samplesets, hstack_samplesets
 from hybrid import traits
 
 __all__ = ['IdentityComposer', 'SplatComposer', 'GreedyPathMerge',
-           'MergeSamples', 'SliceSamples', 'AggregatedSamples']
+           'MergeSamples', 'SliceSamples', 'AggregatedSamples',
+           'IsoenergeticClusterMove', 'ICM']
 
 logger = logging.getLogger(__name__)
 
@@ -278,3 +282,96 @@ class AggregatedSamples(traits.SamplesProcessor, traits.SISO, Runnable):
             samples = self.spread(state.samples)
 
         return state.updated(samples=samples)
+
+
+class IsoenergeticClusterMove(traits.SamplesProcessor, traits.ProblemSampler,
+                              traits.MIMO, Runnable):
+    """Isoenergetic cluster move (ICM), also know as Houdayer move.
+
+    ICM creates two new samples from a pair of samples by identifying, among
+    connected variables, clusters with exactly complementary values and swapping
+    one such randomly chosen cluster between the two samples. The total energy
+    of the two samples remains unchanged, yet such moves on variables reasonably
+    grouped together can enable better exploration of the solution space.
+
+    Args:
+        seed (int, optional, default=None/current time):
+            Pseudo-random number generator seed.
+
+    Input:
+        :class:`~hybrid.core.States`:
+            Two states with at least one sample each. First state should also
+            contain a relevant problem.
+
+    Output:
+        :class:`~hybrid.core.States`:
+            Two states from input with updated first sample in each.
+
+    """
+
+    def __init__(self, seed=None, **runopts):
+        super(IsoenergeticClusterMove, self).__init__(**runopts)
+
+        # initialize random seed and store it for reference
+        self.seed = seed
+        self.random = random.Random(seed)
+
+    def next(self, states):
+        """ICM between two first samples in the first two input states."""
+
+        if len(states) > 2:
+            raise ValueError("exactly two input states required")
+
+        inp1, inp2 = states
+        bqm = inp1.problem
+
+        ss1 = inp1.samples.change_vartype(dimod.BINARY, inplace=False)
+        ss2 = inp2.samples.change_vartype(dimod.BINARY, inplace=False)
+
+        # sanity check: we operate on the same set of variables
+        if ss1.variables ^ ss2.variables:
+            raise ValueError("input samples not over the same set of variables")
+
+        # reorder variables, if necessary
+        # (use sequence comparison, not set)
+        variables = list(ss1.variables)
+        if ss2.variables != variables:
+            reorder = [ss2.variables.index(v) for v in variables]
+            record = ss2.record[:, reorder]
+            ss2 = dimod.SampleSet(record, variables, ss2.info, ss2.vartype)
+
+        # samples' symmetric difference (XOR)
+        # (form clusters of input variables with opposite values)
+        sample1 = ss1.record.sample[0]
+        sample2 = ss2.record.sample[0]
+        symdiff = sample1 ^ sample2
+
+        # for cluster detection we'll use a reduced problem graph
+        graph = bqm.to_networkx_graph()
+        # note: instead of numpy mask indexing of `notcluster`, we enumerate
+        # non-cluster variables manually to avoid conversion of potentially
+        # unhashable variable names to numpy types
+        notcluster = [v for v, d in zip(variables, symdiff) if d == 0]
+        graph.remove_nodes_from(notcluster)
+
+        # pick a random variable that belongs to a cluster, then select the cluster
+        node = self.random.choice(list(graph.nodes))
+        cluster = nx.node_connected_component(graph, node)
+
+        # flip variables from `cluster` in both input samples
+        flipper = np.array([1 if v in cluster else 0 for v in variables])
+        ss1.record.sample[0] ^= flipper
+        ss2.record.sample[0] ^= flipper
+
+        # change vartype back to input's type
+        ss1.change_vartype(inp1.samples.vartype)
+        ss2.change_vartype(inp2.samples.vartype)
+
+        # update sampleset's energies
+        ss1.record.energy = bqm.energies(ss1)
+        ss2.record.energy = bqm.energies(ss2)
+
+        return States(inp1.updated(samples=ss1), inp2.updated(samples=ss2))
+
+
+ICM = IsoenergeticClusterMove
