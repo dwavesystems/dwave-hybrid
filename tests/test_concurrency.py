@@ -75,24 +75,39 @@ class TestMultithreading(unittest.TestCase, RunTimeAssertionMixin):
 
     @unittest.skipUnless(cpu_count() >= 2, "at least two threads required")
     def test_concurrent_sa_samples(self):
-        s1 = hybrid.SimulatedAnnealingProblemSampler(num_reads=100, num_sweeps=1000)
-        s2 = hybrid.SimulatedAnnealingProblemSampler(num_reads=100, num_sweeps=1000)
-        p = hybrid.Parallel(s1, s2)
+        params = dict(num_reads=1, num_sweeps=1000000)
 
-        bqm = dimod.generators.uniform(graph=100, vartype=dimod.SPIN)
+        # serial and parallel SA runs
+        s = (
+            hybrid.SimulatedAnnealingProblemSampler(**params)
+            | hybrid.SimulatedAnnealingProblemSampler(**params)
+        )
+        p = hybrid.Parallel(
+            hybrid.SimulatedAnnealingProblemSampler(**params),
+            hybrid.SimulatedAnnealingProblemSampler(**params)
+        )
+
+        bqm = dimod.generators.uniform(graph=1, vartype=dimod.SPIN)
         state = hybrid.State.from_problem(bqm)
 
-        def time_workflow(workflow, init):
-            workflow.run(init).result()
-            return sum(workflow.timers['dispatch.next'])
+        # wall clock workflow runtime for `repeat` runs
+        def time_workflow(workflow, state, repeat=10):
+            with hybrid.tictoc() as timer:
+                for _ in range(repeat):
+                    workflow.run(state).result()
+            return timer.dt
 
-        t_s1 = time_workflow(s1, state)
-        t_s2 = time_workflow(s2, state)
-        t_p = time_workflow(p, state)
+        # do two warm-up runs before the actual measurement
+        for _ in range(3):
+            t_s = time_workflow(s, state)
+            t_p = time_workflow(p, state)
 
-        # parallel execution must not be slower than the longest running branch + 50%
-        # NOTE: the extremely weak upper bound was chosen so we don't fail on the
-        # unreliable/inconsistent CI VMs, and yet to show some concurrency does exist
-        t_expected_max = max(t_s1, t_s2) * 1.5
+        speedup = t_s / t_p
 
-        self.assertLess(t_p, t_expected_max)
+        # NOTE: temporary for debugging on CI only
+        print(speedup)
+
+        # NOTE: the extremely weak lower bound on speedup was chosen so we don't
+        # fail on the unreliable/inconsistent CI VMs, and but to show some
+        # concurrency does exist
+        self.assertGreater(speedup, 1.25)
