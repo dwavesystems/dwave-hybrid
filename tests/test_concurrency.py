@@ -62,7 +62,7 @@ class TestImmediateExecutor(unittest.TestCase):
 
 class TestMultithreading(unittest.TestCase, RunTimeAssertionMixin):
 
-    def test_concurrent_tabu_samples(self):
+    def test_tabu_concurrency(self):
         t1 = hybrid.TabuProblemSampler(timeout=1000)
         t2 = hybrid.TabuProblemSampler(timeout=2000)
         workflow = hybrid.Parallel(t1, t2)
@@ -74,25 +74,51 @@ class TestMultithreading(unittest.TestCase, RunTimeAssertionMixin):
             workflow.run(state).result()
 
     @unittest.skipUnless(cpu_count() >= 2, "at least two threads required")
-    def test_concurrent_sa_samples(self):
-        s1 = hybrid.SimulatedAnnealingProblemSampler(num_reads=1000, num_sweeps=10000)
-        s2 = hybrid.SimulatedAnnealingProblemSampler(num_reads=1000, num_sweeps=10000)
-        p = hybrid.Parallel(s1, s2)
+    def test_sa_concurrency(self):
+        params = dict(num_reads=1, num_sweeps=1000000)
 
-        bqm = dimod.BinaryQuadraticModel({'a': 1}, {}, 0, 'BINARY')
+        # serial and parallel SA runs
+        s = (
+            hybrid.SimulatedAnnealingProblemSampler(**params)
+            | hybrid.SimulatedAnnealingProblemSampler(**params)
+        )
+        p = hybrid.Parallel(
+            hybrid.SimulatedAnnealingProblemSampler(**params),
+            hybrid.SimulatedAnnealingProblemSampler(**params)
+        )
+
+        bqm = dimod.generators.uniform(graph=1, vartype=dimod.SPIN)
         state = hybrid.State.from_problem(bqm)
 
-        def time_runnable(runnable, init):
-            runnable.run(init).result()
-            return sum(runnable.timers['dispatch.next'])
+        # average wall clock workflow runtime over `repeat` runs
+        def time_workflow(workflow, state, repeat=10):
+            with hybrid.tictoc() as timer:
+                for _ in range(repeat):
+                    workflow.run(state).result()
+            return timer.dt / repeat
 
-        t_s1 = time_runnable(s1, state)
-        t_s2 = time_runnable(s2, state)
-        t_p = time_runnable(p, state)
+        # measure speed-up of parallel SA runs over sequential
 
-        # parallel execution must not be slower than the longest running branch + 75%
-        # NOTE: the extremely weak upper bound was chosen so we don't fail on the
-        # unreliable/inconsistent CI VMs, and yet to show some concurrency does exist
-        t_expected_max = max(t_s1, t_s2) * 1.75
+        # NOTE: relatively weak lower bound on speedup was chosen so we don't
+        # fail on the unreliable/inconsistent CI VMs, but to verify some level
+        # of concurrency does exist
+        minimally_acceptable_speedup = 1.5
 
-        self.assertLess(t_p, t_expected_max)
+        # NOTE: on average, the observed speed-up is between 1.5x and 2x, but
+        # it's highly dependant on the system load and availability of threads.
+        # That's why we do multiple runs, and bail out on the first good speedup
+        speedups = []
+        best_speedup = 0
+        for run in range(250):  # alternatively, run for up to X sec
+            t_s = time_workflow(s, state)
+            t_p = time_workflow(p, state)
+            speedup = t_s / t_p
+            speedups.append(speedup)
+            best_speedup = max(best_speedup, speedup)
+            if best_speedup >= minimally_acceptable_speedup:
+                break
+
+        info = "best speed-up of {} achieved within {} runs: {!r}".format(
+            best_speedup, run+1, speedups)
+
+        self.assertGreaterEqual(best_speedup, minimally_acceptable_speedup, info)
