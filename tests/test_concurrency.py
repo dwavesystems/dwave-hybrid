@@ -99,21 +99,26 @@ class TestMultithreading(unittest.TestCase, RunTimeAssertionMixin):
 
         # measure speed-up of parallel SA runs over sequential
 
-        # NOTE: on average, the observed speed-up is between 1.5x and 2x, but
-        # it's highly dependant on the system load and availability of threads.
-        # That's why we do multiple runs, and pick the best speed-up.
-        speedups = []
-        for _ in range(7):
-            t_s = time_workflow(s, state)
-            t_p = time_workflow(p, state)
-            speedups.append(t_s / t_p)
-
-        # tmp
-        print(speedups)
-
-        speedup = max(speedups)
-
-        # NOTE: the extremely weak lower bound on speedup was chosen so we don't
+        # NOTE: relatively weak lower bound on speedup was chosen so we don't
         # fail on the unreliable/inconsistent CI VMs, but to verify some level
         # of concurrency does exist
-        self.assertGreater(speedup, 1.25)
+        minimally_acceptable_speedup = 1.5
+
+        # NOTE: on average, the observed speed-up is between 1.5x and 2x, but
+        # it's highly dependant on the system load and availability of threads.
+        # That's why we do multiple runs, and bail out on the first good speedup
+        speedups = []
+        best_speedup = 0
+        for run in range(250):  # alternatively, run for up to X sec
+            t_s = time_workflow(s, state)
+            t_p = time_workflow(p, state)
+            speedup = t_s / t_p
+            speedups.append(speedup)
+            best_speedup = max(best_speedup, speedup)
+            if best_speedup >= minimally_acceptable_speedup:
+                break
+
+        info = "best speed-up of {} achieved within {} runs: {!r}".format(
+            best_speedup, run+1, speedups)
+
+        self.assertGreaterEqual(best_speedup, minimally_acceptable_speedup, info)
