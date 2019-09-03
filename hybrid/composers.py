@@ -174,7 +174,23 @@ class MergeSamples(traits.SamplesProcessor, traits.MISO, Runnable):
 
 
 class ExplodeSamples(traits.SamplesProcessor, traits.SIMO, Runnable):
-    """Produce one output state per input sample."""
+    """Produce one output state per input sample.
+
+    Example:
+        This example uses Tabu sampler to produce two samples on a simple
+        problem, and then ExplodeSamples to produce two states, each with one
+        sample.
+
+        >>> import dimod
+        >>> import hybrid
+
+        >>> workflow = hybrid.TabuProblemSampler(num_reads=2) | hybrid.ExplodeSamples()
+        >>> state = hybrid.State(problem=dimod.BQM.from_ising({}, {'ab': 1}))
+
+        >>> result = workflow.run(state).result()
+        >>> len(result)
+        2
+    """
 
     def next(self, state, **runopts):
         samples = state.samples
