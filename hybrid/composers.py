@@ -25,7 +25,7 @@ from hybrid.utils import flip_energy_gains, vstack_samplesets, hstack_samplesets
 from hybrid import traits
 
 __all__ = ['IdentityComposer', 'SplatComposer', 'GreedyPathMerge',
-           'MergeSamples', 'SliceSamples', 'AggregatedSamples',
+           'MergeSamples', 'ExplodeSamples', 'SliceSamples', 'AggregatedSamples',
            'IsoenergeticClusterMove', 'ICM']
 
 logger = logging.getLogger(__name__)
@@ -171,6 +171,23 @@ class MergeSamples(traits.SamplesProcessor, traits.MISO, Runnable):
             logger.debug("{name} output samples aggregated".format(name=self.name))
 
         return states.first.updated(samples=samples)
+
+
+class ExplodeSamples(traits.SamplesProcessor, traits.SIMO, Runnable):
+    """Produce one output state per input sample."""
+
+    def next(self, state, **runopts):
+        samples = state.samples
+        if not samples:
+            raise ValueError("no input samples")
+
+        states = States()
+        n = len(samples)
+        for start, stop in zip(range(n), range(1, n+1)):
+            sample = samples.slice(start, stop, sorted_by=None)
+            states.append(state.updated(samples=sample))
+
+        return states
 
 
 class SliceSamples(traits.SamplesProcessor, traits.SISO, Runnable):
