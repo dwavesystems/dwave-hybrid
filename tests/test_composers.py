@@ -27,7 +27,8 @@ from hybrid.core import State, States, SampleSet
 from hybrid import traits
 from hybrid.composers import (
     IdentityComposer, SplatComposer, GreedyPathMerge,
-    MergeSamples, SliceSamples, AggregatedSamples, IsoenergeticClusterMove)
+    MergeSamples, ExplodeSamples, SliceSamples, AggregatedSamples,
+    IsoenergeticClusterMove)
 from hybrid.utils import min_sample, max_sample, random_sample
 
 
@@ -144,6 +145,50 @@ class TestMergeSamples(unittest.TestCase):
         state = MergeSamples(aggregate=True).run(states).result()
 
         self.assertEqual(state, expected)
+
+
+class TestExplodeSamples(unittest.TestCase):
+
+    def test_empty(self):
+        "At least one input sample is required."
+
+        bqm = dimod.BQM.from_ising({}, {'ab': 1})
+
+        inp = State(problem=bqm, samples=None)
+        with self.assertRaises(ValueError):
+            ExplodeSamples().run(inp).result()
+
+        inp = State(problem=bqm, samples=SampleSet.empty())
+        with self.assertRaises(ValueError):
+            ExplodeSamples().run(inp).result()
+
+    def test_single(self):
+        "One input sample should produce one output state with that sample."
+
+        bqm = dimod.BQM.from_ising({}, {'ab': 1})
+
+        inp = State.from_sample({'a': 1, 'b': 1}, bqm)
+
+        exp = States(inp.updated())
+
+        out = ExplodeSamples().run(inp).result()
+
+        self.assertEqual(out, exp)
+
+    def test_simple(self):
+        "Two output states created for two input samples, in correct order."
+
+        bqm = dimod.BQM.from_ising({}, {'ab': 1})
+
+        inp = State.from_samples([{'a': 1, 'b': 1},
+                                  {'a': -1, 'b': 1}], bqm)
+
+        exp = States(State.from_sample({'a': 1, 'b': 1}, bqm),
+                     State.from_sample({'a': -1, 'b': 1}, bqm))
+
+        out = ExplodeSamples().run(inp).result()
+
+        self.assertEqual(out, exp)
 
 
 class TestSliceSamples(unittest.TestCase):
