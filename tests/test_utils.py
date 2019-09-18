@@ -68,6 +68,15 @@ class TestEnergyFlipGainUtils(unittest.TestCase):
         gains = flip_energy_gains(self.notb, {'a': 1, 'b': 1, 'c': 1}, 'ab')
         self.assertEqual(gains, [(0.0, 'a'), (-4.0, 'b')])
 
+    def test_sample_as_list(self):
+        """List samples (index bqms) are properly handled."""
+
+        bqm = dimod.BQM.from_ising({}, {(0, 1): 1})
+        sample = [1, 1]
+
+        gains = flip_energy_gains(bqm, sample)
+        self.assertEqual(gains, [(-2, 1), (-2, 0)])
+
     def test_localsearch_adversaries(self):
         """When var flip increases energy."""
 
