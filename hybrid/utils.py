@@ -239,6 +239,8 @@ def flip_energy_gains(bqm, sample, variables=None, min_gain=None):
     else:
         raise ValueError("vartype not supported")
 
+    sample = sample_as_dict(sample)
+
     if variables is None:
         variables = iter(sample)
 
@@ -246,7 +248,6 @@ def flip_energy_gains(bqm, sample, variables=None, min_gain=None):
         min_gain = float('-inf')
 
     energy_gains = []
-    sample = sample_as_dict(sample)
     for idx in variables:
         val = sample[idx]
         contrib = bqm.linear[idx] + sum(w * sample[neigh] for neigh, w in bqm.adj[idx].items())
