@@ -545,7 +545,7 @@ class HybridSampler(dimod.Sampler):
         self.parameters = {'initial_sample': []}
         self.properties = {}
 
-    def sample(self, bqm, initial_sample=None, return_state=False):
+    def sample(self, bqm, initial_sample=None, return_state=False, **params):
         """Sample from a binary quadratic model using composed runnable sampler.
 
         Args:
@@ -561,8 +561,19 @@ class HybridSampler(dimod.Sampler):
                 of the returned sample set. Note that if a `state` key
                 already exists in the sample set then it is overwritten.
 
+            **params (dict):
+                Sampling parameters passed down to the underlying workflow as
+                run-time parameters.
+
+        Note:
+            Sampling via hybrid workflow is run asynchronously, and a sample set
+            is returned as soon as workflow starts running. A blocking result
+            resolve occurres on the first attribute access to the returned
+            sample set.
+
         Returns:
-            :class:`~dimod.SampleSet`
+            :class:`~dimod.SampleSet`:
+                Possibly yet unresolved sample set.
 
         """
         if not isinstance(bqm, dimod.BinaryQuadraticModel):
@@ -577,7 +588,7 @@ class HybridSampler(dimod.Sampler):
             raise ValueError("size of 'initial_sample' incompatible with 'bqm'")
 
         initial_state = State.from_sample(initial_sample, bqm)
-        final_state = self._workflow.run(initial_state)
+        final_state = self._workflow.run(initial_state, **params)
 
         def result_hook(state):
             resolved = state.result()
