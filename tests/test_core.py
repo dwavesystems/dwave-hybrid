@@ -380,6 +380,26 @@ class TestHybridSampler(unittest.TestCase):
         self.assertIn('state', ss.info)
         self.assertEqual(ss.info['state'].problem, bqm)
 
+    def test_sampling_params(self):
+
+        # a simple runnable that optionally resets the output samples
+        class Workflow(Runnable):
+            def next(self, state, reset=False):
+                if reset:
+                    return state.updated(samples=hybrid.SampleSet.empty())
+                return state
+
+        bqm = dimod.BinaryQuadraticModel.from_ising({'a': 1}, {})
+        sampler = HybridSampler(Workflow())
+
+        # control run
+        ss = sampler.sample(bqm)
+        self.assertEqual(len(list(ss.samples())), 1)
+
+        # test runopts propagation
+        ss = sampler.sample(bqm, reset=True)
+        self.assertEqual(len(list(ss.samples())), 0)
+
     def test_validation(self):
         bqm = dimod.BinaryQuadraticModel.from_ising({'a': 1}, {})
         sampler = TabuProblemSampler()
