@@ -60,10 +60,9 @@ jobs:
       xcode: "10.1.0"
     environment:
       PYTHON: 3.7.0
-      HOMEBREW_NO_AUTO_UPDATE: 1
     steps:
       - checkout
-      - run: brew install pyenv
+      - run: HOMEBREW_NO_AUTO_UPDATE=1 brew install pyenv
       - restore_cache:
           keys:
             - pyenv-{{ .Environment.CIRCLE_JOB }}
