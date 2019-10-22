@@ -363,15 +363,25 @@ class TestStoppableDecorator(unittest.TestCase, RunTimeAssertionMixin):
 
 class TestHybridSampler(unittest.TestCase):
 
-    def test_simple(self):
-        bqm = dimod.BinaryQuadraticModel({}, {'ab': 1, 'bc': 1, 'ca': -1}, 0, dimod.SPIN)
+    def test_workflow_runs(self):
+        bqm = dimod.BinaryQuadraticModel.from_ising({'a': 1}, {})
         sampler = HybridSampler(TabuProblemSampler())
-        response = sampler.sample(bqm)
+        ss = sampler.sample(bqm)
 
-        self.assertEqual(response.record[0].energy, -3.0)
+        self.assertEqual(list(ss.samples()), [{'a': -1}])
+        self.assertNotIn('state', ss.info)
+
+    def test_return_state(self):
+        bqm = dimod.BinaryQuadraticModel.from_ising({'a': 1}, {})
+        sampler = HybridSampler(TabuProblemSampler())
+        ss = sampler.sample(bqm, return_state=True)
+
+        self.assertEqual(list(ss.samples()), [{'a': -1}])
+        self.assertIn('state', ss.info)
+        self.assertEqual(ss.info['state'].problem, bqm)
 
     def test_validation(self):
-        bqm = dimod.BinaryQuadraticModel({}, {'ab': 1, 'bc': 1, 'ca': -1}, 0, dimod.SPIN)
+        bqm = dimod.BinaryQuadraticModel.from_ising({'a': 1}, {})
         sampler = TabuProblemSampler()
 
         with self.assertRaises(TypeError):
@@ -386,11 +396,11 @@ class TestHybridSampler(unittest.TestCase):
         with self.assertRaises(ValueError):
             HybridSampler(sampler).sample(bqm, initial_sample={1: 2})
 
-        response = HybridSampler(sampler).sample(bqm, initial_sample={'a': 1, 'b': 1, 'c': 1})
-        self.assertEqual(response.record[0].energy, -3.0)
+        ss = HybridSampler(sampler).sample(bqm, initial_sample={'a': 1})
+        self.assertEqual(list(ss.samples()), [{'a': -1}])
 
-        response = HybridSampler(sampler).sample(bqm, initial_sample={'a': -1, 'b': 1, 'c': -1})
-        self.assertEqual(response.record[0].energy, -3.0)
+        ss = HybridSampler(sampler).sample(bqm, initial_sample={'a': -1})
+        self.assertEqual(list(ss.samples()), [{'a': -1}])
 
 
 class TestHybridRunnable(unittest.TestCase):
