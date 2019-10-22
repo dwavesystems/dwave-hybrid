@@ -545,7 +545,7 @@ class HybridSampler(dimod.Sampler):
         self.parameters = {'initial_sample': []}
         self.properties = {}
 
-    def sample(self, bqm, initial_sample=None):
+    def sample(self, bqm, initial_sample=None, return_state=False):
         """Sample from a binary quadratic model using composed runnable sampler.
 
         Args:
@@ -556,8 +556,13 @@ class HybridSampler(dimod.Sampler):
                 `bqm`-compatible sample used for initial state construction.
                 Defaults to `hybrid.utils.min_sample(bqm)`.
 
+            return_state (bool, optional, default=False):
+                If True, the final state is added to :attr:`dimod.SampleSet.info`
+                of the returned sample set. Note that if a `state` key
+                already exists in the sample set then it is overwritten.
+
         Returns:
-            :obj:`~dimod.Response`: A `dimod` :obj:`.~dimod.Response` object.
+            :class:`~dimod.SampleSet`
 
         """
         if not isinstance(bqm, dimod.BinaryQuadraticModel):
@@ -574,7 +579,17 @@ class HybridSampler(dimod.Sampler):
         initial_state = State.from_sample(initial_sample, bqm)
         final_state = self._workflow.run(initial_state)
 
-        return dimod.SampleSet.from_future(final_state, result_hook=lambda f: f.result().samples)
+        def result_hook(state):
+            resolved = state.result()
+            ss = resolved.samples
+            if return_state:
+                # note: this creates a cyclic reference to `samples` from the
+                # sample set via `info['state']`, but that shouldn't be a
+                # problem for GC
+                ss.info.update(state=resolved)
+            return ss
+
+        return dimod.SampleSet.from_future(final_state, result_hook=result_hook)
 
 
 class HybridRunnable(Runnable):
