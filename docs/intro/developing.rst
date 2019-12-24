@@ -20,7 +20,7 @@ the code.
 
 The :ref:`racingBranches1` graphic below shows the top-down composition (tree structure) of a hybrid loop.
 
-.. figure:: ../_static/tree.png
+.. figure:: ../_images/tree.png
   :name: Tree
   :scale: 65 %
   :alt: Top-Down Composition

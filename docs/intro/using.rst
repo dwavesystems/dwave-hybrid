@@ -101,7 +101,7 @@ problem and a D-Wave system on subproblems. In addition to building-block compon
 such as employed above, this example also uses infrastructure classes to manage the
 decomposition and parallel running of branches.
 
-.. figure:: ../_static/racing_branches_1.png
+.. figure:: ../_images/racing_branches_1.png
   :name: racingBranches1
   :scale: 70 %
   :alt: Racing Branches
@@ -165,7 +165,7 @@ with large numbers of variables.
    descending energy impact are not directly connected (no shared edges, and might not represent
    a local structure of the problem).
 
-.. figure:: ../_static/eid_energy.png
+.. figure:: ../_images/eid_energy.png
   :name: eidEnergy
   :scale: 70 %
   :alt: EID energy
@@ -187,7 +187,7 @@ with large numbers of variables.
    ordered by node index. In PFS, graph traversal selects the node with highest
    energy impact among unselected nodes directly connected to any already selected node.
 
-.. figure:: ../_static/eid_bfs_pfs.png
+.. figure:: ../_images/eid_bfs_pfs.png
   :name: eidBfsPfs
   :scale: 70 %
   :alt: EID BFS
