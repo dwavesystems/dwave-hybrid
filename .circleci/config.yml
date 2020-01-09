@@ -1,5 +1,7 @@
 version: 2
+
 jobs:
+
   #
   # linux
   #
@@ -57,7 +59,7 @@ jobs:
 
   test-osx-3.7: &test-osx-template
     macos:
-      xcode: "10.1.0"
+      xcode: "11.2.1"
     environment:
       PYTHON: 3.7.0
     steps:
@@ -65,10 +67,10 @@ jobs:
       - run: HOMEBREW_NO_AUTO_UPDATE=1 brew install pyenv
       - restore_cache:
           keys:
-            - pyenv-{{ .Environment.CIRCLE_JOB }}
+            - pyenv-{{ .Environment.CIRCLE_JOB }}-xcode-11.2.1
       - run: pyenv install $PYTHON -s
       - save_cache:
-          key: pyenv-{{ .Environment.CIRCLE_JOB }}
+          key: pyenv-{{ .Environment.CIRCLE_JOB }}-xcode-11.2.1
           paths:
             - ~/.pyenv
       - run:
