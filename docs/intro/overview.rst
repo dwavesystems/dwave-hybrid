@@ -18,7 +18,7 @@ representation of a branch's components---decomposer, sampler, and composer---is
 shown in the lowest branch. A user-defined criterion selects from current samples
 and solver outputs a sample set for iteration :math:`i+1`.
 
-.. figure:: ../_static/HybridBlockDiagram.png
+.. figure:: ../_images/HybridBlockDiagram.png
   :name: HybridBlockDiagram
   :scale: 70 %
   :alt: Block diagram
