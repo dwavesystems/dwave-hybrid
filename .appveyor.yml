@@ -10,6 +10,8 @@ environment:
     - PYTHON: "C:\\Python36-x64"
     - PYTHON: "C:\\Python37"
     - PYTHON: "C:\\Python37-x64"
+    - PYTHON: "C:\\Python38"
+    - PYTHON: "C:\\Python38-x64"
 
 matrix:
   fast_finish: true
@@ -17,6 +19,15 @@ matrix:
 cache:
   - '%PYTHON%\Lib\site-packages -> requirements.txt, tests\requirements.txt'
   - '%AppData%\pip-cache'
+
+install:
+  # install the latest Microsoft Visual C++ Redistributable for Visual Studio 2015-2019
+  # (currently 14.24.28127.4) to support FH4 exception handling in the latest dimod
+  # (see https://devblogs.microsoft.com/cppblog/making-cpp-exception-handling-smaller-x64/)
+  - ps: |
+      Invoke-WebRequest "https://aka.ms/vs/16/release/vc_redist.x64.exe" -OutFile vcredist.exe
+      Start-Process -FilePath .\vcredist.exe -ArgumentList "/install /quiet /norestart /log vcredist.log" -NoNewWindow -Wait
+      cat .\vcredist.log
 
 build_script:
   - "%PYTHON%\\python.exe -m pip install -r tests\\requirements.txt --cache-dir %AppData%\\pip-cache"
