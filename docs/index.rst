@@ -66,4 +66,4 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-* :ref:`glossary`
+* `Glossary <https://docs.ocean.dwavesys.com/en/latest/glossary.html>`_
