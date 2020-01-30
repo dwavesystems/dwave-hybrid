@@ -1,4 +1,4 @@
-.. _conversion:
+.. _conversion_hybrid:
 
 ================
 Dimod Conversion

@@ -1,4 +1,4 @@
-.. _using:
+.. _using_framework:
 
 ===================
 Using the Framework
@@ -31,7 +31,7 @@ The example below uses Kerberos to solve a large QUBO.
 Building Workflows
 ==================
 
-As shown in the :ref:`overview` section, you build hybrid solvers by arranging components such
+As shown in the :ref:`overview_hybrid` section, you build hybrid solvers by arranging components such
 as samplers in a workflow.
 
 Building Blocks
@@ -67,7 +67,7 @@ Flow Structuring
 ----------------
 
 The framework provides classes for structuring workflows that use the "building-block"
-components. As shown in the :ref:`overview` section, you can create a *branch* of :class:`Runnable`
+components. As shown in the :ref:`overview_hybrid` section, you can create a *branch* of :class:`Runnable`
 classes; for example :code:`decomposer | sampler | composer`, which delegates part
 of a problem to a sampler such as the D-Wave system.
 

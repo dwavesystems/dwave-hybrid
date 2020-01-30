@@ -1,4 +1,4 @@
-.. _developing:
+.. _developing_hybrid:
 
 =========================
 Developing New Components
@@ -13,7 +13,7 @@ from this class. A :class:`~hybrid.core.Runnable` is run for an iteration in whi
 the :class:`~hybrid.core.State` it receives. Typical methods are `run` or `next` to execute an
 iteration and `stop` to terminate the :class:`~hybrid.core.Runnable`.
 
-The :ref:`core` and :ref:`flow` sections describe, respectively, the basic :class:`~hybrid.core.Runnable`
+The :ref:`core_hybrid` and :ref:`flow_hybrid` sections describe, respectively, the basic :class:`~hybrid.core.Runnable`
 classes (building blocks) and flow-structuring ones and their methods. If you are
 implementing these methods for your own :class:`~hybrid.core.Runnable` class, see comments in
 the code.
@@ -43,8 +43,8 @@ nontrivial for some advanced flow-control runnables.
 
 .. traits-end-marker
 
-The :ref:`conversion` section describes the :class:`~hybrid.core.HybridRunnable`
+The :ref:`conversion_hybrid` section describes the :class:`~hybrid.core.HybridRunnable`
 class you can use to produce a :class:`~hybrid.core.Runnable` sampler based on
 a :std:doc:`dimod <dimod:index>` sampler.
 
-The :ref:`utilities` section provides a list of useful utility methods.
+The :ref:`utilities_hybrid` section provides a list of useful utility methods.

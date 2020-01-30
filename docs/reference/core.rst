@@ -1,4 +1,4 @@
-.. _core:
+.. _core_hybrid:
 
 ==========
 Primitives

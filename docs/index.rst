@@ -1,6 +1,6 @@
 ..  -*- coding: utf-8 -*-
 
-.. _contents:
+.. _index_hybrid:
 
 =============
 D-Wave Hybrid

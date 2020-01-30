@@ -1,4 +1,4 @@
-.. _traits:
+.. _traits_hybrid:
 
 ========
 Traits
