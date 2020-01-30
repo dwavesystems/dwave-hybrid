@@ -1,8 +1,8 @@
 .. _sdk_index:
 
-=============
-D-Wave Hybrid
-=============
+============
+dwave-hybrid
+============
 
 .. include:: /readmes/hybrid.rst
    :start-after: index-start-marker
