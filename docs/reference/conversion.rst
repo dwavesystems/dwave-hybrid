@@ -11,6 +11,7 @@ Classes
 -------
 
 .. automodule:: hybrid.core
+   :noindex:
 
 .. autoclass:: HybridSampler
 .. autoclass:: HybridRunnable
