@@ -6,14 +6,14 @@
 D-Wave Hybrid
 =============
 
-.. include:: ../README.rst
+.. include:: README.rst
   :start-after: index-start-marker
   :end-before: index-end-marker
 
 Example
 =======
 
-.. include:: ../README.rst
+.. include:: README.rst
   :start-after: example-start-marker
   :end-before: example-end-marker
 

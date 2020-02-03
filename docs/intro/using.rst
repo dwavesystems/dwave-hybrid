@@ -108,7 +108,7 @@ decomposition and parallel running of branches.
 
   Racing Branches
 
-.. include:: ../../README.rst
+.. include:: ../README.rst
   :start-after: example-start-marker
   :end-before: example-end-marker
 
