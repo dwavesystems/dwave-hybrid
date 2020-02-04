@@ -96,7 +96,7 @@ And instead of a single iteration on the sample set, you can use the :class:`.Lo
 to iterate a set number of times or until a convergence criteria is met.
 
 This example of :ref:`racingBranches1` solves a binary quadratic model by iteratively producing best samples.
-Similar to :std:doc:`qbsolv <qbsolv:index>`, it employs both tabu search on the entire
+Similar to :std:doc:`qbsolv <oceandocs:docs_qbsolv>`, it employs both tabu search on the entire
 problem and a D-Wave system on subproblems. In addition to building-block components
 such as employed above, this example also uses infrastructure classes to manage the
 decomposition and parallel running of branches.

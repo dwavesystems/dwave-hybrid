@@ -17,7 +17,7 @@ points out the way to developing your own components in the framework.
 * :ref:`using_framework` shows how to use the framework. You can quickly get started by using a
   provided reference sampler built with this framework, Kerberos, to solve a problem too
   large to :term:`minor-embed` on a D-Wave system. Next, use the framework
-  to build (hybrid) workflows; for example, a solver similar to :std:doc:`qbsolv <qbsolv:index>`,
+  to build (hybrid) workflows; for example, a solver similar to :std:doc:`qbsolv <oceandocs:docs_qbsolv>`,
   which can employ tabu search on a whole problem while submitting parts of the problem
   to a D-Wave system.
 
