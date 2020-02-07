@@ -1,4 +1,4 @@
-.. _using:
+.. _using_framework:
 
 ===================
 Using the Framework
@@ -31,7 +31,7 @@ The example below uses Kerberos to solve a large QUBO.
 Building Workflows
 ==================
 
-As shown in the :ref:`overview` section, you build hybrid solvers by arranging components such
+As shown in the :ref:`overview_hybrid` section, you build hybrid solvers by arranging components such
 as samplers in a workflow.
 
 Building Blocks
@@ -67,7 +67,7 @@ Flow Structuring
 ----------------
 
 The framework provides classes for structuring workflows that use the "building-block"
-components. As shown in the :ref:`overview` section, you can create a *branch* of :class:`Runnable`
+components. As shown in the :ref:`overview_hybrid` section, you can create a *branch* of :class:`Runnable`
 classes; for example :code:`decomposer | sampler | composer`, which delegates part
 of a problem to a sampler such as the D-Wave system.
 
@@ -96,7 +96,7 @@ And instead of a single iteration on the sample set, you can use the :class:`.Lo
 to iterate a set number of times or until a convergence criteria is met.
 
 This example of :ref:`racingBranches1` solves a binary quadratic model by iteratively producing best samples.
-Similar to :std:doc:`qbsolv <qbsolv:index>`, it employs both tabu search on the entire
+Similar to :std:doc:`qbsolv <oceandocs:docs_qbsolv>`, it employs both tabu search on the entire
 problem and a D-Wave system on subproblems. In addition to building-block components
 such as employed above, this example also uses infrastructure classes to manage the
 decomposition and parallel running of branches.
@@ -108,7 +108,7 @@ decomposition and parallel running of branches.
 
   Racing Branches
 
-.. include:: ../../README.rst
+.. include:: ../README.rst
   :start-after: example-start-marker
   :end-before: example-end-marker
 
