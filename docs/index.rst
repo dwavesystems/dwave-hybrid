@@ -25,6 +25,12 @@ Documentation
   :Release: |version|
   :Date: |today|
 
+.. note:: This documentation is for the latest version of
+   `dwave-hybrid <https://github.com/dwavesystems/dwave-hybrid>`_.
+   Documentation for the version currently installed by
+   `dwave-ocean-sdk <https://github.com/dwavesystems/dwave-ocean-sdk>`_
+   is here: :std:doc:`dwave-hybrid <oceandocs:docs_hybrid/sdk_index>`.
+
 .. sdk-start-marker
 
 .. toctree::
