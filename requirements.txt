@@ -6,6 +6,6 @@ dwave-neal>=0.5.1
 dwave-tabu>=0.2.0
 numpy>=1.15.4
 networkx
-dwave-networkx>=0.6.6
+dwave-networkx>=0.8.6
 click
 plucky>=0.4.3
