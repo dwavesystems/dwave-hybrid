@@ -1,10 +1,16 @@
 six
-dimod>=0.8.11
+
+# latest compiled numpy for py34/win on pypi is 1.15.4; that limits dimod to <0.9
+dimod<0.9; python_version=="3.4"
+numpy==1.15.4; python_version=="3.4"
+
+dimod>=0.8.11; python_version!="3.4"
+numpy>=1.15.4; python_version!="3.4"
+
 minorminer>=0.1.7
 dwave-system>=0.7.6
 dwave-neal>=0.5.1
 dwave-tabu>=0.2.0
-numpy>=1.15.4
 networkx
 dwave-networkx>=0.8.6
 click
