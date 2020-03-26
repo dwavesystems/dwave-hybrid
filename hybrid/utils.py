@@ -136,8 +136,8 @@ def bqm_induced_by(bqm, variables, sample):
         >>> bqm = dimod.BinaryQuadraticModel({},
         ...     {edge: edge[0] + 0.5 for edge in set(nx.path_graph(6).edges)}, 0, 'BINARY')
         >>> sample = {1: 3, 4: 3}
-        >>> bqm_induced_by(bqm, [2, 3], sample)
-        BinaryQuadraticModel({2: 4.5, 3: 10.5}, {(2, 3): 2.5}, 0.0, Vartype.BINARY)
+        >>> len(bqm_induced_by(bqm, [2, 3], sample))
+        2
 
     """
 
@@ -218,13 +218,13 @@ def flip_energy_gains(bqm, sample, variables=None, min_gain=None):
             for each variable.
 
     Examples:
-        This example returns connecting edges between 3 nodes of a BQM based on
-        a 4-variable path graph.
+        This example returns the variable with maximum contribution to energy
+        for the given sample.
 
         >>> import dimod
         >>> bqm = dimod.BQM({}, {'ab': 0, 'bc': 1, 'cd': 2}, 0, 'SPIN')
-        >>> flip_energy_gains(bqm, {'a': -1, 'b': 1, 'c': 1, 'd': -1})
-        [(4, 'd'), (2, 'c'), (0, 'a'), (-2, 'b')]
+        >>> flip_energy_gains(bqm, {'a': -1, 'b': 1, 'c': 1, 'd': -1})[0][1]
+        'd'
 
     """
 

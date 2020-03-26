@@ -20,9 +20,9 @@ The example below uses Kerberos to solve a large QUBO.
 
 >>> import dimod
 >>> from hybrid.reference.kerberos import KerberosSampler
->>> with open('../problems/random-chimera/8192.01.qubo') as problem:
+>>> with open('../problems/random-chimera/8192.01.qubo') as problem:  # doctest: +SKIP
 ...     bqm = dimod.BinaryQuadraticModel.from_coo(problem)
->>> len(bqm)
+>>> len(bqm)          # doctest: +SKIP
 8192
 >>> solution = KerberosSampler().sample(bqm, max_iter=10, convergence=3)   # doctest: +SKIP
 >>> solution.first.energy     # doctest: +SKIP
