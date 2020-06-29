@@ -118,7 +118,7 @@ class TestChimeraTiles(unittest.TestCase):
         tiles = chimera_tiles(bqm, 1, 1, 4)
 
         self.assertEqual(len(tiles), 16)  # we have the correct number of tiles
-        self.assertEqual(set().union(*tiles.values()), set(bqm))  # all of the nodes are present
+        self.assertEqual(set().union(*tiles.values()), bqm.variables)  # all of the nodes are present
         for embedding in tiles.values():
             self.assertEqual(set(chain[0] for chain in embedding.values()), set(range(1*1*4*2)))
 
@@ -128,7 +128,7 @@ class TestChimeraTiles(unittest.TestCase):
         tiles = chimera_tiles(bqm, 2, 2, 4)
 
         self.assertEqual(len(tiles), 4)  # we have the correct number of tiles
-        self.assertEqual(set().union(*tiles.values()), set(bqm))  # all of the nodes are present
+        self.assertEqual(set().union(*tiles.values()), bqm.variables)  # all of the nodes are present
         for embedding in tiles.values():
             self.assertEqual(set(chain[0] for chain in embedding.values()), set(range(2*2*4*2)))
 
@@ -140,7 +140,7 @@ class TestChimeraTiles(unittest.TestCase):
         tiles = chimera_tiles(bqm, ti, tj, tt)
 
         self.assertEqual(len(tiles), 8)  # we have the correct number of tiles
-        self.assertEqual(set().union(*tiles.values()), set(bqm))  # all of the nodes are present
+        self.assertEqual(set().union(*tiles.values()), bqm.variables)  # all of the nodes are present
         for embedding in tiles.values():
             self.assertTrue(set(chain[0] for chain in embedding.values()).issubset(set(range(ti*tj*tt*2))))
 
@@ -157,7 +157,7 @@ class TestChimeraTiles(unittest.TestCase):
         tiles = chimera_tiles(bqm, ti, tj, tt)
 
         self.assertEqual(len(tiles), 4)  # we have the correct number of tiles
-        self.assertEqual(set().union(*tiles.values()), set(bqm))  # all of the nodes are present
+        self.assertEqual(set().union(*tiles.values()), bqm.variables)  # all of the nodes are present
         for embedding in tiles.values():
             self.assertTrue(set(chain[0] for chain in embedding.values()).issubset(set(range(ti*tj*tt*2))))
 
