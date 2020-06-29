@@ -113,6 +113,19 @@ class SubproblemCliqueEmbedder(traits.SubproblemIntaking,
             :class:`~dwave.system.samplers.DWaveSampler`. The sampler has to
             have a Chimera or Pegasus topology.
 
+    Example:
+        To replace :class:`.QPUSubproblemAutoEmbeddingSampler` with a sampler
+        that uses fixed clique embedding (adapted to subproblem on each run),
+        use ``SubproblemCliqueEmbedder | QPUSubproblemExternalEmbeddingSampler``
+        construct::
+
+            from dwave.system import DWaveSampler
+
+            qpu = DWaveSampler(solver=dict(qpu=True))
+            qpu_branch = (
+                hybrid.EnergyImpactDecomposer(size=50)
+                | hybrid.SubproblemCliqueEmbedder(sampler=qpu)
+                | hybrid.QPUSubproblemExternalEmbeddingSampler(qpu_sampler=qpu))
     """
 
     def __init__(self, sampler, **runopts):
