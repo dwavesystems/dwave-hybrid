@@ -7,11 +7,8 @@ from setuptools import setup, find_packages
 basedir = os.path.dirname(os.path.abspath(__file__))
 package_info_path = os.path.join(basedir, "hybrid", "package_info.py")
 package_info = {}
-try:
-    with open(package_info_path, encoding='utf-8') as f:
-        exec(f.read(), package_info)
-except SyntaxError:
-    execfile(package_info_path, package_info)
+with open(package_info_path, encoding='utf-8') as f:
+    exec(f.read(), package_info)
 
 
 # Package requirements, minimal pinning

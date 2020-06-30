@@ -20,8 +20,6 @@ from operator import attrgetter
 from functools import partial
 from itertools import chain
 
-import six
-
 from hybrid.core import Runnable, State, States, stoppable
 from hybrid.concurrency import Present, immediate_executor
 from hybrid.exceptions import EndOfStream
@@ -594,7 +592,7 @@ class ArgMin(traits.NotValidated, Runnable):
         super(ArgMin, self).__init__(**runopts)
         if key is None:
             key = 'samples.first.energy'
-        if isinstance(key, six.string_types):
+        if isinstance(key, str):
             key = attrgetter(key)
         self.key = key
 
@@ -664,7 +662,7 @@ class TrackMin(traits.NotValidated, Runnable):
         super(TrackMin, self).__init__(**runopts)
         if key is None:
             key = 'samples.first.energy'
-        if isinstance(key, six.string_types):
+        if isinstance(key, str):
             key = attrgetter(key)
         self.key = key
         self.output = output
@@ -755,7 +753,7 @@ class LoopUntilNoImprovement(traits.NotValidated, Runnable):
 
         if key is None:
             key = 'samples.first.energy'
-        if isinstance(key, six.string_types):
+        if isinstance(key, str):
             key = attrgetter(key)
         self.key = key
 
