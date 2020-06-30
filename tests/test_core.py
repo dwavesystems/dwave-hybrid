@@ -17,8 +17,8 @@ import unittest
 import concurrent.futures
 import logging
 import itertools
+from unittest import mock
 
-import mock
 import dimod
 from tabu import TabuSampler
 
