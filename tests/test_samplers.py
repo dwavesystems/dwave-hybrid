@@ -81,6 +81,23 @@ class TestQPUSamplers(unittest.TestCase):
         # verify mock sampler received custom kwargs
         self.assertEqual(res.subsamples.first.energy, -1)
 
+    def test_clique_embedder(self):
+        bqm = dimod.BinaryQuadraticModel.from_ising({}, {'ab': 1, 'bc': 1, 'ca': 1})
+        init = State.from_subproblem(bqm)
+
+        sampler = MockDWaveSampler()
+
+        workflow = SubproblemCliqueEmbedder(sampler=sampler)
+
+        # run embedding
+        res = workflow.run(init).result()
+
+        # verify mock sampler received custom kwargs
+        self.assertIn('embedding', res)
+        self.assertEqual(len(res.embedding.keys()), 3)
+        # embedding a triangle onto a chimera produces 3 x 2-qubit chains
+        self.assertTrue(all(len(e) == 2 for e in res.embedding.values()))
+
     def test_reverse_annealing_sampler(self):
         sampler = MockDWaveReverseAnnealingSampler()
         ra = ReverseAnnealingAutoEmbeddingSampler(qpu_sampler=sampler)

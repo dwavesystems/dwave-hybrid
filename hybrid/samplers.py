@@ -25,6 +25,8 @@ from collections import namedtuple
 import dimod
 from dwave.system.samplers import DWaveSampler
 from dwave.system.composites import AutoEmbeddingComposite, FixedEmbeddingComposite
+from dwave.embedding.chimera import find_clique_embedding as find_chimera_clique_embedding
+from dwave.embedding.pegasus import find_clique_embedding as find_pegasus_clique_embedding
 
 from tabu import TabuSampler
 from neal import SimulatedAnnealingSampler
@@ -35,8 +37,8 @@ from hybrid.utils import random_sample
 from hybrid import traits
 
 __all__ = [
-    'QPUSubproblemExternalEmbeddingSampler', 'QPUSubproblemAutoEmbeddingSampler',
-    'ReverseAnnealingAutoEmbeddingSampler',
+    'QPUSubproblemExternalEmbeddingSampler', 'SubproblemCliqueEmbedder',
+    'QPUSubproblemAutoEmbeddingSampler', 'ReverseAnnealingAutoEmbeddingSampler',
     'SimulatedAnnealingSubproblemSampler', 'InterruptableSimulatedAnnealingSubproblemSampler',
     'SimulatedAnnealingProblemSampler', 'InterruptableSimulatedAnnealingProblemSampler',
     'TabuSubproblemSampler', 'TabuProblemSampler', 'InterruptableTabuSampler',
@@ -98,6 +100,71 @@ class QPUSubproblemExternalEmbeddingSampler(traits.SubproblemSampler,
         response = sampler.sample(state.subproblem, **params)
 
         return state.updated(subsamples=response)
+
+
+class SubproblemCliqueEmbedder(traits.SubproblemIntaking,
+                               traits.EmbeddingProducing,
+                               traits.SISO, Runnable):
+    """Subproblem-induced-clique embedder on sampler's target graph.
+
+    Args:
+        sampler (:class:`dimod.Structured`):
+            Structured :class:`dimod.Sampler` such as a
+            :class:`~dwave.system.samplers.DWaveSampler`. The sampler has to
+            have a Chimera or Pegasus topology.
+
+    Example:
+        To replace :class:`.QPUSubproblemAutoEmbeddingSampler` with a sampler
+        that uses fixed clique embedding (adapted to subproblem on each run),
+        use ``SubproblemCliqueEmbedder | QPUSubproblemExternalEmbeddingSampler``
+        construct::
+
+            from dwave.system import DWaveSampler
+
+            qpu = DWaveSampler(solver=dict(qpu=True))
+            qpu_branch = (
+                hybrid.EnergyImpactDecomposer(size=50)
+                | hybrid.SubproblemCliqueEmbedder(sampler=qpu)
+                | hybrid.QPUSubproblemExternalEmbeddingSampler(qpu_sampler=qpu))
+    """
+
+    def __init__(self, sampler, **runopts):
+        super(SubproblemCliqueEmbedder, self).__init__(**runopts)
+        self.sampler = sampler
+
+    def __repr__(self):
+        return "{self}(sampler={self.sampler!r})".format(self=self)
+
+    @staticmethod
+    def find_clique_embedding(variables, sampler):
+        """Given a Chimera- or Pegasus-based ``sampler``, and a list of
+        variable labels, return a clique embedding.
+
+        Returns:
+            dict:
+                Clique embedding map with source variables from ``variables``
+                and target edges taken from ``sampler``.
+
+        """
+        topology_type = sampler.properties['topology']['type']
+        topology_shape = sampler.properties['topology']['shape']
+
+        clique_embedders = dict(chimera=find_chimera_clique_embedding,
+                                pegasus=find_pegasus_clique_embedding)
+        try:
+            find_clique_embedding = clique_embedders[topology_type]
+        except KeyError:
+            raise ValueError('unknown sampler topology')
+
+        embedding = find_clique_embedding(
+            variables, m=topology_shape[0], target_edges=sampler.edgelist)
+
+        return embedding
+
+    def next(self, state, **runopts):
+        embedding = self.find_clique_embedding(
+            state.subproblem.variables, self.sampler)
+        return state.updated(embedding=embedding)
 
 
 class QPUSubproblemAutoEmbeddingSampler(traits.SubproblemSampler, traits.SISO, Runnable):
