@@ -29,8 +29,6 @@ continues from the modified assignment instead.
 [2] http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.186.3521&rep=rep1&type=pdf
 """
 
-from __future__ import print_function
-
 import sys
 
 import dimod

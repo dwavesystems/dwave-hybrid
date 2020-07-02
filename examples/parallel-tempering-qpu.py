@@ -16,8 +16,6 @@
 
 """Hybridized parallel tempering: use QPU as a high-temperature sampler."""
 
-from __future__ import print_function
-
 import sys
 import math
 import random

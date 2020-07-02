@@ -16,20 +16,11 @@
 
 import os
 import contextlib
+from unittest import mock
 
 from hybrid.profiling import perf_counter
 
 __all__ = ['mock', 'isolated_environ']
-
-
-# py2/3 mock support
-try:
-    # python 3
-    from unittest import mock
-
-except ImportError:  # pragma: no cover
-    # python 2
-    import mock
 
 
 @contextlib.contextmanager
