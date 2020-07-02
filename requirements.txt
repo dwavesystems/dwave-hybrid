@@ -1,6 +1,5 @@
-dimod>=0.8.11; python_version!="3.4"
-numpy>=1.15.4; python_version!="3.4"
-
+dimod>=0.8.11
+numpy>=1.15.4
 minorminer>=0.1.7
 dwave-system>=0.7.6
 dwave-neal>=0.5.1

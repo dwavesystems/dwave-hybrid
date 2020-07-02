@@ -12,7 +12,7 @@ with open(package_info_path, encoding='utf-8') as f:
 
 
 # Package requirements, minimal pinning
-install_requires = ['numpy>=1.15.0,<2.0.0', 'networkx', 'click>5', 'plucky>=0.4.3',
+install_requires = ['numpy>=1.15.0', 'networkx', 'click>5', 'plucky>=0.4.3',
                     'dimod>=0.8.11', 'minorminer>=0.1.7', 'dwave-networkx>=0.6.6',
                     'dwave-system>=0.7.6', 'dwave-neal>=0.5.1', 'dwave-tabu>=0.2.0']
 
