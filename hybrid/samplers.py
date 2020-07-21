@@ -77,7 +77,7 @@ class QPUSubproblemExternalEmbeddingSampler(traits.SubproblemSampler,
         self.num_reads = num_reads
 
         if qpu_sampler is None:
-            qpu_sampler = DWaveSampler(solver=dict(qpu=True))
+            qpu_sampler = DWaveSampler(client="qpu")
         self.sampler = qpu_sampler
 
         if sampling_params is None:
@@ -199,7 +199,7 @@ class QPUSubproblemAutoEmbeddingSampler(traits.SubproblemSampler, traits.SISO, R
         self.num_reads = num_reads
 
         if qpu_sampler is None:
-            qpu_sampler = DWaveSampler(solver=dict(qpu=True))
+            qpu_sampler = DWaveSampler(client="qpu")
 
         if sampling_params is None:
             sampling_params = {}
@@ -274,8 +274,8 @@ class ReverseAnnealingAutoEmbeddingSampler(traits.SubproblemSampler,
 
         if qpu_sampler is None:
             qpu_sampler = DWaveSampler(
-                solver=dict(qpu=True,
-                            max_anneal_schedule_points__gte=len(self.anneal_schedule)))
+                client="qpu",
+                solver=dict(max_anneal_schedule_points__gte=len(self.anneal_schedule)))
 
         # validate schedule, raising `ValueError` on invalid schedule or
         # `RuntimeError` if anneal schedule not supported by QPU (this could
