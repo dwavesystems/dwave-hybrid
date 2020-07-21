@@ -60,7 +60,7 @@ class QPUSubproblemExternalEmbeddingSampler(traits.SubproblemSampler,
         num_reads (int, optional, default=100):
             Number of states (output solutions) to read from the sampler.
 
-        qpu_sampler (:class:`dimod.Sampler`, optional, default=\ :class:`~dwave.system.samplers.DWaveSampler`\ ()):
+        qpu_sampler (:class:`dimod.Sampler`, optional, default=\ :class:`~dwave.system.samplers.DWaveSampler`\ ``(client="qpu")``):
             Quantum sampler such as a D-Wave system.
 
         sampling_params (dict):
@@ -175,7 +175,7 @@ class QPUSubproblemAutoEmbeddingSampler(traits.SubproblemSampler, traits.SISO, R
         num_reads (int, optional, default=100):
             Number of states (output solutions) to read from the sampler.
 
-        qpu_sampler (:class:`dimod.Sampler`, optional, default=\ :class:`~dwave.system.samplers.DWaveSampler`\ ()):
+        qpu_sampler (:class:`dimod.Sampler`, optional, default=\ :class:`~dwave.system.samplers.DWaveSampler`\ ``(client="qpu")``):
             Quantum sampler such as a D-Wave system. Subproblems that do not fit the
             sampler's structure are minor-embedded on the fly with
             :class:`~dwave.system.composites.AutoEmbeddingComposite`.
@@ -246,10 +246,16 @@ class ReverseAnnealingAutoEmbeddingSampler(traits.SubproblemSampler,
             points. For more details, see
             :meth:`~dwave.system.DWaveSampler.validate_anneal_schedule`.
 
-        qpu_sampler (:class:`dimod.Sampler`, optional, default=\ :class:`~dwave.system.samplers.DWaveSampler`\ ()):
-            Quantum sampler such as a D-Wave system. Subproblems that do not fit the
-            sampler's structure are minor-embedded on the fly with
+        qpu_sampler (:class:`dimod.Sampler`, optional):
+            Quantum sampler such as a D-Wave system. Subproblems that do not fit
+            the sampler's structure are minor-embedded on the fly with
             :class:`~dwave.system.composites.AutoEmbeddingComposite`.
+
+            If sampler is not provided, it defaults to::
+
+                qpu_sampler = DWaveSampler(
+                    client="qpu",
+                    solver=dict(max_anneal_schedule_points__gte=len(anneal_schedule)))
 
         sampling_params (dict):
             Dictionary of keyword arguments with values that will be used
