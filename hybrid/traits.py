@@ -32,7 +32,7 @@ For example:
 
 """
 
-from collections import Sequence, Mapping
+from collections.abc import Sequence, Mapping
 
 from hybrid.exceptions import StateTraitMissingError, StateDimensionalityError
 

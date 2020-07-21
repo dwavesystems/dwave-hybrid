@@ -451,7 +451,7 @@ class RandomConstraintDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable
 
         self.size = size
 
-        if not isinstance(constraints, collections.Sequence):
+        if not isinstance(constraints, collections.abc.Sequence):
             raise TypeError("constraints should be a list of containers")
         if any(len(const) > size for const in constraints):
             raise ValueError("size must be able to contain the largest constraint")
