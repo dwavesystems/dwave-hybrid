@@ -245,7 +245,6 @@ class QPUSubproblemAutoEmbeddingSampler(traits.SubproblemSampler, traits.SISO, R
 
         return state.updated(subsamples=response)
 
-
 class ReverseAnnealingAutoEmbeddingSampler(traits.SubproblemSampler,
                                            traits.SubsamplesIntaking,
                                            traits.SISO, Runnable):
