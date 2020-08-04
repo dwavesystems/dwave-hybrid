@@ -175,6 +175,9 @@ class QPUSubproblemAutoEmbeddingSampler(traits.SubproblemSampler, traits.SISO, R
         num_reads (int, optional, default=100):
             Number of states (output solutions) to read from the sampler.
 
+        num_retries (int, optional, default=0):
+            Number of times the sampler will retry to embed if a failure occurs.
+
         qpu_sampler (:class:`dimod.Sampler`, optional, default=\ :class:`~dwave.system.samplers.DWaveSampler`\ ``(client="qpu")``):
             Quantum sampler such as a D-Wave system. Subproblems that do not fit the
             sampler's structure are minor-embedded on the fly with
