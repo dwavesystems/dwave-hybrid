@@ -23,6 +23,7 @@ from dwave.system.testing import MockDWaveSampler
 from hybrid.samplers import *
 from hybrid.core import State
 from hybrid.testing import mock
+from hybrid.utils import random_sample
 
 
 class MockDWaveReverseAnnealingSampler(MockDWaveSampler):
@@ -38,6 +39,15 @@ class MockDWaveReverseAnnealingSampler(MockDWaveSampler):
         self.anneal_schedule = kwargs.pop('anneal_schedule', None)
         self.initial_state = kwargs.pop('initial_state', None)
         return super(MockDWaveReverseAnnealingSampler, self).sample(*args, **kwargs)
+
+class MockDWaveSamplerCounter(MockDWaveSampler):
+    """Extend the `dwave.system.testing.MockDWaveSampler` to count how many times 
+    the sampler runs.
+    """
+    count = 0
+    def sample(self, *args, **kwargs):
+        self.count += 1
+        return super(MockDWaveSamplerCounter, self).sample(*args, **kwargs)
 
 
 class TestQPUSamplers(unittest.TestCase):
@@ -65,6 +75,21 @@ class TestQPUSamplers(unittest.TestCase):
         init = State.from_subsample({'a': 1}, bqm)
         res = q.run(init).result()
         self.assertEqual(res.subsamples.first.energy, -1)
+
+    def test_auto_embedding_failure(self):
+        counter = MockDWaveSamplerCounter()
+        q = QPUSubproblemAutoEmbeddingSampler(qpu_sampler=counter)
+
+        target_structure = q.sampler.target_structure
+        num_vars = len(target_structure.nodelist) + 1 # source graph will be too large for the target and ensure an embedding failure
+        bqm = dimod.BinaryQuadraticModel(num_vars, 'SPIN') 
+        init = State.from_subsample(random_sample(bqm), bqm)
+
+        retries = 3
+        with self.assertRaises(ValueError):
+            result = q.run(init, num_retries=retries).result()
+
+        self.assertEqual(retries + 1, counter.count)
 
     def test_external_embedding_sampler(self):
         bqm = dimod.BinaryQuadraticModel.from_ising({'a': 1}, {})

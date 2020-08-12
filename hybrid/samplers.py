@@ -175,6 +175,9 @@ class QPUSubproblemAutoEmbeddingSampler(traits.SubproblemSampler, traits.SISO, R
         num_reads (int, optional, default=100):
             Number of states (output solutions) to read from the sampler.
 
+        num_retries (int, optional, default=0):
+            Number of times the sampler will retry to embed if a failure occurs.
+
         qpu_sampler (:class:`dimod.Sampler`, optional, default=\ :class:`~dwave.system.samplers.DWaveSampler`\ ``(client="qpu")``):
             Quantum sampler such as a D-Wave system. Subproblems that do not fit the
             sampler's structure are minor-embedded on the fly with
@@ -192,11 +195,12 @@ class QPUSubproblemAutoEmbeddingSampler(traits.SubproblemSampler, traits.SISO, R
     See :ref:`samplers-examples`.
     """
 
-    def __init__(self, num_reads=100, qpu_sampler=None, sampling_params=None,
+    def __init__(self, num_reads=100, num_retries=0, qpu_sampler=None, sampling_params=None,
                  auto_embedding_params=None, **runopts):
         super(QPUSubproblemAutoEmbeddingSampler, self).__init__(**runopts)
 
         self.num_reads = num_reads
+        self.num_retries = num_retries
 
         if qpu_sampler is None:
             qpu_sampler = DWaveSampler(client="qpu")
@@ -222,10 +226,24 @@ class QPUSubproblemAutoEmbeddingSampler(traits.SubproblemSampler, traits.SISO, R
         params = sampling_params.copy()
         params.update(num_reads=num_reads)
 
-        response = self.sampler.sample(state.subproblem, **params)
+        num_retries = runopts.get('num_retries', self.num_retries)
+        
+        embedding_success = False
+        num_tries = 0
+
+        while not embedding_success:
+            try:
+                num_tries += 1
+                response = self.sampler.sample(state.subproblem, **params)
+            except ValueError as exc:
+                if num_tries <= num_retries:
+                    pass
+                else:
+                    raise exc
+            else:
+                embedding_success = True
 
         return state.updated(subsamples=response)
-
 
 class ReverseAnnealingAutoEmbeddingSampler(traits.SubproblemSampler,
                                            traits.SubsamplesIntaking,
