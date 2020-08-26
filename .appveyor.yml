@@ -26,7 +26,7 @@ install:
       cat .\vcredist.log
 
 build_script:
-  - "%PYTHON%\\python.exe -m pip install -r tests\\requirements.txt --cache-dir %AppData%\\pip-cache"
+  - "%PYTHON%\\python.exe -m pip install -r requirements.txt -r tests\\requirements.txt --cache-dir %AppData%\\pip-cache"
 
 before_test:
   - "%PYTHON%\\python.exe -m pip install ."
