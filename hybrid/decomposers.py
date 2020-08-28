@@ -52,19 +52,17 @@ class ComponentDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
         rolling (bool, optional, default=True):
             If True, successive calls for the same problem (with possibly
             different samples) produce subproblems on different components,
-            selected by rolling down the list of all components sorted by
-            the `key` function.
+            selected by rolling down the list of all components.
 
-        key (function, optional, default=len):
-            Function used to extract a comparison key from each component of 
-            the problem. The comparison keys determine which component will be 
-            used to build the subproblem. By default, the components are sorted 
-            by size in decreasing order, so the largest component will be used first.
-        
-        reverse (bool, optional, default=True):
-            If True, the components' comparison keys, found using the `key` function, 
-            will be sorted in decreasing order. If False, they will be sorted
-            in increasing order. 
+        key (callable, optional, default=None):
+            Extracts a comparison key from each component of the problem. The 
+            comparison keys determine which component will be used to build the 
+            subproblem.
+
+        reverse (bool, optional, default=None):
+            Only applies when `key` is specified. If False, the components' comparison 
+            keys will be sorted in increasing order. If True or unspecified, they will
+            be sorted in decreasing order.
 
         silent_rewind (bool, optional, default=True):
             If False, raises :exc:`EndOfStream` when resetting/rewinding the
@@ -74,7 +72,7 @@ class ComponentDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
 
     """
 
-    def __init__(self, rolling=True, silent_rewind=True, key=len, reverse=True, **runopts):
+    def __init__(self, rolling=True, silent_rewind=True, key=None, reverse=None, **runopts):
         super(ComponentDecomposer, self).__init__(**runopts)
 
         self.rolling = rolling
@@ -83,7 +81,8 @@ class ComponentDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
         self.reverse = reverse
 
         self._rolling_bqm = None
-        self._ordered_components = []
+        self._rolling_components = []
+        self._component_index = 0
 
     def __repr__(self):
         return ("{self}(rolling={self.rolling!r}, "
@@ -91,40 +90,53 @@ class ComponentDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
                 "key={self.key!r}, "
                 "reverse={self.reverse!r})").format(self=self)
 
-    def _rewind_rolling(self, bqm, components):
-        self._rolling_bqm = bqm
-        self._ordered_components = sorted(components, key=self.key, reverse=self.reverse)
+    def _get_rolling_components(self, bqm):
+        components = list(connected_components(bqm))
+
+        if self.key is None:
+            return components
+        else:
+            if self.reverse is None:
+                self.reverse = True # Decreasing order by default
+
+            return sorted(components, key=self.key, reverse=self.reverse)
 
     def next(self, state, **runopts):
         silent_rewind = runopts.get('silent_rewind', self.silent_rewind)
 
         bqm = state.problem
-        components = list(connected_components(bqm))
 
-        if not components:
+        if bqm.num_variables <= 1:
             return state.updated(subproblem=bqm)
 
         if self.rolling:
             if bqm != self._rolling_bqm:
                 # This is the first time this problem was called
-                self._rewind_rolling(bqm, components)
+                self._rolling_bqm = bqm
+                self._rolling_components = self._get_rolling_components(bqm)
 
-            elif not self._ordered_components:
+            elif self._component_index >= len(self._rolling_components):
                 # We've already used every component in this problem
-                self._rewind_rolling(bqm, components)
+                self._component_index = 0
 
                 if not silent_rewind:
                     raise EndOfStream
-
-            component = self._ordered_components.pop(0)
+            
+            component = self._rolling_components[self._component_index]
+            self._component_index += 1
 
         else:
-            # No need to sort, just find the first component based on comparison key
-            if self.reverse is True:
-                component = max(components, key=self.key)
-            else:
-                component = min(components, key=self.key)
+            components = list(connected_components(bqm))
 
+            if self.key is None:
+                component = components[0]
+            else:
+                # No need to actually sort, since we're not rolling. 
+                if self.reverse or self.reverse is None:
+                    component = max(components, key=self.key)
+                else:
+                    component = min(components, key=self.key)
+        
         sample = state.samples.change_vartype(bqm.vartype).first.sample
         subbqm = bqm_induced_by(bqm, component, sample)
         

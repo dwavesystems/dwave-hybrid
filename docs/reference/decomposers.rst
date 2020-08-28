@@ -40,7 +40,7 @@ by component size in decreasing order.
     bqm = dimod.BinaryQuadraticModel({'a': 1, 'b': -1, 'c': 1, 'd': 2}, {'ab': 1, 'bc': 1}, 0, dimod.SPIN)
     state0 = State.from_sample(random_sample(bqm), bqm)
 
-    decomposer = ComponentDecomposer()
+    decomposer = ComponentDecomposer(key=len)
     state1 = decomposer.next(state0).result()
     state2 = decomposer.next(state1).result()
 

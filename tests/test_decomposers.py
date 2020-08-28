@@ -29,28 +29,41 @@ from hybrid.utils import min_sample, random_sample
 from hybrid.exceptions import EndOfStream
 
 class TestComponentDecomposer(unittest.TestCase):
-    bqm = dimod.BinaryQuadraticModel({'a': 1, 'b': -1, 'd': 2}, {'ab': 1, 'bc': 1}, 0, dimod.SPIN)
+    bqm = dimod.BinaryQuadraticModel({'a': 2, 'b': -1, 'd': 1}, {'bc': 1, 'cd': 1}, 0, dimod.SPIN)
     state = State.from_sample(random_sample(bqm), bqm)
 
     def test_default(self):
         decomposer = ComponentDecomposer()
         
-        nextstate = decomposer.next(self.state)
-        self.assertDictEqual(dict(nextstate.subproblem.linear), {'a': 1, 'b': -1, 'c': 0})
+        state1 = decomposer.next(self.state)
+        self.assertIn(dict(state1.subproblem.linear), ({'a': 2}, {'b': -1, 'c': 0, 'd': 1}))
 
-        nextstate = decomposer.next(nextstate)
-        self.assertDictEqual(dict(nextstate.subproblem.linear), {'d': 2})
+        state2 = decomposer.next(state1)
+        self.assertIn(dict(state2.subproblem.linear), ({'a': 2}, {'b': -1, 'c': 0, 'd': 1}))
+        self.assertNotEqual(dict(state1.subproblem.linear), dict(state2.subproblem.linear))
 
-        nextstate = decomposer.next(nextstate)  # silent_rewind=True, so we're back to the first component
-        self.assertDictEqual(dict(nextstate.subproblem.linear), {'a': 1, 'b': -1, 'c': 0})
+        state3 = decomposer.next(state2)  # silent_rewind=True, so rewind w/o raising an assertion
+        self.assertIn(dict(state3.subproblem.linear), ({'a': 2}, {'b': -1, 'c': 0, 'd': 1}))
+
+    def test_sort(self):
+        decomposer = ComponentDecomposer(key=len)
+        
+        state1 = decomposer.next(self.state)
+        self.assertDictEqual(dict(state1.subproblem.linear), {'b': -1, 'c': 0, 'd': 1})
+
+    def test_sort_reverse(self):
+        decomposer = ComponentDecomposer(key=len, reverse=False)
+        
+        state1 = decomposer.next(self.state)
+        self.assertDictEqual(dict(state1.subproblem.linear), {'a': 2})
 
     def test_no_silent_rewind(self):
         decomposer = ComponentDecomposer(silent_rewind=False)
-        nextstate = decomposer.next(self.state)
-        nextstate = decomposer.next(self.state)
+        state1 = decomposer.next(self.state)
+        state2 = decomposer.next(state1)
 
         with self.assertRaises(EndOfStream):
-            nextstate = decomposer.next(self.state)
+            state3 = decomposer.next(state2)
 
     def test_key_func(self):
         def sum_linear_biases(component):
@@ -61,35 +74,35 @@ class TestComponentDecomposer(unittest.TestCase):
     
         decomposer = ComponentDecomposer(key=sum_linear_biases)
 
-        nextstate = decomposer.next(self.state)
-        self.assertDictEqual(dict(nextstate.subproblem.linear), {'d': 2})
+        state1 = decomposer.next(self.state)
+        self.assertDictEqual(dict(state1.subproblem.linear), {'a': 2})
 
     def test_no_rolling(self):
-        decomposer = ComponentDecomposer(rolling=False)
+        decomposer = ComponentDecomposer(rolling=False, key=len)
 
-        nextstate = decomposer.next(self.state)
-        self.assertDictEqual(dict(nextstate.subproblem.linear), {'a': 1, 'b': -1, 'c': 0})
+        state1 = decomposer.next(self.state)
+        self.assertDictEqual(dict(state1.subproblem.linear), {'b': -1, 'c': 0, 'd': 1})
 
-        nextstate = decomposer.next(nextstate)
-        self.assertDictEqual(dict(nextstate.subproblem.linear), {'a': 1, 'b': -1, 'c': 0})
+        state2 = decomposer.next(state1)
+        self.assertDictEqual(dict(state2.subproblem.linear), {'b': -1, 'c': 0, 'd': 1})
 
     def test_one_component(self):
         bqm = dimod.BinaryQuadraticModel({'a': 1, 'b': -1}, {'ab': 1}, 0, dimod.SPIN)
         state = State.from_sample(random_sample(bqm), bqm)
         
         decomposer = ComponentDecomposer()
-        nextstate = decomposer.next(state)
+        state1 = decomposer.next(state)
 
-        self.assertEqual(bqm, nextstate.subproblem)
+        self.assertEqual(bqm, state1.subproblem)
 
     def test_empty(self):
         bqm = dimod.BinaryQuadraticModel(dimod.SPIN)
         state = State.from_sample(random_sample(bqm), bqm)
 
         decomposer = ComponentDecomposer()
-        nextstate = decomposer.next(state)
+        state1 = decomposer.next(state)
 
-        self.assertEqual(bqm, nextstate.subproblem)
+        self.assertEqual(bqm, state1.subproblem)
 
 class TestEnergyImpactDecomposer(unittest.TestCase):
     # minimized when not all vars are equal
