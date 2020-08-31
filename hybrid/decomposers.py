@@ -31,9 +31,9 @@ from hybrid.utils import (
     chimera_tiles)
 
 __all__ = [
-    'IdentityDecomposer', 'EnergyImpactDecomposer', 'RandomSubproblemDecomposer',
-    'TilingChimeraDecomposer', 'RandomConstraintDecomposer',
-    'RoofDualityDecomposer',
+    'IdentityDecomposer', 'ComponentDecomposer', 'EnergyImpactDecomposer', 
+    'RandomSubproblemDecomposer', 'TilingChimeraDecomposer', 
+    'RandomConstraintDecomposer', 'RoofDualityDecomposer',
 ]
 
 logger = logging.getLogger(__name__)
@@ -78,11 +78,14 @@ class ComponentDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
         self.rolling = rolling
         self.silent_rewind = silent_rewind
         self.key = key
-        self.reverse = reverse
+
+        if reverse is None:
+            self.reverse = True
+        else:
+            self.reverse = reverse
 
         self._rolling_bqm = None
-        self._rolling_components = []
-        self._component_index = 0
+        self._iter_components = None
 
     def __repr__(self):
         return ("{self}(rolling={self.rolling!r}, "
@@ -90,16 +93,13 @@ class ComponentDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
                 "key={self.key!r}, "
                 "reverse={self.reverse!r})").format(self=self)
 
-    def _get_rolling_components(self, bqm):
-        components = list(connected_components(bqm))
+    def _get_iter_components(self, bqm):
+        components = connected_components(bqm)
 
-        if self.key is None:
-            return components
+        if self.rolling and self.key:
+            return iter(sorted(components, key=self.key, reverse=self.reverse))
         else:
-            if self.reverse is None:
-                self.reverse = True # Decreasing order by default
-
-            return sorted(components, key=self.key, reverse=self.reverse)
+            return components
 
     def next(self, state, **runopts):
         silent_rewind = runopts.get('silent_rewind', self.silent_rewind)
@@ -113,29 +113,30 @@ class ComponentDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
             if bqm != self._rolling_bqm:
                 # This is the first time this problem was called
                 self._rolling_bqm = bqm
-                self._rolling_components = self._get_rolling_components(bqm)
+                self._iter_components = self._get_iter_components(bqm)
 
-            elif self._component_index >= len(self._rolling_components):
+            try:
+                component = next(self._iter_components)
+            except StopIteration:
                 # We've already used every component in this problem
-                self._component_index = 0
-
                 if not silent_rewind:
+                    self._rolling_bqm = None # Reset to be ready for subsequent call
                     raise EndOfStream
-            
-            component = self._rolling_components[self._component_index]
-            self._component_index += 1
+
+                # Rewind    
+                self._iter_components = self._get_iter_components(bqm)
+                component = next(self._iter_components)
 
         else:
-            components = list(connected_components(bqm))
+            self._iter_components = self._get_iter_components(bqm)
 
             if self.key is None:
-                component = components[0]
+                component = next(self._iter_components)
             else:
-                # No need to actually sort, since we're not rolling. 
-                if self.reverse or self.reverse is None:
-                    component = max(components, key=self.key)
+                if self.reverse:
+                    component = max(self._iter_components, key=self.key)
                 else:
-                    component = min(components, key=self.key)
+                    component = min(self._iter_components, key=self.key)
         
         sample = state.samples.change_vartype(bqm.vartype).first.sample
         subbqm = bqm_induced_by(bqm, component, sample)
