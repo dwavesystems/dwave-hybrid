@@ -20,6 +20,7 @@ from heapq import heappush, heappop
 from functools import partial
 
 import dimod
+from dimod.traversal import connected_components
 import networkx as nx
 
 from hybrid.core import Runnable, State
@@ -30,9 +31,9 @@ from hybrid.utils import (
     chimera_tiles)
 
 __all__ = [
-    'IdentityDecomposer', 'EnergyImpactDecomposer', 'RandomSubproblemDecomposer',
-    'TilingChimeraDecomposer', 'RandomConstraintDecomposer',
-    'RoofDualityDecomposer',
+    'IdentityDecomposer', 'ComponentDecomposer', 'EnergyImpactDecomposer', 
+    'RandomSubproblemDecomposer', 'TilingChimeraDecomposer', 
+    'RandomConstraintDecomposer', 'RoofDualityDecomposer',
 ]
 
 logger = logging.getLogger(__name__)
@@ -44,6 +45,104 @@ class IdentityDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
     def next(self, state, **runopts):
         return state.updated(subproblem=state.problem)
 
+class ComponentDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
+    """Selects a subproblem of variables that make up a connected component.
+
+    Args:
+        rolling (bool, optional, default=True):
+            If True, successive calls for the same problem (with possibly
+            different samples) produce subproblems on different components,
+            selected by rolling down the list of all components.
+
+        key (callable, optional, default=None):
+            Extracts a comparison key from each component of the problem. The 
+            comparison keys determine which component will be used to build the 
+            subproblem.
+
+        reverse (bool, optional, default=None):
+            Only applies when `key` is specified. If False, the components' comparison 
+            keys will be sorted in increasing order. If True or unspecified, they will
+            be sorted in decreasing order.
+
+        silent_rewind (bool, optional, default=True):
+            If False, raises :exc:`EndOfStream` when resetting/rewinding the
+            subproblem generator once all components have been used. 
+    
+    See :ref:`decomposers-examples`.
+
+    """
+
+    def __init__(self, rolling=True, silent_rewind=True, key=None, reverse=None, **runopts):
+        super(ComponentDecomposer, self).__init__(**runopts)
+
+        self.rolling = rolling
+        self.silent_rewind = silent_rewind
+        self.key = key
+
+        if reverse is None:
+            self.reverse = True
+        else:
+            self.reverse = reverse
+
+        self._rolling_bqm = None
+        self._iter_components = None
+
+    def __repr__(self):
+        return ("{self}(rolling={self.rolling!r}, "
+                "silent_rewind={self.silent_rewind!r}, "
+                "key={self.key!r}, "
+                "reverse={self.reverse!r})").format(self=self)
+
+    def _get_iter_components(self, bqm):
+        components = connected_components(bqm)
+
+        if self.rolling and self.key:
+            return iter(sorted(components, key=self.key, reverse=self.reverse))
+        else:
+            return components
+
+    def next(self, state, **runopts):
+        silent_rewind = runopts.get('silent_rewind', self.silent_rewind)
+
+        bqm = state.problem
+
+        if bqm.num_variables <= 1:
+            return state.updated(subproblem=bqm)
+
+        if self.rolling:
+            if bqm != self._rolling_bqm:
+                # This is the first time this problem was called
+                self._rolling_bqm = bqm
+                self._iter_components = self._get_iter_components(bqm)
+
+            try:
+                component = next(self._iter_components)
+            except StopIteration:
+                # We've already used every component in this problem
+                if not silent_rewind:
+                    self._rolling_bqm = None # Reset to be ready for subsequent call
+                    raise EndOfStream
+
+                # Rewind    
+                self._iter_components = self._get_iter_components(bqm)
+                component = next(self._iter_components)
+
+        else:
+            self._iter_components = self._get_iter_components(bqm)
+
+            if self.key is None:
+                component = next(self._iter_components)
+            else:
+                if self.reverse:
+                    component = max(self._iter_components, key=self.key)
+                else:
+                    component = min(self._iter_components, key=self.key)
+        
+        sample = state.samples.change_vartype(bqm.vartype).first.sample
+        subbqm = bqm_induced_by(bqm, component, sample)
+        
+        return state.updated(subproblem=subbqm)
+    
 
 class EnergyImpactDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
     """Selects a subproblem of variables maximally contributing to the problem

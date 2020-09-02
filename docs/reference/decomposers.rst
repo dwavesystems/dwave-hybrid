@@ -9,6 +9,7 @@ Decomposers
 Classes
 =======
 
+.. autoclass:: ComponentDecomposer
 .. autoclass:: EnergyImpactDecomposer
 .. autoclass:: IdentityDecomposer
 .. autoclass:: RandomConstraintDecomposer
@@ -21,6 +22,35 @@ Classes
 
 Examples
 ========
+
+ComponentDecomposer
+----------------------
+
+This example iterates twice on a 4-variable binary quadratic model, 
+decomposing the problem into 2 connected components which are selected 
+by component size in decreasing order.
+
+.. code-block:: python
+
+    import dimod
+    from hybrid.decomposers import ComponentDecomposer
+    from hybrid.core import State
+    from hybrid.utils import random_sample
+
+    bqm = dimod.BinaryQuadraticModel({'a': 1, 'b': -1, 'c': 1, 'd': 2}, {'ab': 1, 'bc': 1}, 0, dimod.SPIN)
+    state0 = State.from_sample(random_sample(bqm), bqm)
+
+    decomposer = ComponentDecomposer(key=len)
+    state1 = decomposer.next(state0).result()
+    state2 = decomposer.next(state1).result()
+
+::
+
+    >>> print(state1.subproblem)
+    BinaryQuadraticModel({b: -1.0, a: 1.0, c: 1.0}, {('b', 'a'): 1.0, ('b', 'c'): 1.0}, 0.0, 'SPIN')
+    >>> print(state2.subproblem)
+    BinaryQuadraticModel({d: 2.0}, {}, 0.0, 'SPIN')
+
 
 EnergyImpactDecomposer
 ----------------------
