@@ -172,14 +172,20 @@ class TestSampleSetUtils(unittest.TestCase):
         res = hstack_samplesets(s1, s2)
         self.assertEqual(res, exp)
 
-    def test_hstack_one(self):
+    def test_hstack_identity(self):
+        """hstack_samplesets is identity op on single sampleset's samples"""
+        ss = dimod.SampleSet.from_samples({'a': 1}, vartype='BINARY', energy=0)
+        hs = hstack_samplesets(ss)
+
+        self.assertEqual(hs, ss)
+        self.assertEqual(hs.record.sample.dtype, ss.record.sample.dtype)
+
+    def test_hstack_with_empty(self):
         ss = dimod.SampleSet.from_samples({'a': 1}, vartype='BINARY', energy=0)
         emp = SampleSet.empty()
 
-        self.assertEqual(hstack_samplesets(ss), ss)
         self.assertEqual(hstack_samplesets(ss, emp), ss)
         self.assertEqual(hstack_samplesets(emp, ss), ss)
-        self.assertEqual(hstack_samplesets(ss, ss), ss)
 
     def test_hstack_combine(self):
         s1 = dimod.SampleSet.from_samples({'a': 1}, vartype='BINARY', energy=0)
@@ -188,6 +194,15 @@ class TestSampleSetUtils(unittest.TestCase):
 
         self.assertEqual(hstack_samplesets(s1, s2), exp)
         self.assertEqual(hstack_samplesets(s2, s1), exp)
+
+    def test_hstack_correct_dtype(self):
+        """Output sampleset has the same dtype"""
+        s1 = dimod.SampleSet.from_samples({'a': 1}, vartype='BINARY', energy=0)
+        s2 = dimod.SampleSet.from_samples({'b': 1}, vartype='BINARY', energy=0)
+        hs = hstack_samplesets(s1, s2)
+
+        self.assertEqual(s1.record.sample.dtype, s2.record.sample.dtype)
+        self.assertEqual(hs.record.sample.dtype, s1.record.sample.dtype)
 
     def test_hstack_clamp(self):
         s1 = dimod.SampleSet.from_samples([{'a': 1}, {'a': 0}], vartype='BINARY', energy=0)

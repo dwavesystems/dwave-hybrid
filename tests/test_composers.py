@@ -81,6 +81,17 @@ class TestSplatComposer(unittest.TestCase):
         self.assertEqual(nextstate.samples,
                          SampleSet.from_samples_bqm(self.composed, self.problem))
 
+    def test_dtype(self):
+        bqm = dimod.BQM.from_ising({'a': 0}, {})
+        init = State.from_problem(bqm)
+        state = init.updated(subsamples=init.samples)
+
+        nextstate = SplatComposer().next(state)
+
+        init_dtype = state.samples.record.sample.dtype
+        next_dtype = nextstate.samples.record.sample.dtype
+        self.assertEqual(init_dtype, next_dtype)
+
     def test_traits_enforced(self):
         """Sample composers require `problem`, `samples` and `subsamples`."""
 
