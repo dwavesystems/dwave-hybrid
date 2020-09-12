@@ -606,7 +606,10 @@ def hstack_samplesets(base, *others, **kwargs):
     else:
         energies = bqm.energies((samples, variables))
 
-    return dimod.SampleSet.from_samples((samples, variables), energy=energies, vartype=vartype)
+    return dimod.SampleSet.from_samples(
+        (samples, variables), energy=energies, vartype=vartype,
+        info=None, num_occurrences=None, aggregate_samples=False,
+        sort_labels=False)
 
 
 def vstack_samplesets(*samplesets):
