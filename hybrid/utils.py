@@ -586,8 +586,14 @@ def hstack_samplesets(base, *others, **kwargs):
     # calculate final number of samples
     num_samples = min(len(sampleset) for sampleset in samplesets)
 
+    # determine final dtype
+    dtype = None
+    dtypes = set(ss.record.sample.dtype.name for ss in samplesets)
+    if len(dtypes) == 1:
+        dtype = dtypes.pop()
+
     # prepare empty result sampleset
-    samples = numpy.empty((num_samples, len(variables)))
+    samples = numpy.empty((num_samples, len(variables)), dtype=dtype)
 
     # copy over samplesets, one by one, from left to right
     for ss in samplesets:
