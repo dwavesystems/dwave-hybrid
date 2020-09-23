@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Hybrid ansynchronous solver documentation build configuration file
+# Hybrid asynchronous solver documentation build configuration file
 #
 # This file is execfile()d with the current directory set to its
 # containing dir.
@@ -99,14 +99,21 @@ html_theme = 'sphinx_rtd_theme'
 html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 html_static_path = ['_static']
 
+# Theme options are theme-specific and customize the look and feel of a theme
+# further.  For a list of options available for each theme, see the
+# documentation.
+#
+# html_theme_options = {}
+
 def setup(app):
-   app.add_stylesheet('cookie_notice.css')
-   app.add_javascript('cookie_notice.js')
-   app.add_config_value('target', 'repo', 'env')
+    app.add_css_file('cookie_notice.css')
+    app.add_js_file('cookie_notice.js')
+    app.add_config_value('target', 'repo', 'env')
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'python': ('https://docs.python.org/3', None),
-                       'qbsolv': ('https://docs.ocean.dwavesys.com/projects/qbsolv/en/latest/', None),
-                       'oceandocs': ('https://docs.ocean.dwavesys.com/en/latest/', None),
-                       'sysdocs_gettingstarted': ('https://docs.dwavesys.com/docs/latest/', None),
-                       }
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/3', None),
+    'qbsolv': ('https://docs.ocean.dwavesys.com/projects/qbsolv/en/latest/', None),
+    'oceandocs': ('https://docs.ocean.dwavesys.com/en/latest/', None),
+    'sysdocs_gettingstarted': ('https://docs.dwavesys.com/docs/latest/', None),
+}
