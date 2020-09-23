@@ -16,6 +16,8 @@ Classes
 .. autoclass:: ReverseAnnealingAutoEmbeddingSampler
 .. autoclass:: SimulatedAnnealingProblemSampler
 .. autoclass:: SimulatedAnnealingSubproblemSampler
+.. autoclass:: SteepestDescentProblemSampler
+.. autoclass:: SteepestDescentSubproblemSampler
 .. autoclass:: TabuProblemSampler
 .. autoclass:: TabuSubproblemSampler
 

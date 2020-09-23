@@ -601,7 +601,7 @@ class SteepestDescentSubproblemSampler(traits.SubproblemSampler, traits.SISO, Ru
         initial_states_generator (str, 'none'/'tile'/'random', optional, default='random'):
             Defines the expansion of input state subsamples into `initial_states`
             for the steepest descent, if fewer than `num_reads` subsamples are
-            present. See :meth:`greedy.SteepestDescentSolver.sample`.
+            present. See :meth:`greedy.sampler.SteepestDescentSolver.sample`.
 
     See :ref:`samplers-examples`.
     """
@@ -637,7 +637,7 @@ class SteepestDescentProblemSampler(traits.ProblemSampler, traits.SISO, Runnable
         initial_states_generator (str, 'none'/'tile'/'random', optional, default='random'):
             Defines the expansion of input state samples into `initial_states`
             for the steepest descent, if fewer than `num_reads` samples are
-            present. See :meth:`greedy.SteepestDescentSolver.sample`.
+            present. See :meth:`greedy.sampler.SteepestDescentSolver.sample`.
 
     """
 
