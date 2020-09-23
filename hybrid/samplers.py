@@ -30,6 +30,7 @@ from dwave.embedding.pegasus import find_clique_embedding as find_pegasus_clique
 
 from tabu import TabuSampler
 from neal import SimulatedAnnealingSampler
+from greedy import SteepestDescentSolver
 
 from hybrid.core import Runnable, SampleSet
 from hybrid.flow import Loop
@@ -42,6 +43,8 @@ __all__ = [
     'SimulatedAnnealingSubproblemSampler', 'InterruptableSimulatedAnnealingSubproblemSampler',
     'SimulatedAnnealingProblemSampler', 'InterruptableSimulatedAnnealingProblemSampler',
     'TabuSubproblemSampler', 'TabuProblemSampler', 'InterruptableTabuSampler',
+    'SteepestDescentSubproblemSampler', 'SteepestDescentProblemSampler',
+    'GreedySubproblemSampler', 'GreedyProblemSampler',  # aliases
     'RandomSubproblemSampler',
 ]
 
@@ -586,6 +589,77 @@ class InterruptableTabuSampler(Loop):
     def __init__(self, max_time=None, **tabu):
         super(InterruptableTabuSampler, self).__init__(
             TabuProblemSampler(**tabu), max_time=max_time)
+
+
+class SteepestDescentSubproblemSampler(traits.SubproblemSampler, traits.SISO, Runnable):
+    """A steepest descent solver for a subproblem.
+
+    Args:
+        num_reads (int, optional, default=len(state.subsamples) or 1):
+            Number of states (output solutions) to read from the sampler.
+
+        initial_states_generator (str, 'none'/'tile'/'random', optional, default='random'):
+            Defines the expansion of input state subsamples into `initial_states`
+            for the steepest descent, if fewer than `num_reads` subsamples are
+            present. See :meth:`greedy.sampler.SteepestDescentSolver.sample`.
+
+    See :ref:`samplers-examples`.
+    """
+
+    def __init__(self, num_reads=None, initial_states_generator='random', **runopts):
+        super(SteepestDescentSubproblemSampler, self).__init__(**runopts)
+        self.num_reads = num_reads
+        self.initial_states_generator = initial_states_generator
+        self.sampler = SteepestDescentSolver()
+
+    def __repr__(self):
+        return ("{self}(num_reads={self.num_reads!r}, "
+                       "initial_states_generator={self.initial_states_generator!r})").format(self=self)
+
+    def next(self, state, **runopts):
+        subsamples = self.sampler.sample(
+            state.subproblem, num_reads=self.num_reads,
+            initial_states=state.subsamples,
+            initial_states_generator=self.initial_states_generator)
+        return state.updated(subsamples=subsamples)
+
+# alias
+GreedySubproblemSampler = SteepestDescentSubproblemSampler
+
+
+class SteepestDescentProblemSampler(traits.ProblemSampler, traits.SISO, Runnable):
+    """A steepest descent solver for a complete problem.
+
+    Args:
+        num_reads (int, optional, default=len(state.samples) or 1):
+            Number of states (output solutions) to read from the sampler.
+
+        initial_states_generator (str, 'none'/'tile'/'random', optional, default='random'):
+            Defines the expansion of input state samples into `initial_states`
+            for the steepest descent, if fewer than `num_reads` samples are
+            present. See :meth:`greedy.sampler.SteepestDescentSolver.sample`.
+
+    """
+
+    def __init__(self, num_reads=None, initial_states_generator='random', **runopts):
+        super(SteepestDescentProblemSampler, self).__init__(**runopts)
+        self.num_reads = num_reads
+        self.initial_states_generator = initial_states_generator
+        self.sampler = SimulatedAnnealingSampler()
+
+    def __repr__(self):
+        return ("{self}(num_reads={self.num_reads!r}, "
+                       "initial_states_generator={self.initial_states_generator!r})").format(self=self)
+
+    def next(self, state, **runopts):
+        samples = self.sampler.sample(
+            state.problem, num_reads=self.num_reads,
+            initial_states=state.samples,
+            initial_states_generator=self.initial_states_generator)
+        return state.updated(samples=samples)
+
+# alias
+GreedyProblemSampler = SteepestDescentProblemSampler
 
 
 class RandomSubproblemSampler(traits.SubproblemSampler, traits.SISO, Runnable):
