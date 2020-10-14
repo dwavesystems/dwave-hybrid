@@ -1,5 +1,4 @@
 import os
-from io import open
 from setuptools import setup, find_packages
 
 
@@ -44,7 +43,7 @@ setup(
     long_description=open('README.rst', encoding='utf-8').read(),
     url=package_info['__url__'],
     license=package_info['__license__'],
-    packages=find_packages(),
+    packages=[pkg for pkg in find_packages() if pkg.startswith('hybrid')],
     install_requires=install_requires,
     extras_require=extras_require,
     python_requires=python_requires,
