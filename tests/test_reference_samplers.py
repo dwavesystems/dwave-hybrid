@@ -21,7 +21,7 @@ import hybrid
 from hybrid.reference.kerberos import KerberosSampler
 from hybrid.reference.pa import (
     EnergyWeightedResampler, ProgressBetaAlongSchedule,
-    CalculateAnnealingBetaSchedule
+    CalculateAnnealingBetaSchedule, PopulationAnnealing
 )
 
 
@@ -112,3 +112,25 @@ class TestPopulationAnnealingUtils(unittest.TestCase):
         res = calc.run(state).result()
         self.assertIn('beta_schedule', res)
         self.assertEqual(len(res.beta_schedule), 10)
+
+
+class TestPopulationAnnealing(unittest.TestCase):
+
+    def test_smoke(self):
+        bqm = dimod.BinaryQuadraticModel.from_ising({}, {'ab': 1})
+        state = hybrid.State.from_problem(bqm)
+
+        pa = PopulationAnnealing()
+        ss = pa.run(state).result().samples
+
+        self.assertEqual(ss.first.energy, -1)
+
+    def test_range(self):
+        bqm = dimod.BinaryQuadraticModel({0: -1, 1: 0.01}, {}, 0, 'BINARY')
+        ground = {0: 1, 1: 0}
+        state = hybrid.State.from_problem(bqm)
+
+        pa = PopulationAnnealing(num_reads=1, num_iter=10, num_sweeps=100)
+        ss = pa.run(state).result().samples
+
+        self.assertDictEqual(ss.first.sample, ground)
