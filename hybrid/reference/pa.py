@@ -132,7 +132,7 @@ class CalculateAnnealingBetaSchedule(hybrid.traits.SISO, hybrid.Runnable):
         length (int):
             Length of the produced beta schedule.
 
-        interpolation (str, optional, default='geometric'):
+        interpolation (str, optional, default='linear'):
             Interpolation used between the hot and the cold beta. Supported
             values are:
 
@@ -143,7 +143,7 @@ class CalculateAnnealingBetaSchedule(hybrid.traits.SISO, hybrid.Runnable):
         :meth:`neal.default_beta_range`.
     """
 
-    def __init__(self, length=2, interpolation='geometric', **runopts):
+    def __init__(self, length=2, interpolation='linear', **runopts):
         super(CalculateAnnealingBetaSchedule, self).__init__(**runopts)
         self.length = length
         self.interpolation = interpolation
