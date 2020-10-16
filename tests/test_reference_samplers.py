@@ -47,14 +47,14 @@ class TestWeightedResampler(unittest.TestCase):
         state = hybrid.State(samples=skewed)
 
         # cold sampling
-        res = EnergyWeightedResampler(beta=1, seed=1234).run(state).result()
+        res = EnergyWeightedResampler(delta_beta=1, seed=1234).run(state).result()
         samples = res.samples.aggregate()
 
         self.assertEqual(len(samples), 1)
-        self.assertDictEqual(dict(list(samples.samples())[0]), winner)
+        self.assertDictEqual(samples.first.sample, winner)
 
         # hot sampling
-        res = EnergyWeightedResampler(beta=0, seed=1234).run(state).result()
+        res = EnergyWeightedResampler(delta_beta=0, seed=1234).run(state).result()
         samples = res.samples.aggregate()
 
         self.assertGreater(len(samples), 1)
@@ -68,17 +68,17 @@ class TestWeightedResampler(unittest.TestCase):
             res = EnergyWeightedResampler().run(state).result()
 
         # beta given on construction
-        res = EnergyWeightedResampler(beta=0).run(state).result()
-        self.assertEqual(res.samples.info['beta'], 0)
+        res = EnergyWeightedResampler(delta_beta=0).run(state).result()
+        self.assertEqual(res.samples.info['delta_beta'], 0)
 
         # beta given on runtime, to run method
-        res = EnergyWeightedResampler().run(state, beta=1).result()
-        self.assertEqual(res.samples.info['beta'], 1)
+        res = EnergyWeightedResampler().run(state, delta_beta=1).result()
+        self.assertEqual(res.samples.info['delta_beta'], 1)
 
         # beta given in state
-        state.beta = 2
+        state.delta_beta = 2
         res = EnergyWeightedResampler().run(state).result()
-        self.assertEqual(res.samples.info['beta'], 2)
+        self.assertEqual(res.samples.info['delta_beta'], 2)
 
 
 class TestPopulationAnnealingUtils(unittest.TestCase):

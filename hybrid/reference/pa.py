@@ -14,6 +14,8 @@
 
 """Population annealing support and a reference workflow implementation."""
 
+import warnings
+
 import numpy as np
 
 import neal
@@ -29,15 +31,19 @@ __all__ = ['EnergyWeightedResampler',
 
 class EnergyWeightedResampler(hybrid.traits.SISO, hybrid.Runnable):
     """Sample from the input sample set according to a distribution defined with
-    sample energies (with replacement):
+    sample energies (with replacement) and temperature/beta difference between
+    current and previous population:
 
-        p ~ exp(-sample.energy / temperature) ~ exp(-beta * sample.energy)
+        p ~ exp(-sample.energy / delta_temperature) ~ exp(-delta_beta * sample.energy)
 
     Args:
+        delta_beta (float):
+            Inverse of sampling temperature difference between current and
+            previous population. Can be defined on sampler construction, on run
+            method invocation, or in the input state's ``delta_beta`` variable.
+
         beta (float):
-            Inverse of sampling temperature. Can be defined on sampler
-            construction, on run method invocation, or in the input state's
-            ``beta`` variable.
+            Deprecated. Use 'delta_beta' instead.
 
         seed (int, default=None):
             Pseudo-random number generator seed.
@@ -47,29 +53,39 @@ class EnergyWeightedResampler(hybrid.traits.SISO, hybrid.Runnable):
         the higher will be its relative frequency in the output sample set. 
     """
 
-    def __init__(self, beta=None, seed=None, **runopts):
+    def __init__(self, delta_beta=None, seed=None, beta=None, **runopts):
         super(EnergyWeightedResampler, self).__init__(**runopts)
-        self.beta = beta
+
+        if beta is not None:
+            warnings.warn("'beta' has been replaced with 'delta_beta'.",
+                          DeprecationWarning)
+            if delta_beta is not None:
+                warnings.warn("Ignoring 'beta' since 'delta_beta' is specified.",
+                              SyntaxWarning)
+            else:
+                delta_beta = beta
+
+        self.delta_beta = delta_beta
         self.seed = seed
         self.random = np.random.RandomState(seed)
 
     def next(self, state, **runopts):
-        beta = runopts.get('beta', self.beta)
-        beta = state.get('beta', beta)
-        if beta is None:
-            raise ValueError('beta must be given on construction or during run-time')
+        delta_beta = runopts.get('delta_beta', self.delta_beta)
+        delta_beta = state.get('delta_beta', delta_beta)
+        if delta_beta is None:
+            raise ValueError('delta_beta must be given on construction or during run-time')
 
         ss = state.samples
 
         # calculate weights
-        w = np.exp(-beta * ss.record.energy)
+        w = np.exp(-delta_beta * ss.record.energy)
         p = w / sum(w)
 
         # resample
         idx = self.random.choice(len(ss), len(ss), p=p)
         record = ss.record[idx]
         info = ss.info.copy()
-        info.update(beta=beta)
+        info.update(beta=state.beta, delta_beta=delta_beta)
         new_samples = dimod.SampleSet(record, ss.variables, info, ss.vartype)
 
         return state.updated(samples=new_samples)
@@ -98,9 +114,13 @@ class ProgressBetaAlongSchedule(hybrid.traits.SISO, hybrid.Runnable):
 
     def next(self, state, **runopts):
         try:
-            return state.updated(beta=next(self.beta_schedule))
+            next_beta = next(self.beta_schedule)
         except StopIteration:
             raise hybrid.exceptions.EndOfStream
+
+        beta = state.get('beta', next_beta)
+        delta_beta = next_beta - beta
+        return state.updated(beta=next_beta, delta_beta=delta_beta)
 
 
 class CalculateAnnealingBetaSchedule(hybrid.traits.SISO, hybrid.Runnable):
