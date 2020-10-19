@@ -168,7 +168,7 @@ class CalculateAnnealingBetaSchedule(hybrid.traits.SISO, hybrid.Runnable):
         return state.updated(beta_schedule=beta_schedule)
 
 
-def PopulationAnnealing(num_reads=20, num_iter=20, num_sweeps=1000):
+def PopulationAnnealing(num_reads=100, num_iter=100, num_sweeps=100):
     """Population annealing workflow generator.
 
     Args:
@@ -198,7 +198,7 @@ def PopulationAnnealing(num_reads=20, num_iter=20, num_sweeps=1000):
     return workflow
 
 
-def HybridizedPopulationAnnealing(num_reads=20, num_iter=20, num_sweeps=1000):
+def HybridizedPopulationAnnealing(num_reads=100, num_iter=100, num_sweeps=100):
     """Workflow generator for population annealing initialized with QPU samples.
 
     Args:
