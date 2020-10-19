@@ -57,6 +57,12 @@ class ImmediateExecutor(Executor):
             return Present(exception=exc)
 
 
-thread_executor = ThreadPoolExecutor(max_workers=cpu_count() * 5)
-process_executor = ProcessPoolExecutor(max_workers=cpu_count())
 immediate_executor = ImmediateExecutor()
+thread_executor = ThreadPoolExecutor(max_workers=cpu_count() * 5)
+
+# make `process_executor` optional, since multiprocessing features might not
+# be available in some environments (like AWS Lambda)
+try:
+    process_executor = ProcessPoolExecutor(max_workers=cpu_count())
+except:
+    pass
