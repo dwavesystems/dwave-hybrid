@@ -21,7 +21,7 @@ import hybrid
 from hybrid.reference.kerberos import KerberosSampler
 from hybrid.reference.pa import (
     EnergyWeightedResampler, ProgressBetaAlongSchedule,
-    CalculateAnnealingBetaSchedule
+    CalculateAnnealingBetaSchedule, PopulationAnnealing
 )
 
 
@@ -47,14 +47,14 @@ class TestWeightedResampler(unittest.TestCase):
         state = hybrid.State(samples=skewed)
 
         # cold sampling
-        res = EnergyWeightedResampler(beta=1, seed=1234).run(state).result()
+        res = EnergyWeightedResampler(delta_beta=1, seed=1234).run(state).result()
         samples = res.samples.aggregate()
 
         self.assertEqual(len(samples), 1)
-        self.assertDictEqual(dict(list(samples.samples())[0]), winner)
+        self.assertDictEqual(samples.first.sample, winner)
 
         # hot sampling
-        res = EnergyWeightedResampler(beta=0, seed=1234).run(state).result()
+        res = EnergyWeightedResampler(delta_beta=0, seed=1234).run(state).result()
         samples = res.samples.aggregate()
 
         self.assertGreater(len(samples), 1)
@@ -68,17 +68,17 @@ class TestWeightedResampler(unittest.TestCase):
             res = EnergyWeightedResampler().run(state).result()
 
         # beta given on construction
-        res = EnergyWeightedResampler(beta=0).run(state).result()
-        self.assertEqual(res.samples.info['beta'], 0)
+        res = EnergyWeightedResampler(delta_beta=0).run(state).result()
+        self.assertEqual(res.samples.info['delta_beta'], 0)
 
         # beta given on runtime, to run method
-        res = EnergyWeightedResampler().run(state, beta=1).result()
-        self.assertEqual(res.samples.info['beta'], 1)
+        res = EnergyWeightedResampler().run(state, delta_beta=1).result()
+        self.assertEqual(res.samples.info['delta_beta'], 1)
 
         # beta given in state
-        state.beta = 2
+        state.delta_beta = 2
         res = EnergyWeightedResampler().run(state).result()
-        self.assertEqual(res.samples.info['beta'], 2)
+        self.assertEqual(res.samples.info['delta_beta'], 2)
 
 
 class TestPopulationAnnealingUtils(unittest.TestCase):
@@ -112,3 +112,42 @@ class TestPopulationAnnealingUtils(unittest.TestCase):
         res = calc.run(state).result()
         self.assertIn('beta_schedule', res)
         self.assertEqual(len(res.beta_schedule), 10)
+
+        # user-provided range
+        calc = CalculateAnnealingBetaSchedule(
+            length=3, interpolation='linear', beta_range=[0, 1])
+        res = calc.run(state).result()
+        self.assertIn('beta_schedule', res)
+        self.assertEqual(list(res.beta_schedule), [0, 0.5, 1])
+
+
+class TestPopulationAnnealing(unittest.TestCase):
+
+    def test_smoke(self):
+        bqm = dimod.BinaryQuadraticModel.from_ising({}, {'ab': 1})
+        state = hybrid.State.from_problem(bqm)
+
+        pa = PopulationAnnealing()
+        ss = pa.run(state).result().samples
+
+        self.assertEqual(ss.first.energy, -1)
+
+    def test_range(self):
+        bqm = dimod.BinaryQuadraticModel({0: -1, 1: 0.01}, {}, 0, 'BINARY')
+        ground = {0: 1, 1: 0}
+        state = hybrid.State.from_problem(bqm)
+
+        pa = PopulationAnnealing(num_reads=1, num_iter=10, num_sweeps=100)
+        ss = pa.run(state).result().samples
+
+        self.assertDictEqual(ss.first.sample, ground)
+
+    def test_custom_beta_schedule(self):
+        bqm = dimod.BinaryQuadraticModel({0: -1, 1: 0.01}, {}, 0, 'BINARY')
+        ground = {0: 1, 1: 0}
+        state = hybrid.State.from_problem(bqm)
+
+        pa = PopulationAnnealing(num_reads=1, num_iter=10, num_sweeps=10, beta_range=[0, 1000])
+        ss = pa.run(state).result().samples
+
+        self.assertDictEqual(ss.first.sample, ground)

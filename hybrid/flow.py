@@ -856,7 +856,7 @@ class SimpleIterator(LoopUntilNoImprovement):
         super(SimpleIterator, self).__init__(*args, **kwargs)
 
         warnings.warn("SimpleIterator is deprecated, please use Loop instead.",
-                        DeprecationWarning)
+                      DeprecationWarning)
 
 
 class LoopWhileNoImprovement(LoopUntilNoImprovement):

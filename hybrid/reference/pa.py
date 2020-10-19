@@ -14,6 +14,8 @@
 
 """Population annealing support and a reference workflow implementation."""
 
+import warnings
+
 import numpy as np
 
 import neal
@@ -29,15 +31,19 @@ __all__ = ['EnergyWeightedResampler',
 
 class EnergyWeightedResampler(hybrid.traits.SISO, hybrid.Runnable):
     """Sample from the input sample set according to a distribution defined with
-    sample energies (with replacement):
+    sample energies (with replacement) and temperature/beta difference between
+    current and previous population:
 
-        p ~ exp(-sample.energy / temperature) ~ exp(-beta * sample.energy)
+        p ~ exp(-sample.energy / delta_temperature) ~ exp(-delta_beta * sample.energy)
 
     Args:
+        delta_beta (float):
+            Inverse of sampling temperature difference between current and
+            previous population. Can be defined on sampler construction, on run
+            method invocation, or in the input state's ``delta_beta`` variable.
+
         beta (float):
-            Inverse of sampling temperature. Can be defined on sampler
-            construction, on run method invocation, or in the input state's
-            ``beta`` variable.
+            Deprecated. Use 'delta_beta' instead.
 
         seed (int, default=None):
             Pseudo-random number generator seed.
@@ -47,42 +53,54 @@ class EnergyWeightedResampler(hybrid.traits.SISO, hybrid.Runnable):
         the higher will be its relative frequency in the output sample set. 
     """
 
-    def __init__(self, beta=None, seed=None, **runopts):
+    def __init__(self, delta_beta=None, seed=None, beta=None, **runopts):
         super(EnergyWeightedResampler, self).__init__(**runopts)
-        self.beta = beta
+
+        if beta is not None:
+            warnings.warn("'beta' has been replaced with 'delta_beta'.",
+                          DeprecationWarning)
+            if delta_beta is not None:
+                warnings.warn("Ignoring 'beta' since 'delta_beta' is specified.",
+                              SyntaxWarning)
+            else:
+                delta_beta = beta
+
+        self.delta_beta = delta_beta
         self.seed = seed
         self.random = np.random.RandomState(seed)
 
     def next(self, state, **runopts):
-        beta = runopts.get('beta', self.beta)
-        beta = state.get('beta', beta)
-        if beta is None:
-            raise ValueError('beta must be given on construction or during run-time')
+        delta_beta = runopts.get('delta_beta', self.delta_beta)
+        delta_beta = state.get('delta_beta', delta_beta)
+        if delta_beta is None:
+            raise ValueError('delta_beta must be given on construction or during run-time')
 
         ss = state.samples
 
-        # calculate weights
-        w = np.exp(-beta * ss.record.energy)
+        # calculate weights (note: to avoid overflow, we offset energy, as it
+        # cancels out during probability calc)
+        min_energy = ss.record.energy.min()
+        w = np.exp(-delta_beta * (ss.record.energy - min_energy))
         p = w / sum(w)
 
         # resample
         idx = self.random.choice(len(ss), len(ss), p=p)
         record = ss.record[idx]
         info = ss.info.copy()
-        info.update(beta=beta)
+        info.update(beta=state.beta, delta_beta=delta_beta)
         new_samples = dimod.SampleSet(record, ss.variables, info, ss.vartype)
 
         return state.updated(samples=new_samples)
 
 
 class ProgressBetaAlongSchedule(hybrid.traits.SISO, hybrid.Runnable):
-    """Sets ``beta`` state variable to a schedule given on construction or in
-    state at first run.
+    """Sets ``beta`` and ``delta_beta`` state variables according to a schedule
+    given on construction or in state at first run call.
 
     Args:
         beta_schedule (iterable(float)):
-            The beta schedule. State's ``beta`` is iterated according to the
-            beta schedule.
+            The beta schedule. State's ``beta``/``delta_beta`` are iterated
+            according to the beta schedule.
 
     Raises:
         :exc:`~hybrid.exceptions.EndOfStream` when beta schedule is depleted.
@@ -98,9 +116,13 @@ class ProgressBetaAlongSchedule(hybrid.traits.SISO, hybrid.Runnable):
 
     def next(self, state, **runopts):
         try:
-            return state.updated(beta=next(self.beta_schedule))
+            next_beta = next(self.beta_schedule)
         except StopIteration:
             raise hybrid.exceptions.EndOfStream
+
+        beta = state.get('beta', next_beta)
+        delta_beta = next_beta - beta
+        return state.updated(beta=next_beta, delta_beta=delta_beta)
 
 
 class CalculateAnnealingBetaSchedule(hybrid.traits.SISO, hybrid.Runnable):
@@ -112,27 +134,38 @@ class CalculateAnnealingBetaSchedule(hybrid.traits.SISO, hybrid.Runnable):
         length (int):
             Length of the produced beta schedule.
 
-        interpolation (str, optional, default='geometric'):
+        interpolation (str, optional, default='linear'):
             Interpolation used between the hot and the cold beta. Supported
             values are:
 
             * linear
             * geometric
 
-    See:
-        :meth:`neal.default_beta_range`.
+        beta_range (tuple[float], optional):
+            A 2-tuple defining the beginning and end of the beta schedule,
+            where beta is the inverse temperature. The schedule is derived by
+            interpolating the range with ``interpolation`` method. Default range
+            is set based on the total bias associated with each node (see
+            :meth:`neal.default_beta_range`).
+
     """
 
-    def __init__(self, length=2, interpolation='geometric', **runopts):
+    def __init__(self, length=2, interpolation='linear', beta_range=None, **runopts):
         super(CalculateAnnealingBetaSchedule, self).__init__(**runopts)
         self.length = length
         self.interpolation = interpolation
+        self.beta_range = beta_range
 
     def next(self, state, **runopts):
         bqm = state.problem
 
-        # get a reasonable beta range
-        beta_hot, beta_cold = neal.default_beta_range(bqm)
+        if self.beta_range is None:
+            # get a reasonable beta range
+            beta_range = neal.default_beta_range(bqm)
+        else:
+            beta_range = self.beta_range
+
+        beta_hot, beta_cold = beta_range
 
         # generate betas
         if self.interpolation == 'linear':
@@ -146,7 +179,8 @@ class CalculateAnnealingBetaSchedule(hybrid.traits.SISO, hybrid.Runnable):
         return state.updated(beta_schedule=beta_schedule)
 
 
-def PopulationAnnealing(num_reads=20, num_iter=20, num_sweeps=1000):
+def PopulationAnnealing(num_reads=100, num_iter=100, num_sweeps=100,
+                        beta_range=None):
     """Population annealing workflow generator.
 
     Args:
@@ -160,13 +194,23 @@ def PopulationAnnealing(num_reads=20, num_iter=20, num_sweeps=1000):
         num_sweeps (int):
             Number of sweeps in the fixed temperature sampling step.
 
+        beta_range (tuple[float], optional):
+            A 2-tuple defining the beginning and end of the beta
+            schedule, where beta is the inverse temperature. Passed to
+            :class:`.CalculateAnnealingBetaSchedule` for linear schedule
+            generation.
+
     Returns:
         Workflow (:class:`~hybrid.core.Runnable` instance).
     """
 
     # PA workflow: after initial beta schedule estimation, we do `num_iter` steps
     # (one per beta/temperature) of fixed-temperature sampling / weighted resampling
-    workflow = CalculateAnnealingBetaSchedule(length=num_iter) | hybrid.Loop(
+
+    schedule_init = CalculateAnnealingBetaSchedule(
+        length=num_iter, beta_range=beta_range, interpolation='linear')
+
+    workflow = schedule_init | hybrid.Loop(
         ProgressBetaAlongSchedule()
         | hybrid.FixedTemperatureSampler(num_sweeps=num_sweeps, num_reads=num_reads)
         | EnergyWeightedResampler(),
@@ -176,7 +220,8 @@ def PopulationAnnealing(num_reads=20, num_iter=20, num_sweeps=1000):
     return workflow
 
 
-def HybridizedPopulationAnnealing(num_reads=20, num_iter=20, num_sweeps=1000):
+def HybridizedPopulationAnnealing(num_reads=100, num_iter=100, num_sweeps=100,
+                                  beta_range=None):
     """Workflow generator for population annealing initialized with QPU samples.
 
     Args:
@@ -189,6 +234,12 @@ def HybridizedPopulationAnnealing(num_reads=20, num_iter=20, num_sweeps=1000):
 
         num_sweeps (int):
             Number of sweeps in the fixed temperature sampling step.
+
+        beta_range (tuple[float], optional):
+            A 2-tuple defining the beginning and end of the beta
+            schedule, where beta is the inverse temperature. Passed to
+            :class:`.CalculateAnnealingBetaSchedule` for linear schedule
+            generation.
 
     Returns:
         Workflow (:class:`~hybrid.core.Runnable` instance).
@@ -204,7 +255,11 @@ def HybridizedPopulationAnnealing(num_reads=20, num_iter=20, num_sweeps=1000):
     # PA workflow: after initial QPU sampling and initial beta schedule estimation,
     # we do `num_iter` steps (one per beta/temperature) of fixed-temperature
     # sampling / weighted resampling
-    workflow = qpu_init | CalculateAnnealingBetaSchedule(length=num_iter) | hybrid.Loop(
+
+    schedule_init = CalculateAnnealingBetaSchedule(
+        length=num_iter, beta_range=beta_range, interpolation='linear')
+
+    workflow = qpu_init | schedule_init | hybrid.Loop(
         ProgressBetaAlongSchedule()
         | hybrid.FixedTemperatureSampler(num_sweeps=num_sweeps)
         | EnergyWeightedResampler(),
