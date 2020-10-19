@@ -179,7 +179,8 @@ class CalculateAnnealingBetaSchedule(hybrid.traits.SISO, hybrid.Runnable):
         return state.updated(beta_schedule=beta_schedule)
 
 
-def PopulationAnnealing(num_reads=100, num_iter=100, num_sweeps=100):
+def PopulationAnnealing(num_reads=100, num_iter=100, num_sweeps=100,
+                        beta_range=None):
     """Population annealing workflow generator.
 
     Args:
@@ -193,13 +194,23 @@ def PopulationAnnealing(num_reads=100, num_iter=100, num_sweeps=100):
         num_sweeps (int):
             Number of sweeps in the fixed temperature sampling step.
 
+        beta_range (tuple[float], optional):
+            A 2-tuple defining the beginning and end of the beta
+            schedule, where beta is the inverse temperature. Passed to
+            :class:`.CalculateAnnealingBetaSchedule` for linear schedule
+            generation.
+
     Returns:
         Workflow (:class:`~hybrid.core.Runnable` instance).
     """
 
     # PA workflow: after initial beta schedule estimation, we do `num_iter` steps
     # (one per beta/temperature) of fixed-temperature sampling / weighted resampling
-    workflow = CalculateAnnealingBetaSchedule(length=num_iter) | hybrid.Loop(
+
+    schedule_init = CalculateAnnealingBetaSchedule(
+        length=num_iter, beta_range=beta_range, interpolation='linear')
+
+    workflow = schedule_init | hybrid.Loop(
         ProgressBetaAlongSchedule()
         | hybrid.FixedTemperatureSampler(num_sweeps=num_sweeps, num_reads=num_reads)
         | EnergyWeightedResampler(),
@@ -209,7 +220,8 @@ def PopulationAnnealing(num_reads=100, num_iter=100, num_sweeps=100):
     return workflow
 
 
-def HybridizedPopulationAnnealing(num_reads=100, num_iter=100, num_sweeps=100):
+def HybridizedPopulationAnnealing(num_reads=100, num_iter=100, num_sweeps=100,
+                                  beta_range=None):
     """Workflow generator for population annealing initialized with QPU samples.
 
     Args:
@@ -222,6 +234,12 @@ def HybridizedPopulationAnnealing(num_reads=100, num_iter=100, num_sweeps=100):
 
         num_sweeps (int):
             Number of sweeps in the fixed temperature sampling step.
+
+        beta_range (tuple[float], optional):
+            A 2-tuple defining the beginning and end of the beta
+            schedule, where beta is the inverse temperature. Passed to
+            :class:`.CalculateAnnealingBetaSchedule` for linear schedule
+            generation.
 
     Returns:
         Workflow (:class:`~hybrid.core.Runnable` instance).
@@ -237,7 +255,11 @@ def HybridizedPopulationAnnealing(num_reads=100, num_iter=100, num_sweeps=100):
     # PA workflow: after initial QPU sampling and initial beta schedule estimation,
     # we do `num_iter` steps (one per beta/temperature) of fixed-temperature
     # sampling / weighted resampling
-    workflow = qpu_init | CalculateAnnealingBetaSchedule(length=num_iter) | hybrid.Loop(
+
+    schedule_init = CalculateAnnealingBetaSchedule(
+        length=num_iter, beta_range=beta_range, interpolation='linear')
+
+    workflow = qpu_init | schedule_init | hybrid.Loop(
         ProgressBetaAlongSchedule()
         | hybrid.FixedTemperatureSampler(num_sweeps=num_sweeps)
         | EnergyWeightedResampler(),

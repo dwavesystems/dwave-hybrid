@@ -141,3 +141,13 @@ class TestPopulationAnnealing(unittest.TestCase):
         ss = pa.run(state).result().samples
 
         self.assertDictEqual(ss.first.sample, ground)
+
+    def test_custom_beta_schedule(self):
+        bqm = dimod.BinaryQuadraticModel({0: -1, 1: 0.01}, {}, 0, 'BINARY')
+        ground = {0: 1, 1: 0}
+        state = hybrid.State.from_problem(bqm)
+
+        pa = PopulationAnnealing(num_reads=1, num_iter=10, num_sweeps=10, beta_range=[0, 1000])
+        ss = pa.run(state).result().samples
+
+        self.assertDictEqual(ss.first.sample, ground)
