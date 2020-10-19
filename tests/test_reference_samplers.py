@@ -113,6 +113,13 @@ class TestPopulationAnnealingUtils(unittest.TestCase):
         self.assertIn('beta_schedule', res)
         self.assertEqual(len(res.beta_schedule), 10)
 
+        # user-provided range
+        calc = CalculateAnnealingBetaSchedule(
+            length=3, interpolation='linear', beta_range=[0, 1])
+        res = calc.run(state).result()
+        self.assertIn('beta_schedule', res)
+        self.assertEqual(list(res.beta_schedule), [0, 0.5, 1])
+
 
 class TestPopulationAnnealing(unittest.TestCase):
 

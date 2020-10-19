@@ -141,20 +141,31 @@ class CalculateAnnealingBetaSchedule(hybrid.traits.SISO, hybrid.Runnable):
             * linear
             * geometric
 
-    See:
-        :meth:`neal.default_beta_range`.
+        beta_range (tuple[float], optional):
+            A 2-tuple defining the beginning and end of the beta schedule,
+            where beta is the inverse temperature. The schedule is derived by
+            interpolating the range with ``interpolation`` method. Default range
+            is set based on the total bias associated with each node (see
+            :meth:`neal.default_beta_range`).
+
     """
 
-    def __init__(self, length=2, interpolation='linear', **runopts):
+    def __init__(self, length=2, interpolation='linear', beta_range=None, **runopts):
         super(CalculateAnnealingBetaSchedule, self).__init__(**runopts)
         self.length = length
         self.interpolation = interpolation
+        self.beta_range = beta_range
 
     def next(self, state, **runopts):
         bqm = state.problem
 
-        # get a reasonable beta range
-        beta_hot, beta_cold = neal.default_beta_range(bqm)
+        if self.beta_range is None:
+            # get a reasonable beta range
+            beta_range = neal.default_beta_range(bqm)
+        else:
+            beta_range = self.beta_range
+
+        beta_hot, beta_cold = beta_range
 
         # generate betas
         if self.interpolation == 'linear':
