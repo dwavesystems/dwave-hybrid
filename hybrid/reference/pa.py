@@ -77,8 +77,10 @@ class EnergyWeightedResampler(hybrid.traits.SISO, hybrid.Runnable):
 
         ss = state.samples
 
-        # calculate weights
-        w = np.exp(-delta_beta * ss.record.energy)
+        # calculate weights (note: to avoid overflow, we offset energy, as it
+        # cancels out during probability calc)
+        min_energy = ss.record.energy.min()
+        w = np.exp(-delta_beta * (ss.record.energy - min_energy))
         p = w / sum(w)
 
         # resample
@@ -92,13 +94,13 @@ class EnergyWeightedResampler(hybrid.traits.SISO, hybrid.Runnable):
 
 
 class ProgressBetaAlongSchedule(hybrid.traits.SISO, hybrid.Runnable):
-    """Sets ``beta`` state variable to a schedule given on construction or in
-    state at first run.
+    """Sets ``beta`` and ``delta_beta`` state variables according to a schedule
+    given on construction or in state at first run call.
 
     Args:
         beta_schedule (iterable(float)):
-            The beta schedule. State's ``beta`` is iterated according to the
-            beta schedule.
+            The beta schedule. State's ``beta``/``delta_beta`` are iterated
+            according to the beta schedule.
 
     Raises:
         :exc:`~hybrid.exceptions.EndOfStream` when beta schedule is depleted.
