@@ -13,7 +13,8 @@
 # limitations under the License.
 
 """
-Classical and quantum :class:`.Runnable` `dimod <http://dimod.readthedocs.io/en/stable/>`_
+Classical and quantum :class:`.Runnable`
+`dimod <https://docs.ocean.dwavesys.com/en/stable/docs_dimod/sdk_index.html>`_
 samplers for problems and subproblems.
 """
 
@@ -230,7 +231,7 @@ class QPUSubproblemAutoEmbeddingSampler(traits.SubproblemSampler, traits.SISO, R
         params.update(num_reads=num_reads)
 
         num_retries = runopts.get('num_retries', self.num_retries)
-        
+
         embedding_success = False
         num_tries = 0
 
