@@ -55,7 +55,7 @@ Documentation
 
   Ocean Home <https://ocean.dwavesys.com/>
   Ocean Documentation <https://docs.ocean.dwavesys.com>
-  Ocean Glossary <https://docs.ocean.dwavesys.com/en/latest/glossary.html>
+  Ocean Glossary <https://docs.ocean.dwavesys.com/en/stable/concepts/index.html>
 
 .. toctree::
   :caption: D-Wave
@@ -72,4 +72,4 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-* `Glossary <https://docs.ocean.dwavesys.com/en/latest/glossary.html>`_
+* `Glossary <https://docs.ocean.dwavesys.com/en/stable/concepts/index.html>`_
