@@ -1,10 +1,10 @@
-dimod>=0.8.11
-numpy>=1.15.4
-minorminer>=0.1.7
-dwave-system>=0.7.6
+dimod>=0.9.11
+numpy>=1.19.4
+minorminer>=0.2.0
+dwave-system>=1.0.0
 dwave-neal>=0.5.1
-dwave-tabu>=0.2.0
-dwave-greedy>=0.1.0
+dwave-tabu>=0.4.0
+dwave-greedy>=0.2.0
 networkx
 dwave-networkx>=0.8.6
 click

@@ -54,11 +54,6 @@ jobs:
     docker:
       - image: circleci/python:3.6.12
 
-  test-3.5:
-    <<: *test-linux-template
-    docker:
-      - image: circleci/python:3.5.10
-
   #
   # macos
   #
@@ -117,11 +112,6 @@ jobs:
     environment:
       PYTHON: 3.6.12
 
-  test-osx-3.5:
-    <<: *test-osx-template
-    environment:
-      PYTHON: 3.5.10
-
   #
   # deploy
   #
@@ -147,12 +137,10 @@ workflows:
       - test-3.8
       - test-3.7
       - test-3.6
-      - test-3.5
       - test-osx-3.9
       - test-osx-3.8
       - test-osx-3.7
       - test-osx-3.6
-      - test-osx-3.5
 
   deploy:
     jobs:
