@@ -121,7 +121,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          key: v1-dependencies-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ checksum "docs/requirements.txt" }}-test-3.8
+          key: v1-dependencies-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ checksum "docs/requirements.txt" }}-test-3.9
       - run: env/bin/pip install wheel twine
       - run: env/bin/python setup.py sdist bdist_wheel
       - store_artifacts:
