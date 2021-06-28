@@ -651,7 +651,9 @@ class HybridRunnable(Runnable):
         self.input, self.output = fields
 
     def next(self, state, **sample_kwargs):
-        response = self.sampler.sample(state[self.input], **sample_kwargs)
+        known_params = self.sampler.parameters
+        sample_params = {k: v for k, v in sample_kwargs.items() if k in known_params}
+        response = self.sampler.sample(state[self.input], **sample_params)
         return state.updated(**{self.output: response})
 
 
