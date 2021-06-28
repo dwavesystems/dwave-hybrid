@@ -187,13 +187,13 @@ class TestTabuSamplers(unittest.TestCase):
         bqm = dimod.BinaryQuadraticModel({}, {'ab': 1}, 0, 'SPIN')
         sampleset = dimod.SampleSet.from_samples_bqm([{'a': 1, 'b': -1},
                                                       {'a': -1, 'b': 1}], bqm)
-        state = State(problem=bqm, samples=sampleset)
+        state = State(problem=bqm, samples=sampleset.copy())
 
         # with timeout=0, TabuSampler should just return the initial_states
-        result = TabuProblemSampler(timeout=0).run(state).result()
         expected = sampleset.record.sample
+        result = TabuProblemSampler(timeout=0).run(state).result()
 
-        self.assertTrue(np.array_equal(result.samples.record.sample, expected))
+        np.testing.assert_array_equal(result.samples.record.sample, expected)
         self.assertEqual(len(result.samples), 2)
 
         # test input samples are tiled
@@ -202,7 +202,7 @@ class TestTabuSamplers(unittest.TestCase):
 
         expected = np.tile(sampleset.record.sample, (2,1))
 
-        self.assertTrue(np.array_equal(result.samples.record.sample, expected))
+        np.testing.assert_array_equal(result.samples.record.sample, expected)
         self.assertEqual(len(result.samples), 4)
 
     def test_tabu_subproblem_sampler(self):
@@ -221,13 +221,13 @@ class TestTabuSamplers(unittest.TestCase):
         bqm = dimod.BinaryQuadraticModel({}, {'ab': 1}, 0, 'SPIN')
         sampleset = dimod.SampleSet.from_samples_bqm([{'a': 1, 'b': -1},
                                                       {'a': -1, 'b': 1}], bqm)
-        state = State(subproblem=bqm, subsamples=sampleset)
+        state = State(subproblem=bqm, subsamples=sampleset.copy())
 
         # with timeout=0, TabuSampler should just return the initial_states
         result = TabuSubproblemSampler(timeout=0).run(state).result()
         expected = sampleset.record.sample
 
-        self.assertTrue(np.array_equal(result.subsamples.record.sample, expected))
+        np.testing.assert_array_equal(result.subsamples.record.sample, expected)
         self.assertEqual(len(result.subsamples), 2)
 
         # test input samples are tiled
@@ -236,7 +236,7 @@ class TestTabuSamplers(unittest.TestCase):
 
         expected = np.tile(sampleset.record.sample, (2,1))
 
-        self.assertTrue(np.array_equal(result.subsamples.record.sample, expected))
+        np.testing.assert_array_equal(result.subsamples.record.sample, expected)
         self.assertEqual(len(result.subsamples), 4)
 
     def test_interruptable_tabu(self):
