@@ -470,6 +470,38 @@ class TestHybridRunnable(unittest.TestCase):
         self.assertIsInstance(response, concurrent.futures.Future)
         self.assertEqual(response.result().samples.record[0].energy, -3.0)
 
+    def test_racing_workflow_with_oracle_subsolver(self):
+        workflow = hybrid.LoopUntilNoImprovement(hybrid.RacingBranches(
+            hybrid.InterruptableTabuSampler(),
+            hybrid.EnergyImpactDecomposer(size=1)
+            | HybridSubproblemRunnable(dimod.ExactSolver())
+            | hybrid.SplatComposer()
+        ) | hybrid.ArgMin(), convergence=3)
+        state = State.from_sample(min_sample(self.bqm), self.bqm)
+        response = workflow.run(state)
+
+        self.assertIsInstance(response, concurrent.futures.Future)
+        self.assertEqual(response.result().samples.record[0].energy, -3.0)
+
+    def test_sampling_parameters_filtering(self):
+        class Sampler(dimod.ExactSolver):
+            """Exact solver that fails if a sampling parameter is provided."""
+            parameters = {}
+            def sample(self, bqm):
+                return super().sample(bqm)
+
+        workflow = hybrid.LoopUntilNoImprovement(hybrid.RacingBranches(
+            hybrid.InterruptableTabuSampler(),
+            hybrid.EnergyImpactDecomposer(size=1)
+            | HybridSubproblemRunnable(Sampler())
+            | hybrid.SplatComposer()
+        ) | hybrid.ArgMin(), convergence=3)
+        state = State.from_sample(min_sample(self.bqm), self.bqm)
+        response = workflow.run(state)
+
+        self.assertIsInstance(response, concurrent.futures.Future)
+        self.assertEqual(response.result().samples.record[0].energy, -3.0)
+
 
 class TestLogging(unittest.TestCase):
 
