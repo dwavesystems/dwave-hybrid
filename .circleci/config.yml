@@ -192,7 +192,7 @@ workflows:
           matrix:
             parameters:
               python-version: &python-versions ["3.6.12", "3.7.9", "3.8.6", "3.9.0"]
-              dimod-version: ["~=0.8.0,>=0.8.11", "~=0.9.0"]
+              dimod-version: ["~=0.8.0,>=0.8.11", "~=0.9.0", "~=0.10.0,>0.10.4"]
 
       - test-macos:
           name: test-macos-py<< matrix.python-version >>
