@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import time
 import logging
 import warnings
@@ -20,16 +21,19 @@ from operator import attrgetter
 from functools import partial
 from itertools import chain
 
+from dwave.cloud.utils import utcnow
+
 from hybrid.core import Runnable, State, States, stoppable
 from hybrid.concurrency import Present, immediate_executor
 from hybrid.exceptions import EndOfStream
+from hybrid.utils import OceanEncoder
 from hybrid import traits
 
 __all__ = [
     'Branch', 'Branches', 'RacingBranches', 'Race', 'ParallelBranches', 'Parallel',
     'Map', 'Reduce', 'Lambda', 'ArgMin', 'Unwind', 'TrackMin',
     'Loop', 'LoopUntilNoImprovement', 'LoopWhileNoImprovement',
-    'Identity', 'BlockingIdentity', 'Dup', 'Const', 'Wait'
+    'Identity', 'BlockingIdentity', 'Dup', 'Const', 'Wait', 'Log',
 ]
 
 logger = logging.getLogger(__name__)
@@ -1065,3 +1069,59 @@ class Const(traits.NotValidated, Runnable):
 
     def next(self, state, **runopts):
         return state.updated(**self.consts)
+
+
+class Log(traits.NotValidated, Runnable):
+    """Tracks and logs user-defined data (e.g. state metrics) extracted from
+    state by the ``key`` function.
+
+    Args:
+        key (callable):
+            Data/metric(s) extractor. A callable that receives a state, and
+            returns a mapping of values to names::
+
+                key: Callable[State] -> Mapping[str, Any]
+
+            Data returned by the key function is stored under ``data`` key of
+            the produced log record. In addition to ``data``, UTC ``time`` (in
+            ISO-8601 format) and a monotonic float ``timestamp`` (secods since
+            the epoch) are always stored in the log record.
+
+        extra (dict, optional):
+            Static extra items to add to each log record.
+
+        outfile (file, optional):
+            A file opened in text + write/append mode. JSON log record is
+            written on each runnable iteration and optionally flushed, depending
+            on `buffering` argument.
+
+        buffering (bool, optional, default=True):
+            When buffering is set to False, output to `outfile` is flushed on
+            each iteration.
+
+    """
+
+    def __init__(self, key, extra=None, outfile=None, buffering=False, **runopts):
+        super().__init__(**runopts)
+        if not callable(key):
+            raise TypeError("callable 'key' expected")
+        self.key = key
+        self.extra = extra
+        self.outfile = outfile
+        self.buffering = buffering
+
+    def __repr__(self):
+        return (f"{self.name}(key={self.key!r}, extra={self.extra!r}, "
+                f"outfile={self.outfile!r}, buffering={self.buffering!r})")
+
+    def next(self, state, **runopts):
+        data = self.key(state)
+        record = dict(time=utcnow(), timestamp=time.monotonic(), data=data)
+        if self.extra is not None:
+            record.update(self.extra)
+
+        if self.outfile:
+            line = json.dumps(record, cls=OceanEncoder)
+            print(line, file=self.outfile, flush=not self.buffering)
+
+        return state
