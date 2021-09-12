@@ -153,7 +153,7 @@ def bqm_induced_by(bqm, variables, sample):
         subbqm.add_variable(u, bias)
 
     # no point in having offset since we're fixing only variables on boundary
-    subbqm.remove_offset()
+    subbqm.offset = 0
 
     return subbqm
 
@@ -178,8 +178,9 @@ def bqm_edges_between_variables(bqm, variables):
 
         >>> import dimod
         >>> bqm = dimod.BQM({}, {(0, 1): 1, (1, 2): 1, (2, 3): 1}, 0, 'BINARY')
-        >>> bqm_edges_between_variables(bqm, {0, 1, 3})
-        [(0, 1), (0, 0), (1, 1), (3, 3)]
+        >>> edges = bqm_edges_between_variables(bqm, {0, 1, 3})
+        >>> edges       # doctest: +SKIP
+        [(0, 1), (0, 0), (1, 1), (3, 3)]    # note: order not defined
 
     """
     variables = set(variables)
@@ -598,7 +599,7 @@ def hstack_samplesets(base, *others, **kwargs):
     # copy over samplesets, one by one, from left to right
     for ss in samplesets:
         ss.change_vartype(vartype)
-        mask = [variables.index[v] for v in ss.variables]
+        mask = [variables.index(v) for v in ss.variables]
         samples[:, mask] = ss.record.sample[:num_samples]
 
     if bqm is None:
