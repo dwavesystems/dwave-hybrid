@@ -352,7 +352,11 @@ class TestGreedySamplers(unittest.TestCase):
         self.assertEqual(result.samples.first.energy, -3)
         self.assertEqual(len(result.samples), 10)
 
-    def test_greedy_problem_sampler_initialization(self):
+    @parameterized.expand([
+        (GreedyProblemSampler, State.from_problem, attrgetter('samples')),
+        (GreedySubproblemSampler, State.from_subproblem, attrgetter('subsamples'))
+    ])
+    def test_greedy_samplers_initialization(self, sampler_cls, state_gen, get_samples):
         # a convex section of hyperbolic paraboloid in the Ising space,
         # with global minimum at (-1,-1)
         bqm = dimod.BinaryQuadraticModel.from_ising({0: 2, 1: 2}, {(0, 1): -1})
@@ -360,43 +364,20 @@ class TestGreedySamplers(unittest.TestCase):
                                                       {0: -1, 1: 1}], bqm)
         ground = dimod.SampleSet.from_samples_bqm([{0: -1, 1: -1},
                                                    {0: -1, 1: -1}], bqm)
-        state = State(problem=bqm, samples=sampleset)
+        state = state_gen(bqm, sampleset)
 
         # implicit number of samples
-        result = GreedyProblemSampler().run(state).result()
-        self.assertEqual(len(result.samples), 2)
+        result = sampler_cls().run(state).result()
+        self.assertEqual(len(get_samples(result)), 2)
 
         # test input samples are tiled
-        result = GreedyProblemSampler(
+        result = sampler_cls(
             num_reads=4, initial_states_generator="tile").run(state).result()
 
         expected = np.tile(ground.record.sample, (2,1))
 
-        self.assertTrue(np.array_equal(result.samples.record.sample, expected))
-        self.assertEqual(len(result.samples), 4)
-
-    def test_greedy_subproblem_sampler_initialization(self):
-        # a convex section of hyperbolic paraboloid in the Ising space,
-        # with global minimum at (-1,-1)
-        bqm = dimod.BinaryQuadraticModel.from_ising({0: 2, 1: 2}, {(0, 1): -1})
-        sampleset = dimod.SampleSet.from_samples_bqm([{0: 1, 1: -1},
-                                                      {0: -1, 1: 1}], bqm)
-        ground = dimod.SampleSet.from_samples_bqm([{0: -1, 1: -1},
-                                                   {0: -1, 1: -1}], bqm)
-        state = State(subproblem=bqm, subsamples=sampleset)
-
-        # implicit number of samples
-        result = GreedySubproblemSampler().run(state).result()
-        self.assertEqual(len(result.subsamples), 2)
-
-        # test input samples are tiled
-        result = GreedySubproblemSampler(
-            num_reads=4, initial_states_generator="tile").run(state).result()
-
-        expected = np.tile(ground.record.sample, (2,1))
-
-        self.assertTrue(np.array_equal(result.subsamples.record.sample, expected))
-        self.assertEqual(len(result.subsamples), 4)
+        self.assertTrue(np.array_equal(get_samples(result).record.sample, expected))
+        self.assertEqual(len(get_samples(result)), 4)
 
     @parameterized.expand([
         (GreedyProblemSampler, State.from_problem, attrgetter('samples')),
