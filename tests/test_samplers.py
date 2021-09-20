@@ -17,8 +17,9 @@ import time
 from operator import attrgetter
 
 import numpy as np
+from parameterized import parameterized_class
+
 import dimod
-from parameterized import parameterized
 from neal import SimulatedAnnealingSampler
 from dwave.system.testing import MockDWaveSampler
 
@@ -327,36 +328,37 @@ class TestSASamplers(unittest.TestCase):
         self.assertEqual(len(result.subsamples), 4)
 
 
+@parameterized_class(("sampler_cls", "state_gen", "get_samples"), [
+    (GreedyProblemSampler, State.from_problem, attrgetter('samples')),
+    (GreedySubproblemSampler, State.from_subproblem, attrgetter('subsamples')),
+])
 class TestGreedySamplers(unittest.TestCase):
 
-    def test_greedy_problem_sampler_interface(self):
+    def test_greedy_sampler_interface(self):
         bqm = dimod.BinaryQuadraticModel({'a': 1}, {}, 0, 'SPIN')
 
-        workflow = GreedyProblemSampler(num_reads=10)
+        workflow = self.sampler_cls(num_reads=10)
 
-        init = State.from_sample({'a': 1}, bqm)
+        init = self.state_gen(bqm, {'a': 1})
         result = workflow.run(init).result()
 
-        self.assertEqual(result.samples.first.energy, -1)
-        self.assertEqual(len(result.samples), 10)
+        samples = self.get_samples(result)
+        self.assertEqual(samples.first.energy, -1)
+        self.assertEqual(len(samples), 10)
 
-    def test_greedy_problem_sampler_functionality(self):
+    def test_greedy_sampler_functionality(self):
         bqm = dimod.BinaryQuadraticModel({}, {'ab': 1, 'bc': -1, 'ca': 1}, 0, 'SPIN')
 
-        workflow = GreedyProblemSampler(num_reads=10)
+        workflow = self.sampler_cls(num_reads=10)
 
-        # use a random sample as initial value
-        init = State(problem=bqm, samples=None)
+        init = self.state_gen(bqm, random_sample)
         result = workflow.run(init).result()
 
-        self.assertEqual(result.samples.first.energy, -3)
-        self.assertEqual(len(result.samples), 10)
+        samples = self.get_samples(result)
+        self.assertEqual(samples.first.energy, -3)
+        self.assertEqual(len(samples), 10)
 
-    @parameterized.expand([
-        (GreedyProblemSampler, State.from_problem, attrgetter('samples')),
-        (GreedySubproblemSampler, State.from_subproblem, attrgetter('subsamples'))
-    ])
-    def test_greedy_samplers_initialization(self, sampler_cls, state_gen, get_samples):
+    def test_greedy_sampler_initialization(self):
         # a convex section of hyperbolic paraboloid in the Ising space,
         # with global minimum at (-1,-1)
         bqm = dimod.BinaryQuadraticModel.from_ising({0: 2, 1: 2}, {(0, 1): -1})
@@ -364,35 +366,32 @@ class TestGreedySamplers(unittest.TestCase):
                                                       {0: -1, 1: 1}], bqm)
         ground = dimod.SampleSet.from_samples_bqm([{0: -1, 1: -1},
                                                    {0: -1, 1: -1}], bqm)
-        state = state_gen(bqm, sampleset)
+        state = self.state_gen(bqm, sampleset)
 
         # implicit number of samples
-        result = sampler_cls().run(state).result()
-        self.assertEqual(len(get_samples(result)), 2)
+        result = self.sampler_cls().run(state).result()
+        self.assertEqual(len(self.get_samples(result)), 2)
 
         # test input samples are tiled
-        result = sampler_cls(
+        result = self.sampler_cls(
             num_reads=4, initial_states_generator="tile").run(state).result()
 
         expected = np.tile(ground.record.sample, (2,1))
 
-        self.assertTrue(np.array_equal(get_samples(result).record.sample, expected))
-        self.assertEqual(len(get_samples(result)), 4)
+        samples = self.get_samples(result)
+        self.assertTrue(np.array_equal(samples.record.sample, expected))
+        self.assertEqual(len(samples), 4)
 
-    @parameterized.expand([
-        (GreedyProblemSampler, State.from_problem, attrgetter('samples')),
-        (GreedySubproblemSampler, State.from_subproblem, attrgetter('subsamples'))
-    ])
-    def test_greedy_samplers_is_monotonic(self, sampler_cls, state_gen, get_samples):
-        workflow = sampler_cls(num_reads=1)
+    def test_greedy_sampler_is_monotonic(self):
+        workflow = self.sampler_cls(num_reads=1)
 
         bqm = dimod.generators.ran_r(32, 32)
-        state = state_gen(bqm)
+        state = self.state_gen(bqm)
 
         trials = 32
         for _ in range(trials):
             next_state = workflow.run(state).result()
             self.assertLessEqual(
-                get_samples(next_state).first.energy,
-                get_samples(state).first.energy)
+                self.get_samples(next_state).first.energy,
+                self.get_samples(state).first.energy)
             state = next_state
