@@ -646,7 +646,7 @@ class SteepestDescentProblemSampler(traits.ProblemSampler, traits.SISO, Runnable
         super(SteepestDescentProblemSampler, self).__init__(**runopts)
         self.num_reads = num_reads
         self.initial_states_generator = initial_states_generator
-        self.sampler = SimulatedAnnealingSampler()
+        self.sampler = SteepestDescentSolver()
 
     def __repr__(self):
         return ("{self}(num_reads={self.num_reads!r}, "
