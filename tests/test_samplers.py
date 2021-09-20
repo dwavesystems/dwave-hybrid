@@ -14,9 +14,11 @@
 
 import unittest
 import time
+from operator import attrgetter
 
 import numpy as np
 import dimod
+from parameterized import parameterized
 from neal import SimulatedAnnealingSampler
 from dwave.system.testing import MockDWaveSampler
 
@@ -395,3 +397,21 @@ class TestGreedySamplers(unittest.TestCase):
 
         self.assertTrue(np.array_equal(result.subsamples.record.sample, expected))
         self.assertEqual(len(result.subsamples), 4)
+
+    @parameterized.expand([
+        (GreedyProblemSampler, State.from_problem, attrgetter('samples')),
+        (GreedySubproblemSampler, State.from_subproblem, attrgetter('subsamples'))
+    ])
+    def test_greedy_samplers_is_monotonic(self, sampler_cls, state_gen, get_samples):
+        workflow = sampler_cls(num_reads=1)
+
+        bqm = dimod.generators.ran_r(32, 32)
+        state = state_gen(bqm)
+
+        trials = 32
+        for _ in range(trials):
+            next_state = workflow.run(state).result()
+            self.assertLessEqual(
+                get_samples(next_state).first.energy,
+                get_samples(state).first.energy)
+            state = next_state
