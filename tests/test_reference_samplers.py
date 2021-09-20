@@ -13,11 +13,13 @@
 # limitations under the License.
 
 import unittest
+from parameterized import parameterized
 
 import dimod
 from dwave.system.testing import MockDWaveSampler
 
 import hybrid
+from hybrid.samplers import QPUSubproblemAutoEmbeddingSampler
 from hybrid.reference.kerberos import KerberosSampler
 from hybrid.reference.pa import (
     EnergyWeightedResampler, ProgressBetaAlongSchedule,
@@ -151,3 +153,27 @@ class TestPopulationAnnealing(unittest.TestCase):
         ss = pa.run(state).result().samples
 
         self.assertDictEqual(ss.first.sample, ground)
+
+
+@unittest.mock.patch(
+    'hybrid.QPUSubproblemAutoEmbeddingSampler',
+    lambda *a,**kw: QPUSubproblemAutoEmbeddingSampler(qpu_sampler=MockDWaveSampler())
+)
+class TestReferenceWorkflowsSmoke(unittest.TestCase):
+
+    @parameterized.expand([
+        (hybrid.ParallelTempering, dict(num_sweeps=10, num_replicas=2)),
+        (hybrid.HybridizedParallelTempering, dict(num_sweeps=10, num_replicas=2)),
+        (hybrid.PopulationAnnealing, dict(num_reads=10, num_iter=10, num_sweeps=10)),
+        (hybrid.HybridizedPopulationAnnealing, dict(num_reads=10, num_iter=10, num_sweeps=10)),
+        (hybrid.Kerberos, dict(sa_sweeps=10, tabu_timeout=10, qpu_sampler=MockDWaveSampler())),
+        (hybrid.SimplifiedQbsolv, dict(max_iter=2)),
+    ])
+    def test_smoke(self, sampler_cls, sampler_params):
+        bqm = dimod.BinaryQuadraticModel.from_ising({}, {'ab': 1})
+        state = hybrid.State.from_problem(bqm)
+
+        w = sampler_cls(**sampler_params)
+        ss = w.run(state).result().samples
+
+        self.assertEqual(ss.first.energy, -1)
