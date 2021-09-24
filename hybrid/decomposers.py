@@ -22,6 +22,7 @@ from functools import partial
 import dimod
 from dimod.traversal import connected_components
 import networkx as nx
+import numpy as np
 
 from hybrid.core import Runnable, State
 from hybrid.exceptions import EndOfStream
@@ -34,6 +35,7 @@ __all__ = [
     'IdentityDecomposer', 'ComponentDecomposer', 'EnergyImpactDecomposer', 
     'RandomSubproblemDecomposer', 'TilingChimeraDecomposer', 
     'RandomConstraintDecomposer', 'RoofDualityDecomposer',
+    'SublatticeDecomposer',
 ]
 
 logger = logging.getLogger(__name__)
@@ -142,6 +144,7 @@ class ComponentDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
         subbqm = bqm_induced_by(bqm, component, sample)
         
         return state.updated(subproblem=subbqm)
+
     
 
 class EnergyImpactDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
@@ -422,6 +425,92 @@ class RandomSubproblemDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable
 
         return state.updated(subproblem=subbqm)
 
+class SublatticeDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
+    """Selects a lattice structured subproblem creating associated 
+    ``subproblem``, and ``embedding`` state fields.
+    This decomposer uses the state fields ``bqm``, ``origin_embeddings`` and 
+    ``problem_scale`` which must be compatible (in particular, through geometric
+    variable keying). 
+    The decomposer also uses the optional state fields ``exclude_dimensions``, 
+    ``geometric_offset`` and ``origin_embedding_index``.
+    If ``geometric_offset`` and/or ``origin_embedding_index`` are not state 
+    variables, these are assigned uniformly at random, the random number 
+    generator can be initialized with the class variable ``seed``. This creates 
+    workflows in which sublattices and embeddings are chosen independently and 
+    uniformly at random on every block. More complicated workflows might 
+    exploit a structured, or state history dependent, selection of sublattices.
+    For example to exploit parallelism, or other structured flow of information
+    amongst regions.
+
+    Args:
+        seed (int, default=None):
+            Pseudo-random number generator seed.
+
+    See :ref:`decomposers-examples` 
+    
+    """
+
+    def __init__(self, seed=None, **runopts):
+        super(SublatticeDecomposer, self).__init__(**runopts)
+        self.random = np.random.RandomState(seed)
+        
+    def __repr__(self):
+        return "{self}(random={self.random!r})".format(self=self)
+        
+    def next(self, state, **runopts):
+        bqm = state.problem
+        problem_scale = state.problem_scale
+        
+        if 'geometric_offset' not in state:
+            
+            #Select uniformly at random amongst available geometric offsets
+            geometric_offset = [self.random.randint(dim) for dim in state.problem_dimensions]
+            if 'exclude_dimensions' in state:
+                for dim in state.exclude_dimensions:
+                    if dim<0 or dim>=len(geometric_offset):
+                        raise ValueError('exclude_dimension state variable indexes an invalid dimension')
+                    geometric_offset[dim]=0
+        else:
+            if len(state.problem_dimensions) != len(state.geometric_offset):
+                raise ValueError('problem_dimension and geometric_offset state variables are of incompatible length')
+            for idx,offset in enumerate(state.geometric_offset):
+                if not (offset < state.problem_dimensions[idx] and 0<=offset):
+                    raise ValueError('geometric_offset state variable values are outside the lattice allowed ranges [0,problem_dimension[idx]), idx=' + str(idx))
+            geometric_offset = state.geometric_offset
+            
+        def key_transform(initial_coordinates):
+            #The geometric keys are offset, with wrapping about periodic
+            #boundary conditions.
+            final_coordinates = list(initial_coordinates)
+            for idx,val in enumerate(geometric_offset):
+                final_coordinates[idx] = (final_coordinates[idx]+val)%state.problem_dimensions[idx]
+            return tuple(final_coordinates)
+        
+        #For now we explicitely encode different automorphism as different
+        #origin_embeddings, but is would be natural to allow symmetry operations
+        #(automorphisms) with respect to some fixed embedding and lattice class.
+        if 'origin_embedding_index' not in state:
+            #Select uniformly at random amongst available embeddings:
+            origin_embedding_index = self.random.randint(len(state.origin_embeddings))
+        else:
+            if state.origin_embedding_index> len(state.origin_embeddings):
+                raise ValueError('embedding_index state variable specifies an embedding beyond allowed range')
+            origin_embedding_index = state.origin_embedding_index
+
+        #Create the embedding:
+        embedding = {key_transform(key) : value for key,value in state.origin_embeddings[origin_embedding_index].items()}
+
+        #Create the associated subproblem, conditioned on best boundary sample
+        #values:
+        variables = embedding.keys()
+        sample = state.samples.change_vartype(bqm.vartype).first.sample
+        subbqm = bqm_induced_by(bqm, variables, sample)
+        logger.debug("{} selected {} subproblem variables: {!r}".format(
+            self.name, len(variables), variables))
+        
+        return state.updated(subproblem=subbqm, embedding=embedding)
+
+    
 
 class RoofDualityDecomposer(traits.ProblemDecomposer, traits.ProblemSampler,
                             traits.SISO, Runnable):
