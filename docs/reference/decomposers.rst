@@ -178,3 +178,38 @@ arbitrary variables.
 
     >>> print(state1.subproblem)
     BinaryQuadraticModel({'z': -2.0, 'y': 0.0}, {('z', 'y'): 4.0}, 0.0, Vartype.BINARY)
+
+SublatticeDecomposer
+--------------------
+
+This example creates a 5x5 square ferromagnetic lattice problem,
+and builds the 3x3 problem located at the center of the square.
+The initial state is set to all spin up.
+Only the variable (2,2) is not adjacent to the boundary, other
+variables pick up a linear bias of 1 or 2 due to the boundary condition.
+Origin embedding keys determine the subproblem created, in this
+case there is no minor-embedding provided (values are empty). 
+.. code-block:: python
+
+    import dimod
+    from hybrid.decomposers import SublatticeDecomposer
+    from hybrid.core import State
+
+    problem_dims = (5,5)
+    subproblem_dims = (3,3)
+    geometric_offset = (1,1)
+    edgelist = [((i,j),(i+1,j)) for i in range(problem_dims[0]-1) for j in range(problem_dims[1])]
+    edgelist += [((i,j),(i,j+1)) for i in range(problem_dims[0]) for j in range(problem_dims[1]-1)]
+    bqm = dimod.BinaryQuadraticModel({},{edge : -1 for edge in edgelist} , 0, dimod.SPIN)
+    origin_embeddings = [{(i,j) : None for i in range(subproblem_dims[0]) for j in range(subproblem_dims[1])}]
+    decomposer = SublatticeDecomposer()
+    state0 = State.from_sample({var : 1 for var in bqm.variables}, bqm, origin_embeddings=origin_embeddings, problem_dims=problem_dims, geometric_offset = geometric_offset)
+
+    state1 = decomposer.run(state0).result()
+
+::
+
+    >>> print(state1.subproblem)
+    BinaryQuadraticModel({(1, 2): -1.0, (2, 2): 0.0, (1, 1): -2.0, (1, 3): -2.0, (2, 1): -1.0, (3, 1): -2.0, (3, 2): -1.0, (2, 3): -1.0, (3, 3): -2.0}, {((1, 2), (2, 2)): 1.0, ((1, 2), (1, 1)): 1.0, ((1, 2), (1, 3)): 1.0, ((2, 2), (2, 1)): 1.0, ((2, 2), (2, 3)): 1.0, ((2, 2), (3, 2)): 1.0, ((1, 1), (2, 1)): 1.0, ((1, 3), (2, 3)): 1.0, ((2, 1), (3, 1)): 1.0, ((3, 1), (3, 2)): 1.0, ((3, 2), (3, 3)): 1.0, ((2, 3), (3, 3)): 1.0}, 0.0, 'SPIN')
+
+
