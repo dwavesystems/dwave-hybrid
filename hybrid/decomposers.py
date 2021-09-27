@@ -432,7 +432,7 @@ class SublatticeDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
     """Selects a lattice structured subproblem creating associated 
     ``subproblem``, and ``embedding`` state fields.
     This decomposer uses the state fields ``bqm``, ``origin_embeddings`` and 
-    ``problem_scale`` which must be compatible (in particular, through geometric
+    ``problem_dims`` which must be compatible (in particular, through geometric
     variable keying). 
     The decomposer also uses the optional state fields ``exclude_dimensions``, 
     ``geometric_offset`` and ``origin_embedding_index``.
@@ -462,22 +462,21 @@ class SublatticeDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
         
     def next(self, state, **runopts):
         bqm = state.problem
-        problem_scale = state.problem_scale
         
         if 'geometric_offset' not in state:
             
             #Select uniformly at random amongst available geometric offsets
-            geometric_offset = [self.random.randint(dim) for dim in state.problem_dimensions]
+            geometric_offset = [self.random.randint(dim) for dim in state.problem_dims]
             if 'exclude_dimensions' in state:
                 for dim in state.exclude_dimensions:
                     if dim<0 or dim>=len(geometric_offset):
                         raise ValueError('exclude_dimension state variable indexes an invalid dimension')
                     geometric_offset[dim]=0
         else:
-            if len(state.problem_dimensions) != len(state.geometric_offset):
+            if len(state.problem_dims) != len(state.geometric_offset):
                 raise ValueError('problem_dimension and geometric_offset state variables are of incompatible length')
             for idx,offset in enumerate(state.geometric_offset):
-                if not (offset < state.problem_dimensions[idx] and 0<=offset):
+                if not (offset < state.problem_dims[idx] and 0<=offset):
                     raise ValueError('geometric_offset state variable values are outside the lattice allowed ranges [0,problem_dimension[idx]), idx=' + str(idx))
             geometric_offset = state.geometric_offset
             
@@ -486,7 +485,7 @@ class SublatticeDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
             #boundary conditions.
             final_coordinates = list(initial_coordinates)
             for idx,val in enumerate(geometric_offset):
-                final_coordinates[idx] = (final_coordinates[idx]+val)%state.problem_dimensions[idx]
+                final_coordinates[idx] = (final_coordinates[idx]+val)%state.problem_dims[idx]
             return tuple(final_coordinates)
         
         #For now we explicitely encode different automorphism as different

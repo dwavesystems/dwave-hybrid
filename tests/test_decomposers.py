@@ -23,7 +23,8 @@ import networkx as nx
 
 from hybrid.decomposers import (
     EnergyImpactDecomposer, RandomSubproblemDecomposer,
-    RandomConstraintDecomposer, RoofDualityDecomposer, ComponentDecomposer)
+    RandomConstraintDecomposer, RoofDualityDecomposer, ComponentDecomposer,
+    SublatticeDecomposer)
 from hybrid.core import State
 from hybrid.utils import min_sample, random_sample
 from hybrid.exceptions import EndOfStream
@@ -390,6 +391,49 @@ class TestRandomSubproblemDecomposer(unittest.TestCase):
     def test_look_and_feel(self):
         self.assertEqual(repr(RandomSubproblemDecomposer(7)), 'RandomSubproblemDecomposer(size=7)')
 
+
+class TestSublatticeDecomposer(unittest.TestCase):
+    
+    def test_simple_1(self):
+        #A 2by2 square lattice (a square), with a single variable subsolver, is the simplest non-trivial test
+        problem_dims = (2,2)
+        #Vertical edges
+        edgelist = [((i,j),(i+1,j)) for i in range(problem_dims[0]-1) for j in range(problem_dims[1])]
+        #Horiztonal edges
+        edgelist += [((i,j),(i,j+1)) for i in range(problem_dims[0]) for j in range(problem_dims[1]-1)]
+        bqm = dimod.BinaryQuadraticModel({},{edge : 1 for edge in edgelist} , 0, dimod.SPIN)
+        origin_embeddings = [{(0,0) : [0]}]
+        state = State.from_sample(min_sample(bqm), bqm, origin_embeddings=origin_embeddings, problem_dims=problem_dims)
+
+        #Creates subproblems located randomly at (0,0), (0,1), (1,0) and (1,1). 
+        runnable = SublatticeDecomposer()
+        for _ in range(10):
+            state = runnable.next(state)
+            self.assertEqual(len(state.subproblem.variables), 1)
+            self.assertIn(next(iter(state.subproblem.variables)), bqm.variables)
+            self.assertEqual(len(state.embedding), 1)
+            self.assertIn(next(iter(state.embedding.keys())), bqm.variables)
+
+    def test_simple_2(self):
+        #A 3by3 square lattice, with a 2x2 lattice subsolver, is the simplest non-trivial test with edges in the decomposed problem.
+        problem_dims = (3,3)
+        #Vertical edges
+        edgelist = [((i,j),(i+1,j)) for i in range(problem_dims[0]-1) for j in range(problem_dims[1])]
+        #Horiztonal edges
+        edgelist += [((i,j),(i,j+1)) for i in range(problem_dims[0]) for j in range(problem_dims[1]-1)]
+        bqm = dimod.BinaryQuadraticModel({},{edge : 1 for edge in edgelist} , 0, dimod.SPIN)
+        origin_embeddings = [{(i,j) : [i*2+j] for i in range(2) for j in range(2)}]
+        state = State.from_sample(min_sample(bqm), bqm, origin_embeddings=origin_embeddings, problem_dims=problem_dims)
+
+        #Creates one of 3x3 different subsubproblems, some of which are disconnected, and some connected 
+        runnable = SublatticeDecomposer()
+        for _ in range(10):
+            state = runnable.next(state)
+            self.assertEqual(len(state.subproblem.variables), 4)
+            self.assertIn(next(iter(state.subproblem.variables)), bqm.variables)
+            self.assertEqual(len(state.embedding), 4)
+            self.assertIn(next(iter(state.embedding.keys())), bqm.variables)
+    
 
 class TestConstraintDecomposer(unittest.TestCase):
     def test_typical_construction(self):
