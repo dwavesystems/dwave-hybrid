@@ -31,11 +31,14 @@ from hybrid.utils import (
     bqm_induced_by, flip_energy_gains, select_random_subgraph,
     chimera_tiles)
 
+import dwave_networkx as dnx
+from networkx.algorithms.operators.product import product
+
 __all__ = [
     'IdentityDecomposer', 'ComponentDecomposer', 'EnergyImpactDecomposer', 
     'RandomSubproblemDecomposer', 'TilingChimeraDecomposer', 
     'RandomConstraintDecomposer', 'RoofDualityDecomposer',
-    'SublatticeDecomposer',
+    'SublatticeDecomposer','make_origin_embeddings'
 ]
 
 logger = logging.getLogger(__name__)
@@ -439,8 +442,8 @@ class SublatticeDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
     workflows in which sublattices and embeddings are chosen independently and 
     uniformly at random on every block. More complicated workflows might 
     exploit a structured, or state history dependent, selection of sublattices.
-    For example to exploit parallelism, or other structured flow of information
-    amongst regions.
+    These workflows might for example to exploit parallelism, or other 
+    structured flow of information amongst regions.
 
     Args:
         seed (int, default=None):
@@ -688,3 +691,279 @@ class RandomConstraintDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable
         sample = state.samples.change_vartype(bqm.vartype).first.sample
         subbqm = bqm_induced_by(bqm, variables, sample)
         return state.updated(subproblem=subbqm)
+
+    
+def all_minimal_covers(edgelist):
+    '''
+    Create all minimal covers, provided graphs contain fewer than 17 edges.
+    '''
+    if len(edgelist) > 16:
+        raise(ValueError('len(edgelist) > 16. Exponential scaling of this '
+                         + 'method means it should only be used for small' +
+                         + 'graphs. The use case for this function is in'
+                         + 'finding coverings over unyielded lattice subgraphs,'
+                         + 'which in the current online generation of '
+                         + 'processors are sufficiently small so as to allow a'
+                         + 'brute force method.'))
+    minimum_coverings = []
+    for cover in map(set, product(*edgelist)):
+        newmin = []
+        for s in minimum_coverings:
+            if s < cover:
+                break
+            elif cover < s:
+                pass
+            else:
+                newmin.append(s)
+        else:
+            minimum_coverings = newmin + [cover]
+    return minimum_coverings
+
+def unyielded_conditional_edges(emb, source, target):
+    '''Adaption of minorminer.utils.diagnose_embedding
+    Simplification is possible because nodes match by construction, 
+    and each chain is connected by construction.
+    '''
+    labels = {}
+    for x in source:
+        for q in emb[x]:
+            labels[q] = x
+    
+    yielded = nx.Graph()
+    yielded.add_edges_from((labels[e[0]], labels[e[1]]) for e in target.edges
+                           if e[0] in labels and e[1] in labels)
+    
+    unyielded_edge_set = [e for e in source.edges()
+                          if not yielded.has_edge(e[0],e[1])]
+
+    return unyielded_edge_set
+
+def yield_limited_origin_embedding(origin_embedding, proposed_source, target):
+    ''' An unconditional edge defect is an unyielded edge for which one of the 
+    two qubits is yielded. These must be eliminated (by removing additional 
+    qubits) for operation of ```SublatticeDecomposer``. Minimizing the 
+    number of variables removed is a minimum vertex problem over the graph of 
+    unconditional edge defects. Because defects are rare in available 
+    processors, it can be solved by brute force.
+    
+    '''
+    #A fully yielded subgraph of the target problem
+    proposed_source = proposed_source.subgraph(list(origin_embedding.keys()))
+
+    #Edges not yielded over this subgraph:
+    unyielded_edge_set = unyielded_conditional_edges(emb = origin_embedding,
+                                                     source=proposed_source,
+                                                     target=target)
+    
+    #Remove minimal number of nodes such that edges yielded on subgraph:
+    G = nx.Graph()
+    G.add_edges_from(unyielded_edge_set)
+    for subgraph_nodes in nx.algorithms.components.connected_components(G):
+        cover = all_minimal_covers(G.subgraph(subgraph_nodes).edges)
+        for v in cover[0]:
+            del origin_embedding[v]
+    
+    #Restrict to giant component. 
+    proposed_source = proposed_source.subgraph(list(origin_embedding.keys()))
+    max_cc = max(nx.connected_components(proposed_source), key=len)
+    if len(max_cc) == 0:
+        raise ValueError('The proposed origin embedding contains no variables.' +
+                         + ' This is likely caused by a key error (not using'
+                         + ' geometrically appropriate variable keys.')
+    origin_embedding = {k:v for k,v in origin_embedding.items() if k in max_cc}
+    return origin_embedding
+
+def make_cubic_lattice(dimensions):
+    ''' Returns an open boundary cubic lattice graph as function of lattice
+    dimensions. Helper function for ``make_origin_embeddings`` '''
+    cubic_lattice_graph = nx.Graph()
+    cubic_lattice_graph.add_edges_from([((x, y, z),(x+1,y,z))
+                                    for x in range(dimensions[0]-1)
+                                    for y in range(dimensions[1])
+                                    for z in range(dimensions[2])])
+    cubic_lattice_graph.add_edges_from([((x, y, z),(x,y+1,z))
+                                    for x in range(dimensions[0])
+                                    for y in range(dimensions[1]-1)
+                                    for z in range(dimensions[2])])
+    cubic_lattice_graph.add_edges_from([((x, y, z),(x,y,z+1))
+                                    for x in range(dimensions[0])
+                                    for y in range(dimensions[1])
+                                    for z in range(dimensions[2]-1)])
+    return cubic_lattice_graph
+
+def make_origin_embeddings(qpu_sampler = None, lattice_type = None):
+    """Creates optimal embeddings for a lattice, 
+    compatible with the topology and shape of a ``qpu_sampler``. 
+
+    Args:
+        qpu_sampler (:class:`dimod.Sampler`, optional, default=\ :class:`~dwave.system.samplers.DWaveSampler`\ ``(client="qpu")``):
+            Quantum sampler such as a D-Wave system.
+
+        lattice_type (string, optional, default = qpu_sampler.properties['topology']['type']):
+            Options are:
+                * "cubic" 
+                    embeddings compatible with the schemes arXiv:2009.12479 and
+                    arXiv:2003.00133 are created for a ``qpu_sampler`` of 
+                    topology type either 'pegasus' or 'chimera'.
+
+                * "pegasus" 
+                    if ``qpu_sampler`` topology type is 'pegasus', maximum 
+                    scale nice subgraphs are embedded, with chain length one 
+                    (minimal and native embedding).
+
+                * "chimera" : 
+                    if ``qpu_sampler`` topology type is 'chimera', maximum 
+                    scale chimera subgraphs are embedded, with chain length 
+                    one (minimal and native).
+            
+
+    Returns:
+            A list of embeddings. Each embedding is a dictionary, mapping 
+            geometric problem keys to sets of qubits (chains) compatible with 
+            the ``qpu_sampler``.
+
+    Examples:
+        This example creates a list of three cubic lattice embeddings 
+        compatible with the default online system.
+
+        >>> embeddings = make_origin_embeddings(qpu_sampler = DWaveSampler(), 
+                                                lattice_type = 'cubic')
+
+    """
+    if qpu_sampler is None:
+        if lattice_type == 'pegasus' or lattice_type == 'chimera':
+            qpu_sampler = DWaveSampler(sampler={'topology_type':lattice_type})
+        else:
+            qpu_sampler = DWaveSampler()
+
+    qpu_type = qpu_sampler.properties['topology']['type']
+    if lattice_type == None:
+        lattice_type = qpu_type
+    qpu_shape = qpu_sampler.properties['topology']['shape']
+        
+    target = nx.Graph()
+    target.add_edges_from(qpu_sampler.edgelist)
+    
+    if qpu_type == lattice_type:
+        #Fully yielded fully utilized native topology problem.
+        #This method is also easily adapted to work for any chain-length 1
+        #embedding
+        origin_embedding = {q : [q] for q in qpu_sampler.properties['qubits']}
+        if lattice_type == 'pegasus':
+            from dwave_networkx import pegasus_graph
+            #Trimming to nice_coordinate supported embeddings is not a unique,
+            #options, it has some advantages and some disadvantages:
+            proposed_source = pegasus_graph(qpu_shape[0],nice_coordinates=True)
+            proposed_source = nx.relabel_nodes(proposed_source,
+                                               {q : dnx.pegasus_coordinates(qpu_shape[0]).nice_to_linear(q)
+                                                for q in proposed_source.nodes()})
+            lin_to_vec = dnx.pegasus_coordinates(qpu_shape[0]).linear_to_nice
+            
+        elif lattice_type == 'chimera':
+            from dwave_networkx import chimera_graph
+            proposed_source = chimera_graph(qpu_shape[0],
+                                            qpu_shape[1],
+                                            qpu_shape[2])
+            lin_to_vec = dnx.chimera_coordinates(qpu_shape[0]).linear_to_chimera
+        else:
+            raise(ValueError('Unsupported native processor topology '
+                             + qpu_type + '. Support for Zephyr and other'
+                             + ' topologies is straightforward to add subject'
+                             + ' to standard dwave_networkx library tool'
+                             + ' availability.'))
+     
+    elif lattice_type == 'cubic':
+        if qpu_type == 'pegasus':
+            vec_to_lin = dnx.pegasus_coordinates(qpu_shape[0]).pegasus_to_linear
+            L = qpu_shape[0] - 1
+            dimensions = [L,L,12]
+            #See arXiv:2003.00133
+            origin_embedding = {(x, y, z) : [vec_to_lin((0, x, z + 4, y)),
+                                             vec_to_lin((1, y + 1, 7 - z, x))]
+                                for x in range(L)
+                                for y in range(L)
+                                for z in range(8)
+                                if target.has_edge(vec_to_lin((0, x, z + 4, y)),
+                                                   vec_to_lin((1, y + 1, 7 - z, x)))}
+            origin_embedding.update({(x, y, z) : [vec_to_lin((0, x + 1, z - 8, y)),
+                                                  vec_to_lin((1, y, 19 - z, x))]
+                                     for x in range(L)
+                                     for y in range(L)
+                                     for z in range(8,12)
+                                     if target.has_edge(vec_to_lin((0, x + 1, z - 8, y)),
+                                                        vec_to_lin((1, y, 19 - z, x)))})
+        elif qpu_type == 'chimera':
+            vec_to_lin = dnx.chimera_coordinates(qpu_shape[0],
+                                                 qpu_shape[1],
+                                                 qpu_shape[2]).chimera_to_linear
+            L = qpu_shape[0]//2 #15 for a P16 graph, 5 for a P6
+            dimensions = [L,L,8]
+            #See arxiv:2009.12479, one choice amongst many
+            origin_embedding = {(x, y, z) :
+                                [vec_to_lin(coord) for coord in [(2*x+1,2*y,0,z),
+                                                                 (2*x,2*y,0,z),
+                                                                 (2*x,2*y,1,z),
+                                                                 (2*x,2*y+1,1,z)]]
+                                for x in range(L) for y in range(L) for z in range(4)
+                                if target.has_edge(vec_to_lin((2*x+1,2*y,0,z)),
+                                                   vec_to_lin((2*x,2*y,0,z)))
+                                and target.has_edge(vec_to_lin((2*x,2*y,0,z)),
+                                                    vec_to_lin((2*x,2*y,1,z)))
+                                and target.has_edge(vec_to_lin((2*x,2*y,1,z)),
+                                                    vec_to_lin((2*x,2*y+1,1,z)))
+            }
+            origin_embedding.update({(x, y, 4+z) :
+                                     [vec_to_lin(coord) for coord in [(2*x+1,2*y,1,z),
+                                                                      (2*x+1,2*y+1,1,z),
+                                                                      (2*x+1,2*y+1,0,z),
+                                                                      (2*x,2*y+1,0,z)]]
+                                     for x in range(L)
+                                     for y in range(L)
+                                     for z in range(4)
+                                     if target.has_edge(vec_to_lin((2*x+1,2*y,1,z)),
+                                                        vec_to_lin((2*x+1,2*y+1,1,z)))
+                                     and target.has_edge(vec_to_lin((2*x+1,2*y+1,1,z)),
+                                                         vec_to_lin((2*x+1,2*y+1,0,z)))
+                                     and target.has_edge(vec_to_lin((2*x+1,2*y+1,0,z)),
+                                                         vec_to_lin((2*x,2*y+1,0,z)))
+            })
+        else:
+            raise(Exception('Unsupported qpu_sampler topology ' + qpu_type
+                            + ' for cubic lattice solver'))
+        
+        proposed_source = make_cubic_lattice(dimensions)
+    else:
+        raise(ValueError('Unsupported combination of lattice_type '
+                         + 'and qpu_sampler topology'))
+
+    origin_embedding = yield_limited_origin_embedding(origin_embedding,
+                                                      proposed_source,
+                                                      target) 
+
+    if qpu_type == lattice_type:
+        #Convert keys to standard vector scheme:
+        origin_embedding = {lin_to_vec(node) : origin_embedding[node]
+                            for node in origin_embedding}
+
+    
+    #We can propose additional embeddings. Or we can use symmetries of the
+    #target graph (automorphisms), to create additional embedding options.
+    #This is important in the cubic case, because the subregion shape and
+    #embedding features are asymmetric in the x, y and z directions.
+    #Various symmetries can be exploited in all lattices.
+    origin_embeddings = [origin_embedding]
+    if lattice_type == 'cubic':
+        #A rotation is sufficient for demonstration purposes:
+        origin_embeddings.append({(key[2],key[0],key[1]) : value
+                                  for key,value in origin_embedding.items()})
+        origin_embeddings.append({(key[1],key[2],key[0]) : value
+                                  for key,value in origin_embedding.items()})
+    elif lattice_type == 'pegasus':
+        pass
+    else:
+        #A horizontal to vertical flip is sufficient for demonstration purposes:
+        origin_embeddings.append({(key[1],key[0],1-key[2],key[3]) : value
+                                  for key,value in origin_embedding.items()})
+
+    return origin_embeddings
+    

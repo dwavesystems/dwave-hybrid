@@ -16,7 +16,15 @@ Classes
 .. autoclass:: RandomSubproblemDecomposer
 .. autoclass:: RoofDualityDecomposer
 .. autoclass:: TilingChimeraDecomposer
+.. autoclass:: SublatticeDecomposer
 
+Methods
+=======
+
+.. autosummary::
+   :toctree: generated/
+
+   make_origin_embeddings
 
 .. _decomposers-examples:
 
