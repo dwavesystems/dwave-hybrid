@@ -843,6 +843,7 @@ def make_origin_embeddings(qpu_sampler = None, lattice_type = None):
         embeddings are for lattices of size (15,15,12), (12,15,15) and (15,12,15)
         respectively.
 
+        >>> from dwave.system.samplers import DWaveSampler
         >>> embeddings = make_origin_embeddings(qpu_sampler=DWaveSampler(), lattice_type='cubic')
 
     """
