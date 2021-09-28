@@ -429,25 +429,28 @@ class RandomSubproblemDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable
         return state.updated(subproblem=subbqm)
 
 class SublatticeDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
-    """Selects a lattice structured subproblem creating associated 
-    ``subproblem``, and ``embedding`` state fields.
-    This decomposer uses the state fields ``bqm``, ``origin_embeddings`` and 
-    ``problem_dims`` which must be compatible (in particular, through geometric
-    variable keying). 
-    The decomposer also uses the optional state fields ``exclude_dimensions``, 
-    ``geometric_offset`` and ``origin_embedding_index``.
-    If ``geometric_offset`` and/or ``origin_embedding_index`` are not state 
-    variables, these are assigned uniformly at random, the random number 
-    generator can be initialized with the class variable ``seed``. This creates 
-    workflows in which sublattices and embeddings are chosen independently and 
-    uniformly at random on every block. More complicated workflows might 
-    exploit a structured, or state history dependent, selection of sublattices.
-    These workflows might for example to exploit parallelism, or other 
-    structured flow of information amongst regions.
+    """Selects a lattice-structured subproblem.
 
+    This decomposer requires the input state has fields ``bqm`` and 
+    ``origin_embeddings``, only the keys from ``origin_embeddings`` are used.
+    The decomposer can also use the optional state fields ``problem_dims``, 
+    ``exclude_dims``, ``geometric_offset`` and ``origin_embedding_index``.
+
+    By default ``geometric_offset`` is assigned uniformly at random on the range
+    given by ``problem_dims``.
+    By default ``origin_embedding_index`` is assigned uniformly at random 
+    on the range ``[0,len(state.origin_embeddings))``.
+    The random number generator can be initialized with the class variable ``seed``. 
+
+    If ``problem_dims`` is a state field, geometrically offset variables are 
+    wrapped around boundaries according to assumed periodic boundary condition.
+    
     Args:
         seed (int, default=None):
             Pseudo-random number generator seed.
+    
+    Returns:
+        ``subproblem`` and ``embedding`` state fields
 
     See :ref:`decomposers-examples` 
     
@@ -467,8 +470,9 @@ class SublatticeDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
             
             #Select uniformly at random amongst available geometric offsets
             geometric_offset = [self.random.randint(dim) for dim in state.problem_dims]
-            if 'exclude_dimensions' in state:
-                for dim in state.exclude_dimensions:
+            #Do not offset excluded dimensions
+            if 'exclude_dims' in state:
+                for dim in state.exclude_dims:
                     if dim<0 or dim>=len(geometric_offset):
                         raise ValueError('exclude_dimension state variable indexes an invalid dimension')
                     geometric_offset[dim]=0
@@ -476,7 +480,7 @@ class SublatticeDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
             if len(state.problem_dims) != len(state.geometric_offset):
                 raise ValueError('problem_dimension and geometric_offset state variables are of incompatible length')
             for idx,offset in enumerate(state.geometric_offset):
-                if not (offset < state.problem_dims[idx] and 0<=offset):
+                if not (offset < state.problem_dims[idx] and 0 <= offset):
                     raise ValueError('geometric_offset state variable values are outside the lattice allowed ranges [0,problem_dimension[idx]), idx=' + str(idx))
             geometric_offset = state.geometric_offset
             
@@ -484,8 +488,12 @@ class SublatticeDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
             #The geometric keys are offset, with wrapping about periodic
             #boundary conditions.
             final_coordinates = list(initial_coordinates)
-            for idx,val in enumerate(geometric_offset):
-                final_coordinates[idx] = (final_coordinates[idx]+val)%state.problem_dims[idx]
+            if 'problem_dims' in state:
+                for idx,val in enumerate(geometric_offset):
+                    final_coordinates[idx] = (final_coordinates[idx] + val)%state.problem_dims[idx]
+            else:
+                for idx,val in enumerate(geometric_offset):
+                    final_coordinates[idx] = final_coordinates[idx] + val
             return tuple(final_coordinates)
         
         #For now we explicitely encode different automorphism as different
@@ -495,8 +503,8 @@ class SublatticeDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
             #Select uniformly at random amongst available embeddings:
             origin_embedding_index = self.random.randint(len(state.origin_embeddings))
         else:
-            if state.origin_embedding_index> len(state.origin_embeddings):
-                raise ValueError('embedding_index state variable specifies an embedding beyond allowed range')
+            if state.origin_embedding_index > len(state.origin_embeddings) or state.origin_embedding_index < -len(state.origin_embeddings):
+                raise ValueError('embedding_index state variable specifies an origin_embeddings element beyond the list range')
             origin_embedding_index = state.origin_embedding_index
 
         #Create the embedding:
@@ -791,29 +799,36 @@ def make_cubic_lattice(dimensions):
     return cubic_lattice_graph
 
 def make_origin_embeddings(qpu_sampler = None, lattice_type = None):
-    """Creates optimal embeddings for a lattice, 
-    compatible with the topology and shape of a ``qpu_sampler``. 
+    """Creates optimal embeddings for a lattice.
+ 
+    The embeddings created are compatible with the topology and shape of a 
+    specified ``qpu_sampler``. 
 
     Args:
-        qpu_sampler (:class:`dimod.Sampler`, optional, default=\ :class:`~dwave.system.samplers.DWaveSampler`\ ``(client="qpu")``):
+        qpu_sampler (:class:`dimod.Sampler`, optional):
             Quantum sampler such as a D-Wave system.
+            By default \ :class:`~dwave.system.samplers.DWaveSampler()` is
+            used. If the ``lattice_type`` is incompatible with the default 
+            sampler topology, a compatible sampler is chosen.
 
         lattice_type (string, optional, default = qpu_sampler.properties['topology']['type']):
             Options are:
                 * "cubic" 
-                    embeddings compatible with the schemes arXiv:2009.12479 and
+                    Embeddings compatible with the schemes arXiv:2009.12479 and
                     arXiv:2003.00133 are created for a ``qpu_sampler`` of 
                     topology type either 'pegasus' or 'chimera'.
 
                 * "pegasus" 
-                    if ``qpu_sampler`` topology type is 'pegasus', maximum 
-                    scale nice subgraphs are embedded, with chain length one 
-                    (minimal and native embedding).
+                    Embeddings are chain length one (minimal and native).
+                    If ``qpu_sampler`` topology type is 'pegasus', maximum 
+                    scale subgraphs are embedded using the ``nice_coordinates``
+                    vector labeling scheme for variables. 
 
                 * "chimera" : 
-                    if ``qpu_sampler`` topology type is 'chimera', maximum 
-                    scale chimera subgraphs are embedded, with chain length 
-                    one (minimal and native).
+                    Embeddings are chain length one (minimal and native).
+                    If ``qpu_sampler`` topology type is 'chimera', maximum 
+                    scale chimera subgraphs are embedded using the chimera
+                    vector labeling scheme.
             
 
     Returns:
@@ -822,11 +837,13 @@ def make_origin_embeddings(qpu_sampler = None, lattice_type = None):
             the ``qpu_sampler``.
 
     Examples:
-        This example creates a list of three cubic lattice embeddings 
-        compatible with the default online system.
+        This example creates a list of three cubic lattice embeddings
+        compatible with the default online system. These three embeddings are 
+        related by rotation of the lattice: for a Pegasus P16 system the 
+        embeddings are for lattices of size (15,15,12), (12,15,15) and (15,12,15)
+        respectively.
 
-        >>> embeddings = make_origin_embeddings(qpu_sampler = DWaveSampler(), 
-                                                lattice_type = 'cubic')
+        >>> embeddings = make_origin_embeddings(qpu_sampler=DWaveSampler(), lattice_type='cubic')
 
     """
     if qpu_sampler is None:
