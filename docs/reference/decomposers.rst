@@ -188,7 +188,8 @@ The initial state is set to all spin up.
 Only the variable (2,2) is not adjacent to the boundary, other
 variables pick up a linear bias of 1 or 2 due to the boundary condition.
 Origin embedding keys determine the subproblem created, in this
-case there is no minor-embedding provided (values are empty). 
+case there is no minor-embedding provided (values are empty).
+
 .. code-block:: python
 
     import dimod
