@@ -824,11 +824,11 @@ def make_origin_embeddings(qpu_sampler = None, lattice_type = None):
                     scale subgraphs are embedded using the ``nice_coordinates``
                     vector labeling scheme for variables. 
 
-                * "chimera" : 
+                * "chimera"
                     Embeddings are chain length one (minimal and native).
                     If ``qpu_sampler`` topology type is 'chimera', maximum 
                     scale chimera subgraphs are embedded using the chimera
-                    vector labeling scheme.
+                    vector labeling scheme for variables.
             
 
     Returns:
