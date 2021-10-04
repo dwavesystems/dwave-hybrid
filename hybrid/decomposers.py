@@ -430,8 +430,9 @@ class RandomSubproblemDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable
 class SublatticeDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
     """Selects a lattice-structured subproblem.
 
-    This decomposer requires the input state has fields ``bqm`` and
-    ``origin_embeddings``, only the keys from ``origin_embeddings`` are used.
+    This decomposer requires the input state to contain fields ``bqm`` and
+    ``origin_embeddings``; only the keys (the variables/nodes) from 
+    ``origin_embeddings`` are used.
     The decomposer can also use the optional state fields ``problem_dims``,
     ``exclude_dims``, ``geometric_offset`` and ``origin_embedding_index``.
 
@@ -466,9 +467,9 @@ class SublatticeDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
         bqm = state.problem
 
         if 'geometric_offset' not in state:
-            #Select uniformly at random amongst available geometric offsets
+            # Select uniformly at random amongst available geometric offsets
             geometric_offset = [self.random.randint(dim) for dim in state.problem_dims]
-            #Do not offset excluded dimensions
+            # Do not offset excluded dimensions
             if 'exclude_dims' in state:
                 for dim in state.exclude_dims:
                     if dim < 0 or dim >= len(geometric_offset):
@@ -487,8 +488,8 @@ class SublatticeDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
             geometric_offset = state.geometric_offset
 
         def key_transform(initial_coordinates):
-            #The geometric keys are offset, with wrapping about periodic
-            #boundary conditions.
+            # The geometric keys are offset, with wrapping about periodic
+            # boundary conditions.
             final_coordinates = list(initial_coordinates)
             if 'problem_dims' in state:
                 for idx, val in enumerate(geometric_offset):
@@ -499,26 +500,29 @@ class SublatticeDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
                     final_coordinates[idx] += val
             return tuple(final_coordinates)
 
-        #For now we explicitely encode different automorphism as different
-        #origin_embeddings, but is would be natural to allow symmetry operations
-        #(automorphisms) with respect to some fixed embedding and lattice class.
+        # For now we explicitely encode different automorphism as different
+        # origin_embeddings, but is would be natural to allow symmetry
+        # operations (automorphisms) with respect to some fixed embedding
+        # and lattice class.
         if 'origin_embedding_index' not in state:
             #Select uniformly at random amongst available embeddings:
-            origin_embedding_index = self.random.randint(len(state.origin_embeddings))
+            origin_embedding_index = self.random.randint(
+                len(state.origin_embeddings))
         else:
             if (state.origin_embedding_index > len(state.origin_embeddings) or
                 state.origin_embedding_index < -len(state.origin_embeddings)):
-                raise ValueError('embedding_index state variable specifies an '
-                                 'origin_embeddings element beyond the list range')
+                raise ValueError(
+                    'embedding_index state variable specifies an '
+                    'origin_embeddings element beyond the list range')
             origin_embedding_index = state.origin_embedding_index
 
-        #Create the embedding:
+        # Create the embedding:
         embedding = {key_transform(key): value
                      for key, value
                      in state.origin_embeddings[origin_embedding_index].items()}
 
-        #Create the associated subproblem, conditioned on best boundary sample
-        #values:
+        # Create the associated subproblem, conditioned on best boundary sample
+        # values:
         variables = embedding.keys()
         sample = state.samples.change_vartype(bqm.vartype).first.sample
         subbqm = bqm_induced_by(bqm, variables, sample)
@@ -761,15 +765,15 @@ def _yield_limited_origin_embedding(origin_embedding, proposed_source, target):
     unconditional edge defects. Because defects are rare in available
     processors, it can be solved by brute force.
     """
-    #A fully yielded subgraph of the target problem
+    # A fully yielded subgraph of the target problem
     proposed_source = proposed_source.subgraph(list(origin_embedding.keys()))
 
-    #Edges not yielded over this subgraph:
+    # Edges not yielded over this subgraph:
     unyielded_edge_set = _unyielded_conditional_edges(emb=origin_embedding,
                                                       source=proposed_source,
                                                       target=target)
 
-    #Remove minimal number of nodes such that edges yielded on subgraph:
+    # Remove minimal number of nodes such that edges yielded on subgraph:
     G = nx.Graph()
     G.add_edges_from(unyielded_edge_set)
     for subgraph_nodes in nx.algorithms.components.connected_components(G):
@@ -777,7 +781,7 @@ def _yield_limited_origin_embedding(origin_embedding, proposed_source, target):
         for v in cover[0]:
             del origin_embedding[v]
 
-    #Restrict to giant component. 
+    # Restrict to giant component. 
     proposed_source = proposed_source.subgraph(list(origin_embedding.keys()))
     max_cc = max(nx.connected_components(proposed_source), key=len)
     if len(max_cc) == 0:
@@ -819,10 +823,11 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None):
 
     Args:
         qpu_sampler (:class:`dimod.Sampler`, optional):
-            Quantum sampler such as a D-Wave system.
-            By default \ :class:`~dwave.system.samplers.DWaveSampler()` is
-            used. If the ``lattice_type`` is incompatible with the default
-            sampler topology, a compatible sampler is chosen.
+            Quantum sampler such as a D-Wave system. If not specified, the
+            :class:`~dwave.system.samplers.DWaveSampler` sampler class is used 
+            to select a QPU solver with a topology compatible with the specified
+            ``lattice_type`` (e.g. an Advantage system for a 'pegasus' lattice 
+            type).
 
         lattice_type (str, optional, default=qpu_sampler.properties['topology']['type']):
             Options are:
@@ -876,13 +881,13 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None):
     target.add_edges_from(qpu_sampler.edgelist)
 
     if qpu_type == lattice_type:
-        #Fully yielded fully utilized native topology problem.
-        #This method is also easily adapted to work for any chain-length 1
-        #embedding
+        # Fully yielded fully utilized native topology problem.
+        # This method is also easily adapted to work for any chain-length 1
+        # embedding
         origin_embedding = {q: [q] for q in qpu_sampler.properties['qubits']}
         if lattice_type == 'pegasus':
-            #Trimming to nice_coordinate supported embeddings is not a unique,
-            #options, it has some advantages and some disadvantages:
+            # Trimming to nice_coordinate supported embeddings is not a unique,
+            # options, it has some advantages and some disadvantages:
             proposed_source = dnx.pegasus_graph(qpu_shape[0], nice_coordinates=True)
             proposed_source = nx.relabel_nodes(
                 proposed_source,
@@ -906,7 +911,7 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None):
             vec_to_lin = dnx.pegasus_coordinates(qpu_shape[0]).pegasus_to_linear
             L = qpu_shape[0] - 1
             dimensions = [L, L, 12]
-            #See arXiv:2003.00133
+            # See arXiv:2003.00133
             origin_embedding = {(x, y, z): [vec_to_lin((0, x, z+4, y)),
                                             vec_to_lin((1, y+1, 7-z, x))]
                                 for x in range(L)
@@ -925,9 +930,9 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None):
             vec_to_lin = dnx.chimera_coordinates(qpu_shape[0],
                                                  qpu_shape[1],
                                                  qpu_shape[2]).chimera_to_linear
-            L = qpu_shape[0] // 2 #15 for a P16 graph, 5 for a P6
+            L = qpu_shape[0] // 2 
             dimensions = [L, L, 8]
-            #See arxiv:2009.12479, one choice amongst many
+            # See arxiv:2009.12479, one choice amongst many
             origin_embedding = {(x, y, z):
                                 [vec_to_lin(coord) for coord in [(2*x+1, 2*y, 0, z),
                                                                  (2*x, 2*y, 0, z),
@@ -970,26 +975,31 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None):
                                                        target)
 
     if qpu_type == lattice_type:
-        #Convert keys to standard vector scheme:
+        # Convert keys to standard vector scheme:
         origin_embedding = {lin_to_vec(node): origin_embedding[node]
                             for node in origin_embedding}
 
-    #We can propose additional embeddings. Or we can use symmetries of the
-    #target graph (automorphisms), to create additional embedding options.
-    #This is important in the cubic case, because the subregion shape and
-    #embedding features are asymmetric in the x, y and z directions.
-    #Various symmetries can be exploited in all lattices.
+    # We can propose additional embeddings. Or we can use symmetries of the
+    # target graph (automorphisms), to create additional embedding options.
+    # This is important in the cubic case, because the subregion shape and
+    # embedding features are asymmetric in the x, y and z directions.
+    # Various symmetries can be exploited in all lattices.
     origin_embeddings = [origin_embedding]
     if lattice_type == 'cubic':
-        #A rotation is sufficient for demonstration purposes:
+        # A rotation is sufficient for demonstration purposes:
         origin_embeddings.append({(key[2], key[0], key[1]): value
                                   for key, value in origin_embedding.items()})
         origin_embeddings.append({(key[1], key[2], key[0]): value
                                   for key, value in origin_embedding.items()})
     elif lattice_type == 'pegasus':
-        pass
+        # A horizontal to vertical flip is sufficient for demonstration purposes:       # Flip north-east to south-west axis (see draw_pegasus):
+        L = qpu_shape[0]
+        origin_embeddings.append(
+            {(key[0], L-2-key[2], L-2-key[1], 1-key[3], 3-key[4]): value
+             for key,value in origin_embedding.items()})
+        
     else:
-        #A horizontal to vertical flip is sufficient for demonstration purposes:
+        # A horizontal to vertical flip is sufficient for demonstration purposes:
         origin_embeddings.append({(key[1], key[0], 1-key[2], key[3]): value
                                   for key,value in origin_embedding.items()})
 

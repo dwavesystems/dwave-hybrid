@@ -476,11 +476,11 @@ class TestSublatticeDecomposer(unittest.TestCase):
         ``origin_embedding``.
         """
         problem_dims = (3, 3)
-        #Vertical edges
+        # Vertical edges
         edgelist = [((i, j), (i+1, j))
                     for i in range(problem_dims[0]-1)
                     for j in range(problem_dims[1])]
-        #Horizontal edges
+        # Horizontal edges
         edgelist += [((i, j), (i, j+1))
                      for i in range(problem_dims[0])
                      for j in range(problem_dims[1]-1)]
@@ -513,11 +513,11 @@ class TestSublatticeDecomposer(unittest.TestCase):
         ``origin_embedding``.
         """
         problem_dims = (3, 3)
-        #Vertical edges
+        # Vertical edges
         edgelist = [((i, j), (i+1, j))
                     for i in range(problem_dims[0]-1)
                     for j in range(problem_dims[1])]
-        #Horizontal edges
+        # Horizontal edges
         edgelist += [((i, j), (i, j+1))
                      for i in range(problem_dims[0])
                      for j in range(problem_dims[1]-1)]
@@ -712,7 +712,6 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
         """
         qpu_sampler = MockDWaveSamplerGeneralization()
         orig_embs = make_origin_embeddings(qpu_sampler=qpu_sampler)
-
         # Non-empty list of non-empty dictionaries
         self.assertTrue(isinstance(orig_embs, list))
         self.assertTrue(len(orig_embs)>0)
@@ -738,8 +737,9 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
         Uses a default processor scale of 4, with either 0 or 15
         edge defects.
         """
-        # tuple length, chain length, number of embeddings:
-        shape_dicts = {('pegasus', 'pegasus'): {'tl': 5, 'cl': 1, 'ne': 1},
+        # Expected properties by (qpu_topology, lattice_topology):
+        # tuple length, chain length, number of embeddings
+        shape_dicts = {('pegasus', 'pegasus'): {'tl': 5, 'cl': 1, 'ne': 2},
                        ('pegasus', 'cubic'): {'tl': 3, 'cl': 2, 'ne': 3},
                        ('chimera', 'chimera'): {'tl': 4, 'cl': 1, 'ne': 2},
                        ('chimera', 'cubic'): {'tl': 3, 'cl': 4, 'ne': 3}}
@@ -747,9 +747,8 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
         for qpu_top in ['pegasus', 'chimera']:
             #Native by default:
             shape_dicts[(qpu_top, None)] = shape_dicts[(qpu_top, qpu_top)] 
-
             qpu_sampler = MockDWaveSamplerGeneralization(qpu_topology=qpu_top)
-            
+
             # pop final 15 edges to exercise edge cover routines.
             # 15 is a worst case upper bound on the number of defects that
             # can be handled given the default exact edge cover routines. 
