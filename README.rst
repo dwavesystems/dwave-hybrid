@@ -102,3 +102,9 @@ License
 =======
 
 Released under the Apache License 2.0. See `<LICENSE>`_ file.
+
+Contributing
+============
+
+Ocean's `contributing guide <https://docs.ocean.dwavesys.com/en/stable/contributing.html>`_
+has guidelines for contributing to Ocean packages.
