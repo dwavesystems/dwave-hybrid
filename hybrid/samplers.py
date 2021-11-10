@@ -26,6 +26,7 @@ from collections import namedtuple
 import dimod
 from dwave.system.samplers import DWaveSampler
 from dwave.system.composites import AutoEmbeddingComposite, FixedEmbeddingComposite
+from dwave.preprocessing.composites import SpinReversalTransformComposite
 
 from tabu import TabuSampler
 from neal import SimulatedAnnealingSampler
@@ -70,15 +71,18 @@ class QPUSubproblemExternalEmbeddingSampler(traits.SubproblemSampler,
             Dictionary of keyword arguments with values that will be used
             on every call of the (external-embedding-wrapped QPU) sampler.
 
+        logical_spin_rev_trans (int, optional, default=False):
+            Perform a spin-reversal transform over the logical space.
+
     See :ref:`samplers-examples`.
     """
 
     def __init__(self, num_reads=100, qpu_sampler=None, sampling_params=None,
-                 **runopts):
+                 logical_spin_rev_trans = False, **runopts):
         super(QPUSubproblemExternalEmbeddingSampler, self).__init__(**runopts)
 
         self.num_reads = num_reads
-
+        
         if qpu_sampler is None:
             qpu_sampler = DWaveSampler()
         self.sampler = qpu_sampler
@@ -87,6 +91,8 @@ class QPUSubproblemExternalEmbeddingSampler(traits.SubproblemSampler,
             sampling_params = {}
         self.sampling_params = sampling_params
 
+        self.logical_spin_rev_trans = logical_spin_rev_trans
+        
     def __repr__(self):
         return ("{self}(num_reads={self.num_reads!r}, "
                        "qpu_sampler={self.sampler!r}, "
@@ -100,6 +106,9 @@ class QPUSubproblemExternalEmbeddingSampler(traits.SubproblemSampler,
         params.update(num_reads=num_reads)
 
         sampler = FixedEmbeddingComposite(self.sampler, embedding=state.embedding)
+        if logical_spin_rev_trans:
+            params.update(num_spin_reversal_transforms=1)
+            sampler = SpinReversalTransformComposite(sampler)
         response = sampler.sample(state.subproblem, **params)
 
         return state.updated(subsamples=response)
