@@ -1075,7 +1075,7 @@ class Const(traits.NotValidated, Runnable):
 
 class Log(traits.NotValidated, Runnable):
     """Tracks and logs metrics extracted from state by the ``key`` function.
-
+    
     Args:
         key (callable):
             Metric(s) extractor. A callable that receives a state, and returns
