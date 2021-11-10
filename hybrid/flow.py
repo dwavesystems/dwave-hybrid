@@ -12,6 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import numpy as np #Used by Log only
+import json #Used by Log only
+import datetime #Used by Log only
+import os #Used by Log only
+
 import time
 import logging
 import warnings
@@ -29,7 +34,8 @@ __all__ = [
     'Branch', 'Branches', 'RacingBranches', 'Race', 'ParallelBranches', 'Parallel',
     'Map', 'Reduce', 'Lambda', 'ArgMin', 'Unwind', 'TrackMin',
     'Loop', 'LoopUntilNoImprovement', 'LoopWhileNoImprovement',
-    'Identity', 'BlockingIdentity', 'Dup', 'Const', 'Wait'
+    'Identity', 'BlockingIdentity', 'Dup', 'Const', 'Wait',
+    'Log'
 ]
 
 logger = logging.getLogger(__name__)
@@ -1065,3 +1071,63 @@ class Const(traits.NotValidated, Runnable):
 
     def next(self, state, **runopts):
         return state.updated(**self.consts)
+
+
+class Log(traits.NotValidated, Runnable):
+    """Tracks and logs metrics extracted from state by the ``key`` function.
+
+    Args:
+        key (callable):
+            Metric(s) extractor. A callable that receives a state, and returns
+            a mapping of values to names::
+
+                key: Callable[State] -> Mapping[str, Any]
+
+        tag (str, optional):
+            Log entry tag.
+
+        output_file (file, optional):
+            A file opened in append mode, updated on each component run.
+
+    """
+
+    class NumpyEncoder(json.JSONEncoder):
+        """JSON encoder for numpy types """
+
+        def default(self, obj):
+            if isinstance(obj, np.integer):
+                return int(obj)
+            elif isinstance(obj, np.floating):
+                return float(obj)
+            elif isinstance(obj, np.ndarray):
+                return obj.tolist()
+            return json.JSONEncoder.default(self, obj)
+
+    def __init__(self, key, tag=None, output_file=None, **runopts):
+        super(Log, self).__init__(**runopts)
+        if not callable(key):
+            raise TypeError("callable 'key' expected")
+        self.key = key
+        self.output_file = output_file
+        self.tag = tag
+        self.history = []
+
+    def __repr__(self):
+        return (f"{self.name}(key={self.key!r}, tag={self.tag!r}, "
+                f"output_file={self.output_file!r})")
+
+    def next(self, state, **runopts):
+        metrics = self.key(state)
+
+        entry = dict(time=time.time(), time_perf=time.perf_counter(), ddnow_iso=datetime.datetime.now().isoformat(), data=metrics)
+        if self.tag is not None:
+            entry.update(tag=self.tag)
+
+        if self.output_file:
+            self.output_file.write(json.dumps(entry, cls=self.NumpyEncoder))
+            self.output_file.write(os.linesep)
+            self.output_file.flush()
+        else:
+            self.history.append(entry)
+
+        return state
