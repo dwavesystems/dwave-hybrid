@@ -1,4 +1,4 @@
-dimod==0.10.6
+dimod==0.10.9
 numpy>=1.19.4
 minorminer==0.2.6
 dwave-system==1.8.0

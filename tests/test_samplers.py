@@ -44,7 +44,7 @@ class MockDWaveReverseAnnealingSampler(MockDWaveSampler):
         return super(MockDWaveReverseAnnealingSampler, self).sample(*args, **kwargs)
 
 class MockDWaveSamplerCounter(MockDWaveSampler):
-    """Extend the `dwave.system.testing.MockDWaveSampler` to count how many times 
+    """Extend the `dwave.system.testing.MockDWaveSampler` to count how many times
     the sampler runs.
     """
     count = 0
@@ -85,11 +85,11 @@ class TestQPUSamplers(unittest.TestCase):
 
         target_structure = q.sampler.target_structure
         num_vars = len(target_structure.nodelist) + 1 # source graph will be too large for the target and ensure an embedding failure
-        bqm = dimod.BinaryQuadraticModel(num_vars, 'SPIN') 
+        bqm = dimod.BinaryQuadraticModel(num_vars, 'SPIN')
         init = State.from_subsample(random_sample(bqm), bqm)
 
         retries = 3
-        with self.assertRaises(ValueError):
+        with self.assertRaises(KeyError):
             result = q.run(init, num_retries=retries).result()
 
         self.assertEqual(retries + 1, counter.count)

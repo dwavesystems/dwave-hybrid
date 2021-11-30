@@ -239,7 +239,7 @@ class QPUSubproblemAutoEmbeddingSampler(traits.SubproblemSampler, traits.SISO, R
             try:
                 num_tries += 1
                 response = self.sampler.sample(state.subproblem, **params)
-            except ValueError as exc:
+            except KeyError as exc:
                 if num_tries <= num_retries:
                     pass
                 else:
