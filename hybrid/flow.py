@@ -17,6 +17,7 @@ import time
 import logging
 import warnings
 import concurrent.futures
+import queue
 from operator import attrgetter
 from functools import partial
 from itertools import chain
@@ -1095,13 +1096,19 @@ class Log(traits.NotValidated, Runnable):
             written on each runnable iteration and optionally flushed, depending
             on `buffering` argument.
 
+            Note: Avoid using the same ``outfile`` for multiple
+            :class:`~hybrid.flow.Log` runnables, as file write operation is not
+            thread-safe.
+
         buffering (bool, optional, default=True):
             When buffering is set to False, output to `outfile` is flushed on
             each iteration.
 
-        memo (boolean, optional, default=False):
-            Keep track of all log records produced in :attr:`Log.records`. Can
-            be used separate from logging to ``outfile``.
+        memo (boolean/list/queue.Queue, optional, default=False):
+            Set to True to keep track of all log records produced in the
+            instance-local :attr:`Log.records` list. Alternatively, provide an
+            external list or :class:`queue.Queue` in which all log records will
+            be pushed.
 
         loglevel (int, optional, default=logging.NOTSET):
             When loglevel is set, output the log record to standard logger
@@ -1118,9 +1125,23 @@ class Log(traits.NotValidated, Runnable):
         self.extra = extra
         self.outfile = outfile
         self.buffering = buffering
-        self.memo = memo
-        self.records = []
+
+        if hasattr(memo, 'append') or hasattr(memo, 'put'):
+            self.records = memo
+        elif memo:
+            self.records = []
+        else:
+            self.records = None
+
         self.loglevel = loglevel
+
+    def _append_record(self, record):
+        if hasattr(self.records, 'append'):
+            self.records.append(record)
+        elif hasattr(self.records, 'put'):
+            self.records.put(record)
+        else:
+            raise TypeError("unsupported 'memo' container type")
 
     def __repr__(self):
         return (f"{self.name}(key={self.key!r}, extra={self.extra!r}, "
@@ -1137,8 +1158,8 @@ class Log(traits.NotValidated, Runnable):
         if self.outfile:
             print(msg, file=self.outfile, flush=not self.buffering)
 
-        if self.memo:
-            self.records.append(record)
+        if self.records is not None:
+            self._append_record(record)
 
         if self.loglevel:
             logger.log(self.loglevel, f"{self.name} Record({msg})")
