@@ -60,6 +60,27 @@ class NumpyEncoder(json.JSONEncoder):
         return super().default(obj)
 
 
+class OceanEncoder(NumpyEncoder):
+    """JSON encoder for common Ocean types.
+
+    Use for convenience output/logging/inspection only, not for robust
+    serialization (not all info required for reconstruction is dumped)!
+
+    Supported types:
+     - numpy types (see :class:`~hybrid.utils.NumpyEncoder`)
+     - BinaryQuadraticModel (serialized as "numpy vectors")
+     - SampleSet
+    """
+
+    def default(self, obj):
+        if isinstance(obj, dimod.BinaryQuadraticModel):
+            return obj.to_numpy_vectors(return_labels=True)._asdict()
+        elif isinstance(obj, dimod.SampleSet):
+            return obj.to_serializable()
+
+        return super().default(obj)
+
+
 def bqm_density(bqm):
     """Calculate BQM's graph density."""
 

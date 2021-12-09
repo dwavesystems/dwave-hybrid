@@ -24,7 +24,7 @@ import dwave_networkx as dnx
 from hybrid.core import SampleSet
 from hybrid.utils import (
     chimera_tiles, flip_energy_gains, select_localsearch_adversaries,
-    hstack_samplesets, NumpyEncoder)
+    hstack_samplesets, NumpyEncoder, OceanEncoder)
 
 
 class TestEnergyFlipGainUtils(unittest.TestCase):
@@ -280,4 +280,27 @@ class TestNumpyJSONEncoder(unittest.TestCase):
         self.assertEqual(
             json.dumps(py_val),
             json.dumps(np_val, cls=NumpyEncoder)
+        )
+
+
+class TestOceanJSONEncoder(unittest.TestCase):
+
+    def test_bqm_encode(self):
+        bqm = dimod.BQM.from_ising({'a': 1}, {'bc': 1})
+        np_vec = {
+            "linear_biases": [1.0, 0.0, 0.0],
+            "quadratic": [[2], [1], [1.0]],
+            "offset": 0.0,
+            "labels": ["a", "b", "c"]
+        }
+        self.assertEqual(
+            json.dumps(bqm, cls=OceanEncoder),
+            json.dumps(np_vec)
+        )
+
+    def test_sampleset_encode(self):
+        ss = dimod.SampleSet.from_samples([1, 0, 1], 'BINARY', 0)
+        self.assertEqual(
+            json.dumps(ss, cls=OceanEncoder),
+            json.dumps(ss.to_serializable())
         )
