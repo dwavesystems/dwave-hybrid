@@ -21,6 +21,7 @@ import threading
 import operator
 import copy
 import tempfile
+import logging
 from concurrent import futures
 from functools import partial
 
@@ -1024,3 +1025,27 @@ class TestLog(unittest.TestCase):
             self.assertIn('timestamp', record)
             self.assertEqual(record['data'], inp.x)
             self.assertEqual(record['tag'], tag)
+
+    def test_memo_in_a_loop(self):
+        class Inc(Runnable):
+            def next(self, state):
+                return state.updated(x=state.x + 1)
+
+        inc = Inc()
+        log = Log(key=lambda state: state.x, memo=True)
+        wrk = Loop(inc | log, max_iter=3)
+        inp = State(x=0)
+        out = wrk.run(inp).result()
+
+        self.assertEqual(len(log.records), 3)
+        self.assertEqual([r['data'] for r in log.records], [1, 2, 3])
+
+    def test_logging(self):
+        log = Log(key=lambda state: state.x, loglevel=logging.INFO)
+        inp = State(x=1)
+
+        with self.assertLogs('hybrid.flow', level='INFO') as logmgr:
+            _ = log.run(inp).result()
+            self.assertEqual(len(logmgr.output), 1)
+            self.assertIn('Log', logmgr.output[0])
+            self.assertIn('data', logmgr.output[0])

@@ -1099,9 +1099,18 @@ class Log(traits.NotValidated, Runnable):
             When buffering is set to False, output to `outfile` is flushed on
             each iteration.
 
+        memo (boolean, optional, default=False):
+            Keep track of all log records produced in :attr:`Log.records`. Can
+            be used separate from logging to ``outfile``.
+
+        loglevel (int, optional, default=logging.NOTSET):
+            When loglevel is set, output the log record to standard logger
+            configured for ``hybrid.flow`` namespace.
+
     """
 
-    def __init__(self, key, extra=None, outfile=None, buffering=False, **runopts):
+    def __init__(self, key, extra=None, outfile=None, buffering=False,
+                 memo=False, loglevel=logging.NOTSET, **runopts):
         super().__init__(**runopts)
         if not callable(key):
             raise TypeError("callable 'key' expected")
@@ -1109,19 +1118,29 @@ class Log(traits.NotValidated, Runnable):
         self.extra = extra
         self.outfile = outfile
         self.buffering = buffering
+        self.memo = memo
+        self.records = []
+        self.loglevel = loglevel
 
     def __repr__(self):
         return (f"{self.name}(key={self.key!r}, extra={self.extra!r}, "
-                f"outfile={self.outfile!r}, buffering={self.buffering!r})")
+                f"outfile={self.outfile!r}, buffering={self.buffering!r}, "
+                f"memo={self.memo!r}, loglevel={self.loglevel!r})")
 
     def next(self, state, **runopts):
         data = self.key(state)
         record = dict(time=utcnow(), timestamp=time.monotonic(), data=data)
         if self.extra is not None:
             record.update(self.extra)
+        msg = json.dumps(record, cls=OceanEncoder)
 
         if self.outfile:
-            line = json.dumps(record, cls=OceanEncoder)
-            print(line, file=self.outfile, flush=not self.buffering)
+            print(msg, file=self.outfile, flush=not self.buffering)
+
+        if self.memo:
+            self.records.append(record)
+
+        if self.loglevel:
+            logger.log(self.loglevel, f"{self.name} Record({msg})")
 
         return state
