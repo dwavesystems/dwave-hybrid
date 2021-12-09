@@ -14,6 +14,7 @@
 
 import json
 import random
+import datetime
 
 import numpy
 
@@ -73,7 +74,9 @@ class OceanEncoder(NumpyEncoder):
     """
 
     def default(self, obj):
-        if isinstance(obj, dimod.BinaryQuadraticModel):
+        if isinstance(obj, datetime.datetime):
+            return obj.isoformat()
+        elif isinstance(obj, dimod.BinaryQuadraticModel):
             return obj.to_numpy_vectors(return_labels=True)._asdict()
         elif isinstance(obj, dimod.SampleSet):
             return obj.to_serializable()

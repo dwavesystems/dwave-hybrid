@@ -20,6 +20,7 @@ from parameterized import parameterized
 
 import dimod
 import dwave_networkx as dnx
+from dwave.cloud.utils import utcnow
 
 from hybrid.core import SampleSet
 from hybrid.utils import (
@@ -284,6 +285,13 @@ class TestNumpyJSONEncoder(unittest.TestCase):
 
 
 class TestOceanJSONEncoder(unittest.TestCase):
+
+    def test_datetime(self):
+        dt = utcnow()
+        self.assertEqual(
+            json.dumps(dt, cls=OceanEncoder),
+            json.dumps(dt.isoformat())
+        )
 
     def test_bqm_encode(self):
         bqm = dimod.BQM.from_ising({'a': 1}, {'bc': 1})
