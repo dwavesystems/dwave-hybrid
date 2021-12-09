@@ -12,12 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+import json
 import time
 import itertools
 import unittest
 import threading
 import operator
 import copy
+import tempfile
 from concurrent import futures
 from functools import partial
 
@@ -27,7 +30,7 @@ from hybrid.flow import (
     Branch, Branches, RacingBranches, ParallelBranches,
     ArgMin, Map, Reduce, Lambda, Unwind, TrackMin,
     LoopUntilNoImprovement, LoopWhileNoImprovement, SimpleIterator, Loop,
-    Identity, BlockingIdentity, Dup, Const, Wait
+    Identity, BlockingIdentity, Dup, Const, Wait, Log
 )
 from hybrid.core import State, States, Runnable, Present
 from hybrid.utils import min_sample, max_sample
@@ -1000,3 +1003,24 @@ class TestConst(unittest.TestCase):
         inp = States(State(), State(x=1))
         exp = States(State(x=None), State(x=None))
         self.assertEqual(wrk.run(inp).result(), exp)
+
+
+class TestLog(unittest.TestCase):
+
+    def test_log_output(self):
+        with tempfile.TemporaryFile(mode='w+t') as fp:
+            tag = 'test'
+            log = Log(key=lambda state: state.x, extra=dict(tag=tag), outfile=fp)
+            inp = State(x=1)
+            out = log.run(inp).result()
+
+            # get lines logged to file
+            fp.seek(0, os.SEEK_SET)
+            lines = fp.readlines()
+            self.assertEqual(len(lines), 1)
+
+            record = json.loads(lines[0])
+            self.assertIn('time', record)
+            self.assertIn('timestamp', record)
+            self.assertEqual(record['data'], inp.x)
+            self.assertEqual(record['tag'], tag)
