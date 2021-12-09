@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import random
 
 import numpy
@@ -36,6 +37,27 @@ def cpu_count():    # pragma: no cover
         pass
 
     return 1
+
+
+class NumpyEncoder(json.JSONEncoder):
+    """JSON encoder for numpy types.
+
+    Supported types:
+     - basic numeric types: booleans, integers, floats
+     - arrays: ndarray, recarray
+    """
+
+    def default(self, obj):
+        if isinstance(obj, numpy.integer):
+            return int(obj)
+        elif isinstance(obj, numpy.floating):
+            return float(obj)
+        elif isinstance(obj, numpy.bool_):
+            return bool(obj)
+        elif isinstance(obj, numpy.ndarray):
+            return obj.tolist()
+
+        return super().default(obj)
 
 
 def bqm_density(bqm):
