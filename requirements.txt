@@ -1,11 +1,12 @@
-dimod==0.10.6
+dimod==0.10.10
 numpy>=1.19.4
 minorminer==0.2.6
-dwave-system==1.8.0
+dwave-system==1.10.0
 dwave-neal==0.5.8
 dwave-tabu==0.4.2
 dwave-greedy==0.2.1
+dwave-preprocessing==0.3.2
 networkx
-dwave-networkx==0.8.9
+dwave-networkx==0.8.10
 click
 plucky>=0.4.3
