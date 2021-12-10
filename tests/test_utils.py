@@ -258,8 +258,11 @@ class TestNumpyJSONEncoder(unittest.TestCase):
         (numpy.half(1.0), 1.0), (numpy.float16(1.0), 1.0),
         (numpy.single(1.0), 1.0), (numpy.float32(1.0), 1.0),
         (numpy.double(1.0), 1.0), (numpy.float64(1.0), 1.0),
-        (numpy.longdouble(1.0), 1.0), (numpy.float128(1.0), 1.0),
-    ])
+        (numpy.longdouble(1.0), 1.0)
+    ] + ([
+        (numpy.float128(1.0), 1.0)      # unavailable on windows
+    ] if hasattr(numpy, 'float128') else [
+    ]))
     def test_numpy_primary_type_encode(self, np_val, py_val):
         self.assertEqual(
             json.dumps(py_val),
