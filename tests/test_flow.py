@@ -1061,10 +1061,11 @@ class TestLog(unittest.TestCase):
 
     @parameterized.expand([
         (queue.Queue(), ),
-        (queue.SimpleQueue(), ),
         (queue.LifoQueue(), ),
         (multiprocessing.Queue(), ),
-    ])
+    ] + ([
+        (queue.SimpleQueue(), ),    # unavailable in py36 and before
+    ] if hasattr(queue, 'SimpleQueue') else []))
     def test_shared_memo_queue(self, memo):
         # queue as shared, thread-safe, log record store
         key = operator.attrgetter('x')
