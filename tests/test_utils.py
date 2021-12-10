@@ -296,8 +296,8 @@ class TestOceanJSONEncoder(unittest.TestCase):
     def test_bqm_encode(self):
         bqm = dimod.BQM.from_ising({'a': 1}, {'bc': 1})
         np_vec = {
-            "linear_biases": [1.0, 0.0, 0.0],
-            "quadratic": [[2], [1], [1.0]],
+            "linear": [1.0, 0.0, 0.0],
+            "quadratic": [[1], [2], [1.0]],
             "offset": 0.0,
             "labels": ["a", "b", "c"]
         }

@@ -77,7 +77,11 @@ class OceanEncoder(NumpyEncoder):
         if isinstance(obj, datetime.datetime):
             return obj.isoformat()
         elif isinstance(obj, dimod.BinaryQuadraticModel):
-            return obj.to_numpy_vectors(return_labels=True)._asdict()
+            # in dimod > 0.10, to_numpy_vectors returns a namedtuple. until we
+            # drop support for dimod < 0.10, we have to be explicit here
+            fields = ("linear", "quadratic", "offset", "labels")
+            vec = obj.to_numpy_vectors(sort_indices=True, sort_labels=True, return_labels=True)
+            return dict(zip(fields, vec))
         elif isinstance(obj, dimod.SampleSet):
             return obj.to_serializable()
 
