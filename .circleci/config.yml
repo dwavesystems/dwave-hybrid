@@ -5,7 +5,7 @@ jobs:
     parameters:
       python-version:
         type: string
-      dimod-version:
+      pip-constraints:
         type: string
 
     docker:
@@ -30,16 +30,6 @@ jobs:
             pip install -r requirements.txt -r tests/requirements.txt
             pip install wheel twine
 
-      - run:
-          name: Install appropriate dimod version
-          command: |
-            . env/bin/activate
-            if [[ "<< parameters.dimod-version >>" ]]; then
-              pip install 'dimod<< parameters.dimod-version >>'
-            else
-              pip uninstall dimod -y
-            fi
-
       - save_cache: &save-cache-env
           key: v1-dependencies-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
           paths:
@@ -49,9 +39,11 @@ jobs:
           name: Build package
           command: env/bin/python setup.py sdist bdist_wheel
 
-      - run: &install-package
-          name: Install package
-          command: env/bin/pip install .
+      - run: &install-package-with-constraints
+          name: Install package (with constraints)
+          command: |
+            . env/bin/activate
+            pip install . -c <(printf '%s\n' << parameters.pip-constraints >>)
 
       - run: &run-python-tests
           name: Run Python tests
@@ -109,7 +101,9 @@ jobs:
 
       - save_cache: *save-cache-env
 
-      - run: *install-package
+      - run: &install-package
+          name: Install package
+          command: env/bin/pip install .
 
       - run: *run-python-tests
 
@@ -188,17 +182,20 @@ workflows:
   test:
     jobs:
       - test-linux:
-          name: test-linux-py<< matrix.python-version >><<# matrix.dimod-version >>-dimod<< matrix.dimod-version >><</ matrix.dimod-version >>
+          name: test-linux-<< matrix.python-version >> | << matrix.pip-constraints >>
           matrix:
             parameters:
               python-version: &python-versions ["3.6.12", "3.7.9", "3.8.6", "3.9.0"]
-              dimod-version: ["==0.9.6", "~=0.9.0", "~=0.10.0,>0.10.4"]
+              pip-constraints:
+                - "dimod==0.9.6 dwave-system==0.9.7"
+                - "dimod~=0.9.0 dwave-system~=1.0"
+                - "dimod~=0.10.0 dwave-system~=1.0"
             exclude:
               - python-version: "3.9.0"
-                dimod-version: "==0.9.0"    # py39 not supported until 0.9.11
+                pip-constraints: "dimod==0.9.6 dwave-system==0.9.7"    # py39 not supported until dimod==0.9.11
 
       - test-macos:
-          name: test-macos-py<< matrix.python-version >>
+          name: test-macos-<< matrix.python-version >>
           matrix:
             parameters:
               python-version: *python-versions
