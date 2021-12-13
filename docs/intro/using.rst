@@ -142,7 +142,10 @@ with large numbers of variables.
    process all the subproblems in parallel and merge the returned samples. Here the
    :class:`~hybrid.decomposers.EnergyImpactDecomposer` is iterated until it raises a
    :meth:`~hybrid.exceptions.EndOfStream` exception when it reaches 15% of the variables,
-   and then all the 50-variable subproblems are submitted to the D-Wave system.
+   and then all the 50-variable subproblems are submitted to the D-Wave system in parallel.
+   Subsamples returned by the QPU are disjoint in variables, so we can easily reduce them
+   all to a single subsample, which is then merged with the input sample using
+   :class:`~hybrid.composers.SplatComposer`:
 
 .. code-block:: python
 
@@ -151,6 +154,12 @@ with large numbers of variables.
         hybrid.EnergyImpactDecomposer(size=50, rolling_history=0.15)
     )
 
+    # Helper function to merge subsamples in place
+    def merge_substates(_, substates):
+        a, b = substates
+        return a.updated(subsamples=hybrid.hstack_samplesets(a.subsamples, b.subsamples))
+
+    # Map QPU sampling over all subproblems, then reduce subsamples by merging in place
     subsampler = hybrid.Map(
         hybrid.QPUSubproblemAutoEmbeddingSampler()
     ) | hybrid.Reduce(
