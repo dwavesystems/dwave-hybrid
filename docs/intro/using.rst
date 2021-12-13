@@ -144,7 +144,8 @@ with large numbers of variables.
    :meth:`~hybrid.exceptions.EndOfStream` exception when it reaches 15% of the variables,
    and then all the 50-variable subproblems are submitted to the D-Wave system in parallel.
    Subsamples returned by the QPU are disjoint in variables, so we can easily reduce them
-   all to a single subsample, which is then merged with the input sample using ``SplatComposer``:
+   all to a single subsample, which is then merged with the input sample using
+   :class:`~hybrid.composers.SplatComposer`:
 
 .. code-block:: python
 
