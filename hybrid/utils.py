@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import random
+import datetime
 
 import numpy
 
@@ -36,6 +38,54 @@ def cpu_count():    # pragma: no cover
         pass
 
     return 1
+
+
+class NumpyEncoder(json.JSONEncoder):
+    """JSON encoder for numpy types.
+
+    Supported types:
+     - basic numeric types: booleans, integers, floats
+     - arrays: ndarray, recarray
+    """
+
+    def default(self, obj):
+        if isinstance(obj, numpy.integer):
+            return int(obj)
+        elif isinstance(obj, numpy.floating):
+            return float(obj)
+        elif isinstance(obj, numpy.bool_):
+            return bool(obj)
+        elif isinstance(obj, numpy.ndarray):
+            return obj.tolist()
+
+        return super().default(obj)
+
+
+class OceanEncoder(NumpyEncoder):
+    """JSON encoder for common Ocean types.
+
+    Use for convenience output/logging/inspection only, not for robust
+    serialization (not all info required for reconstruction is dumped)!
+
+    Supported types:
+     - numpy types (see :class:`~hybrid.utils.NumpyEncoder`)
+     - BinaryQuadraticModel (serialized as "numpy vectors")
+     - SampleSet
+    """
+
+    def default(self, obj):
+        if isinstance(obj, datetime.datetime):
+            return obj.isoformat()
+        elif isinstance(obj, dimod.BinaryQuadraticModel):
+            # in dimod > 0.10, to_numpy_vectors returns a namedtuple. until we
+            # drop support for dimod < 0.10, we have to be explicit here
+            fields = ("linear", "quadratic", "offset", "labels")
+            vec = obj.to_numpy_vectors(sort_indices=True, sort_labels=True, return_labels=True)
+            return dict(zip(fields, vec))
+        elif isinstance(obj, dimod.SampleSet):
+            return obj.to_serializable()
+
+        return super().default(obj)
 
 
 def bqm_density(bqm):

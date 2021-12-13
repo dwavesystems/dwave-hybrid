@@ -12,22 +12,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+import json
 import time
 import itertools
 import unittest
 import threading
 import operator
 import copy
+import tempfile
+import logging
+import queue
+import multiprocessing
 from concurrent import futures
 from functools import partial
 
 import dimod
+from parameterized.parameterized import parameterized
 
 from hybrid.flow import (
-    Branch, Branches, RacingBranches, ParallelBranches,
+    Branch, Branches, RacingBranches, ParallelBranches, Parallel,
     ArgMin, Map, Reduce, Lambda, Unwind, TrackMin,
     LoopUntilNoImprovement, LoopWhileNoImprovement, SimpleIterator, Loop,
-    Identity, BlockingIdentity, Dup, Const, Wait
+    Identity, BlockingIdentity, Dup, Const, Wait, Log
 )
 from hybrid.core import State, States, Runnable, Present
 from hybrid.utils import min_sample, max_sample
@@ -1000,3 +1007,97 @@ class TestConst(unittest.TestCase):
         inp = States(State(), State(x=1))
         exp = States(State(x=None), State(x=None))
         self.assertEqual(wrk.run(inp).result(), exp)
+
+
+class TestLog(unittest.TestCase):
+
+    class Inc(Runnable):
+        def next(self, state):
+            return state.updated(x=state.x + 1)
+
+    def test_log_output(self):
+        with tempfile.TemporaryFile(mode='w+t') as fp:
+            tag = 'test'
+            log = Log(key=lambda state: state.x, extra=dict(tag=tag), outfile=fp)
+            inp = State(x=1)
+            out = log.run(inp).result()
+
+            # get lines logged to file
+            fp.seek(0, os.SEEK_SET)
+            lines = fp.readlines()
+            self.assertEqual(len(lines), 1)
+
+            record = json.loads(lines[0])
+            self.assertIn('time', record)
+            self.assertIn('timestamp', record)
+            self.assertEqual(record['data'], inp.x)
+            self.assertEqual(record['tag'], tag)
+
+    def test_memo_in_a_loop(self):
+        inc = TestLog.Inc()
+        log = Log(key=lambda state: state.x, memo=True)
+        wrk = Loop(inc | log, max_iter=3)
+        inp = State(x=0)
+        out = wrk.run(inp).result()
+
+        self.assertEqual(len(log.records), 3)
+        self.assertEqual([r['data'] for r in log.records], [1, 2, 3])
+
+    def test_shared_memo_list(self):
+        # list as shared, thread-safe, log record store
+        memo = []
+        key = operator.attrgetter('x')
+        log1 = Log(key=key, memo=memo, extra=dict(id=1))
+        log2 = Log(key=key, memo=memo, extra=dict(id=2))
+        log3 = Log(key=key, memo=memo, extra=dict(id=3))
+        inc = TestLog.Inc()
+        wrk = log1 | inc | Parallel(log2, inc | log3)
+        inp = State(x=1)
+        out = wrk.run(inp).result()
+
+        self.assertEqual(len(memo), 3)
+        self.assertEqual({r['id'] for r in memo}, {1, 2, 3})
+        self.assertEqual({r['data'] for r in memo}, {1, 2, 3})
+
+    @parameterized.expand([
+        (queue.Queue(), ),
+        (queue.LifoQueue(), ),
+        (multiprocessing.Queue(), ),
+    ] + ([
+        (queue.SimpleQueue(), ),    # unavailable in py36 and before
+    ] if hasattr(queue, 'SimpleQueue') else []))
+    def test_shared_memo_queue(self, memo):
+        # queue as shared, thread-safe, log record store
+        key = operator.attrgetter('x')
+        log1 = Log(key=key, memo=memo, extra=dict(id=1))
+        log2 = Log(key=key, memo=memo, extra=dict(id=2))
+        log3 = Log(key=key, memo=memo, extra=dict(id=3))
+        inc = TestLog.Inc()
+        wrk = log1 | inc | Parallel(log2, inc | log3)
+        inp = State(x=1)
+        out = wrk.run(inp).result()
+
+        res = []
+        while True:
+            try:
+                res.append(memo.get_nowait())
+            except queue.Empty:
+                break
+
+        self.assertEqual(len(res), 3)
+        self.assertEqual({r['id'] for r in res}, {1, 2, 3})
+        self.assertEqual({r['data'] for r in res}, {1, 2, 3})
+
+    def test_input_validation(self):
+        with self.assertRaises(TypeError):
+            Log(key=1)
+
+    def test_logging(self):
+        log = Log(key=lambda state: state.x, loglevel=logging.INFO)
+        inp = State(x=1)
+
+        with self.assertLogs('hybrid.flow', level='INFO') as logmgr:
+            _ = log.run(inp).result()
+            self.assertEqual(len(logmgr.output), 1)
+            self.assertIn('Log', logmgr.output[0])
+            self.assertIn('data', logmgr.output[0])

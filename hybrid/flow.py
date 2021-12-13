@@ -12,24 +12,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import time
 import logging
 import warnings
 import concurrent.futures
+import queue
 from operator import attrgetter
 from functools import partial
 from itertools import chain
 
+from dwave.cloud.utils import utcnow
+
 from hybrid.core import Runnable, State, States, stoppable
 from hybrid.concurrency import Present, immediate_executor
 from hybrid.exceptions import EndOfStream
+from hybrid.utils import OceanEncoder
 from hybrid import traits
 
 __all__ = [
     'Branch', 'Branches', 'RacingBranches', 'Race', 'ParallelBranches', 'Parallel',
     'Map', 'Reduce', 'Lambda', 'ArgMin', 'Unwind', 'TrackMin',
     'Loop', 'LoopUntilNoImprovement', 'LoopWhileNoImprovement',
-    'Identity', 'BlockingIdentity', 'Dup', 'Const', 'Wait'
+    'Identity', 'BlockingIdentity', 'Dup', 'Const', 'Wait', 'Log',
 ]
 
 logger = logging.getLogger(__name__)
@@ -1065,3 +1070,98 @@ class Const(traits.NotValidated, Runnable):
 
     def next(self, state, **runopts):
         return state.updated(**self.consts)
+
+
+class Log(traits.NotValidated, Runnable):
+    """Tracks and logs user-defined data (e.g. state metrics) extracted from
+    state by the ``key`` function.
+
+    Args:
+        key (callable):
+            Data/metric(s) extractor. A callable that receives a state, and
+            returns a mapping of values to names::
+
+                key: Callable[State] -> Mapping[str, Any]
+
+            Data returned by the key function is stored under ``data`` key of
+            the produced log record. In addition to ``data``, UTC ``time`` (in
+            ISO-8601 format) and a monotonic float ``timestamp`` (secods since
+            the epoch) are always stored in the log record.
+
+        extra (dict, optional):
+            Static extra items to add to each log record.
+
+        outfile (file, optional):
+            A file opened in text + write/append mode. JSON log record is
+            written on each runnable iteration and optionally flushed, depending
+            on `buffering` argument.
+
+            Note: Avoid using the same ``outfile`` for multiple
+            :class:`~hybrid.flow.Log` runnables, as file write operation is not
+            thread-safe.
+
+        buffering (bool, optional, default=True):
+            When buffering is set to False, output to `outfile` is flushed on
+            each iteration.
+
+        memo (boolean/list/queue.Queue, optional, default=False):
+            Set to True to keep track of all log records produced in the
+            instance-local :attr:`Log.records` list. Alternatively, provide an
+            external list or :class:`queue.Queue` in which all log records will
+            be pushed.
+
+        loglevel (int, optional, default=logging.NOTSET):
+            When loglevel is set, output the log record to standard logger
+            configured for ``hybrid.flow`` namespace.
+
+    """
+
+    def __init__(self, key, extra=None, outfile=None, buffering=False,
+                 memo=False, loglevel=logging.NOTSET, **runopts):
+        super().__init__(**runopts)
+        if not callable(key):
+            raise TypeError("callable 'key' expected")
+        self.key = key
+        self.extra = extra
+        self.outfile = outfile
+        self.buffering = buffering
+
+        if hasattr(memo, 'append') or hasattr(memo, 'put'):
+            self.records = memo
+        elif memo:
+            self.records = []
+        else:
+            self.records = None
+
+        self.loglevel = loglevel
+
+    def _append_record(self, record):
+        if hasattr(self.records, 'append'):
+            self.records.append(record)
+        elif hasattr(self.records, 'put'):
+            self.records.put(record)
+        else:
+            raise TypeError("unsupported 'memo' container type")
+
+    def __repr__(self):
+        return (f"{self.name}(key={self.key!r}, extra={self.extra!r}, "
+                f"outfile={self.outfile!r}, buffering={self.buffering!r}, "
+                f"memo={self.memo!r}, loglevel={self.loglevel!r})")
+
+    def next(self, state, **runopts):
+        data = self.key(state)
+        record = dict(time=utcnow(), timestamp=time.monotonic(), data=data)
+        if self.extra is not None:
+            record.update(self.extra)
+        msg = json.dumps(record, cls=OceanEncoder)
+
+        if self.outfile:
+            print(msg, file=self.outfile, flush=not self.buffering)
+
+        if self.records is not None:
+            self._append_record(record)
+
+        if self.loglevel:
+            logger.log(self.loglevel, f"{self.name} Record({msg})")
+
+        return state

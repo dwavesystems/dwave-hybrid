@@ -12,17 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import unittest
 
 import numpy
+from parameterized import parameterized
 
 import dimod
 import dwave_networkx as dnx
+from dwave.cloud.utils import utcnow
 
 from hybrid.core import SampleSet
 from hybrid.utils import (
     chimera_tiles, flip_energy_gains, select_localsearch_adversaries,
-    hstack_samplesets)
+    hstack_samplesets, NumpyEncoder, OceanEncoder)
 
 
 class TestEnergyFlipGainUtils(unittest.TestCase):
@@ -236,3 +239,79 @@ class TestSampleSetUtils(unittest.TestCase):
         res = hstack_samplesets(ss, bqm=bqm)
         self.assertEqual(res.vartype, dimod.SPIN)
         numpy.testing.assert_array_equal(res.record.energy, numpy.array([-1]))
+
+
+class TestNumpyJSONEncoder(unittest.TestCase):
+
+    @parameterized.expand([
+        (numpy.bool_(1), True), (numpy.bool8(1), True),
+        (numpy.byte(1), 1), (numpy.int8(1), 1),
+        (numpy.ubyte(1), 1), (numpy.uint8(1), 1),
+        (numpy.short(1), 1), (numpy.int16(1), 1),
+        (numpy.ushort(1), 1), (numpy.uint16(1), 1),
+        (numpy.intc(1), 1), (numpy.int32(1), 1),
+        (numpy.uintc(1), 1), (numpy.uint32(1), 1),
+        (numpy.int_(1), 1), (numpy.int32(1), 1),
+        (numpy.uint(1), 1), (numpy.uint32(1), 1),
+        (numpy.longlong(1), 1), (numpy.int64(1), 1),
+        (numpy.ulonglong(1), 1), (numpy.uint64(1), 1),
+        (numpy.half(1.0), 1.0), (numpy.float16(1.0), 1.0),
+        (numpy.single(1.0), 1.0), (numpy.float32(1.0), 1.0),
+        (numpy.double(1.0), 1.0), (numpy.float64(1.0), 1.0),
+        (numpy.longdouble(1.0), 1.0)
+    ] + ([
+        (numpy.float128(1.0), 1.0)      # unavailable on windows
+    ] if hasattr(numpy, 'float128') else [
+    ]))
+    def test_numpy_primary_type_encode(self, np_val, py_val):
+        self.assertEqual(
+            json.dumps(py_val),
+            json.dumps(np_val, cls=NumpyEncoder)
+        )
+
+    @parameterized.expand([
+        (numpy.array([1, 2, 3], dtype=numpy.int), [1, 2, 3]),
+        (numpy.array([[1], [2], [3]], dtype=numpy.double), [[1.0], [2.0], [3.0]]),
+        (numpy.zeros((2, 2), dtype=numpy.bool_), [[False, False], [False, False]]),
+        (numpy.array([('Rex', 9, 81.0), ('Fido', 3, 27.0)],
+                     dtype=[('name', 'U10'), ('age', 'i4'), ('weight', 'f4')]),
+         [['Rex', 9, 81.0], ['Fido', 3, 27.0]]),
+        (numpy.rec.array([(1, 2., 'Hello'), (2, 3., "World")],
+                         dtype=[('foo', 'i4'), ('bar', 'f4'), ('baz', 'U10')]),
+         [[1, 2.0, "Hello"], [2, 3.0, "World"]])
+    ])
+    def test_numpy_array_encode(self, np_val, py_val):
+        self.assertEqual(
+            json.dumps(py_val),
+            json.dumps(np_val, cls=NumpyEncoder)
+        )
+
+
+class TestOceanJSONEncoder(unittest.TestCase):
+
+    def test_datetime(self):
+        dt = utcnow()
+        self.assertEqual(
+            json.dumps(dt, cls=OceanEncoder),
+            json.dumps(dt.isoformat())
+        )
+
+    def test_bqm_encode(self):
+        bqm = dimod.BQM.from_ising({'a': 1}, {'bc': 1})
+        np_vec = {
+            "linear": [1.0, 0.0, 0.0],
+            "quadratic": [[1], [2], [1.0]],
+            "offset": 0.0,
+            "labels": ["a", "b", "c"]
+        }
+        self.assertEqual(
+            json.dumps(bqm, cls=OceanEncoder),
+            json.dumps(np_vec)
+        )
+
+    def test_sampleset_encode(self):
+        ss = dimod.SampleSet.from_samples([1, 0, 1], 'BINARY', 0)
+        self.assertEqual(
+            json.dumps(ss, cls=OceanEncoder),
+            json.dumps(ss.to_serializable())
+        )
