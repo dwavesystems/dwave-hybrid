@@ -11,7 +11,7 @@ with open(package_info_path, encoding='utf-8') as f:
 
 
 # Package requirements, minimal pinning
-install_requires = ['numpy>=1.15.0', 'networkx', 'click>5', 'plucky>=0.4.3',
+install_requires = ['numpy>=1.17.3', 'networkx', 'click>5', 'plucky>=0.4.3',
                     'dimod>=0.9.6,<0.11,!=0.10.0,!=0.10.1,!=0.10.2,!=0.10.3,!=0.10.4,!=0.10.9',
                     # Include dwave-preprocessing, as dimod went back and forth with
                     # including it as a core dependency vs extra. Make it unbounded,
@@ -36,6 +36,7 @@ classifiers = [
     'Programming Language :: Python :: 3.7',
     'Programming Language :: Python :: 3.8',
     'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: 3.10',
 ]
 
 setup(
