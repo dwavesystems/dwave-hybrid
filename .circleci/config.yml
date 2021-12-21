@@ -77,6 +77,20 @@ jobs:
           keys:
             - v1-pyenv-{{ .Environment.CIRCLE_JOB }}-xcode-<< parameters.xcode >>
 
+      - when:
+          # backport https://github.com/python/cpython/pull/21113 to support macOS 11 when building py36
+          # see also: https://github.com/pyenv/pyenv/issues/1737.
+          condition:
+            matches:
+              pattern: "^3\\.6.*$"
+              value: << parameters.python-version >>
+          steps:
+            - run:
+                name: Install Python 3.6 with a patch for macOS 11
+                command: |
+                  curl -LO https://github.com/python/cpython/commit/8ea6353.patch
+                  pyenv install << parameters.python-version>> -s -p < 8ea6353.patch
+
       - run: &pyenv-install-python
           name: Install python
           command: pyenv install << parameters.python-version >> -s
@@ -84,8 +98,10 @@ jobs:
       - run: &pyenv-set-system-python
           name: Set system python
           command: |
-            pyenv global << parameters.python-version >>
+            echo -e '\n\n# Initialize pyenv' >> ~/.bash_profile
+            echo 'eval "$(pyenv init --path 2>/dev/null || true)"' >> ~/.bash_profile
             echo 'eval "$(pyenv init -)"' >> ~/.bash_profile
+            pyenv global << parameters.python-version >>
 
       - save_cache: &save-cache-pyenv
           key: v1-pyenv-{{ .Environment.CIRCLE_JOB }}-xcode-<< parameters.xcode >>
@@ -155,7 +171,7 @@ jobs:
 
   pypi-deploy:
     docker:
-      - image: circleci/python:3.7
+      - image: circleci/python:3.9
 
     steps:
       - checkout
@@ -185,7 +201,7 @@ workflows:
           name: test-linux-<< matrix.python-version >> | << matrix.pip-constraints >>
           matrix:
             parameters:
-              python-version: &python-versions ["3.6.12", "3.7.9", "3.8.6", "3.9.0"]
+              python-version: &python-versions ["3.6.12", "3.7.9", "3.8.6", "3.9.0", "3.10.0"]
               pip-constraints:
                 - "dimod==0.9.6 dwave-system==0.9.7"
                 - "dimod~=0.9.0 dwave-system~=1.0"
@@ -193,13 +209,17 @@ workflows:
             exclude:
               - python-version: "3.9.0"
                 pip-constraints: "dimod==0.9.6 dwave-system==0.9.7"    # py39 not supported until dimod==0.9.11
+              - python-version: "3.10.0"
+                pip-constraints: "dimod==0.9.6 dwave-system==0.9.7"    # py10 not supported until dimod==0.10.10
+              - python-version: "3.10.0"
+                pip-constraints: "dimod~=0.9.0 dwave-system~=1.0"      # py10 not supported until dimod==0.10.10
 
       - test-macos:
           name: test-macos-<< matrix.python-version >>
           matrix:
             parameters:
               python-version: *python-versions
-              xcode: ["12.3.0"]
+              xcode: ["13.2.0"]
 
       - test-docs
 
