@@ -18,7 +18,7 @@ import time
 import logging
 import functools
 
-__all__ = ['perf_counter', 'tictoc', 'print_structure', 'print_counters']
+__all__ = ['perf_counter', 'tictoc', 'trace', 'print_structure', 'print_counters']
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,8 @@ except AttributeError:  # pragma: no cover
 class tictoc(object):
     """Instrument and log function execution duration.
 
-    Examples:
+    Examples::
+
         @tictoc('function', loglevel=logging.INFO)
         def f(x, y):
             a = x * y
@@ -101,7 +102,8 @@ class make_count(object):
     Args:
         counters (dict): Counters storage.
 
-    Example:
+    Example::
+
         counters = {}
         count = make_count(counters)
 
@@ -132,7 +134,8 @@ class make_timeit(object):
     Args:
         timers (dict): Timers storage.
 
-    Example:
+    Example::
+
         timers = {}
         timeit = make_timeit(timers)
 

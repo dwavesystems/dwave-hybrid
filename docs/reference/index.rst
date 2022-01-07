@@ -7,11 +7,12 @@ Reference Documentation
    :maxdepth: 2
 
    core
+   flow
    samplers
    composers
    decomposers
-   flow
    utilities
+   profiling
    conversion
    traits
    exceptions
