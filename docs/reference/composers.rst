@@ -9,10 +9,25 @@ Composers
 Class
 =====
 
+Subsample to Sample Composers
+-----------------------------
+
 .. autoclass:: IdentityComposer
 .. autoclass:: SplatComposer
-.. autoclass:: GreedyPathMerge
 
+Sample Processors
+-----------------
+
+.. autoclass:: GreedyPathMerge
+.. autoclass:: IsoenergeticClusterMove
+
+Primitive Sample Operations
+---------------------------
+
+.. autoclass:: AggregatedSamples
+.. autoclass:: ExplodeSamples
+.. autoclass:: MergeSamples
+.. autoclass:: SliceSamples
 
 .. _composers-examples:
 

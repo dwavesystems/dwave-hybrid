@@ -9,17 +9,32 @@ Samplers
 Classes
 =======
 
-.. autoclass:: InterruptableTabuSampler
-.. autoclass:: QPUSubproblemExternalEmbeddingSampler
+QPU Samplers and Embedders
+--------------------------
+
 .. autoclass:: QPUSubproblemAutoEmbeddingSampler
-.. autoclass:: RandomSubproblemSampler
+.. autoclass:: QPUSubproblemExternalEmbeddingSampler
 .. autoclass:: ReverseAnnealingAutoEmbeddingSampler
+.. autoclass:: SubproblemCliqueEmbedder
+
+Classical Samplers
+------------------
+
+.. autoclass:: RandomSubproblemSampler
 .. autoclass:: SimulatedAnnealingProblemSampler
 .. autoclass:: SimulatedAnnealingSubproblemSampler
 .. autoclass:: SteepestDescentProblemSampler
 .. autoclass:: SteepestDescentSubproblemSampler
 .. autoclass:: TabuProblemSampler
 .. autoclass:: TabuSubproblemSampler
+
+Interruptable Variants
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: InterruptableTabuSampler
+.. autoclass:: InterruptableSimulatedAnnealingProblemSampler
+.. autoclass:: InterruptableSimulatedAnnealingSubproblemSampler
+
 
 .. _samplers-examples:
 

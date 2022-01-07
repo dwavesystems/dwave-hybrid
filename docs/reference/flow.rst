@@ -8,6 +8,7 @@ Classes that structure (hybrid) workflows.
 
 .. automodule:: hybrid.flow
 
+
 Classes
 =======
 
@@ -19,6 +20,7 @@ Classes
 .. autoclass:: Identity
 .. autoclass:: BlockingIdentity
 .. autoclass:: Lambda
+.. autoclass:: Log
 .. autoclass:: Loop
 .. autoclass:: LoopUntilNoImprovement
 .. autoclass:: LoopWhileNoImprovement
