@@ -31,3 +31,11 @@ qbsolv
 
 .. automodule:: hybrid.reference.qbsolv
    :members:
+
+latticeLNLS
+===========
+
+.. automodule:: hybrid.reference.latticeLNLS
+   :members:
+
+      

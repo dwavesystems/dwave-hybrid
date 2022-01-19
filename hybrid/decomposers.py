@@ -879,13 +879,22 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None):
     qpu_shape = qpu_sampler.properties['topology']['shape']
 
     target = nx.Graph()
-    target.add_edges_from(qpu_sampler.edgelist)
-
+    # 'couplers' and 'qubits' property fields are preferred to
+    # edgelist and nodelist properties when available.
+    # Mutability of the former is a useful feature for masking
+    # on the fly.
+    if 'couplers' in qpu_sampler.properties:
+        target.add_edges_from(qpu_sampler.properties['couplers'])
+    else:
+        target.add_edges_from(qpu_sampler.edgelist)
     if qpu_type == lattice_type:
         # Fully yielded fully utilized native topology problem.
         # This method is also easily adapted to work for any chain-length 1
         # embedding
-        origin_embedding = {q: [q] for q in qpu_sampler.properties['qubits']}
+        if 'qubits' in qpu_sampler.properties:
+            origin_embedding = {q: [q] for q in qpu_sampler.properties['qubits']}
+        else:
+            origin_embedding = {q: [q] for q in qpu_sampler.nodelist}
         if lattice_type == 'pegasus':
             # Trimming to nice_coordinate supported embeddings is not a unique,
             # options, it has some advantages and some disadvantages:
