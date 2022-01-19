@@ -31,7 +31,7 @@ def LatticeLNLS(topology,
                 qpu_params={'num_reads': 25, 'annealing_time': 100},
                 workflow_type = 'qpu-only'):
     '''
-    Implements lattice workflows as described in [REFERENCE PAPER]
+    Implements lattice workflows as described in [REFERENCE PAPER IN PREPARATION]
 
     LatticeLNLS workflow is used by :class:`LatticeLNLSSampler`.
     
@@ -40,7 +40,7 @@ def LatticeLNLS(topology,
         topology (str): 
             A lattice topology (e.g. 'cubic'), consistent with bqm.
             
-            Supported values:
+            Supported values: 
             
                 'pegasus' (``qpu_sampler`` must be pegasus-structured)
                 
@@ -48,27 +48,27 @@ def LatticeLNLS(topology,
                 
                 'chimera' (``qpu_sampler`` must be chimera-structured)
 
-        problem_dims: (tuple of ints) 
+        problem_dims (tuple of ints): 
             Lattice dimensions (e.g. (18,18,18))
             
-        qpu_sampler (:class:`dimod.Sampler`, optional, default=DWaveSampler()):
+        qpu_sampler (:class:`dimod.Sampler`, optional, default=DWaveSampler()): 
             Sampler such as a D-Wave system.
     
-        qpu_params (dict, optional, default = {'num_reads': 25, 'annealing_time': 100}):
+        qpu_params (dict, optional, default = ``{'num_reads': 25, 'annealing_time': 100}``): 
             Dictionary of keyword arguments with values that will be used
             on every call of the QPU sampler.
     
         workflow_type (str, optional): 
-            Supported values:
+            Supported values: 
                 
-                'qpu-only': Default workflow of this paper
+               'qpu-only': Default workflow of this paper
                 
-                'qpu+post-process': Steepest greedy descent run sequentially 
-                    with the QPU.
+               'qpu+post-process': Steepest greedy descent run sequentially 
+               with the QPU.
 
-                'qpu+parallel-process': Steepest greedy descent is run in parallel
-                    with the QPU, and best result is accepted (in effect, delayed
-                    post-processing in parallel with QPU.
+               'qpu+parallel-process': Steepest greedy descent is run in parallel
+               with the QPU, and best result is accepted (in effect, delayed
+               post-processing in parallel with QPU.
 
         max_iter (int, optional, default=128):
             Number of iterations in the hybrid algorithm.
@@ -87,7 +87,7 @@ def LatticeLNLS(topology,
         Workflow (:class:`~hybrid.core.Runnable` instance).
         
     See also:
-        [REFERENCE PAPER]
+        [REFERENCE PAPER IN PREPARATION]
 
     Examples: 
         This example creates a workflow for a cubic lattice problem

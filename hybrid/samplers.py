@@ -106,7 +106,7 @@ class QPUSubproblemExternalEmbeddingSampler(traits.SubproblemSampler,
         params.update(num_reads=num_reads)
 
         sampler = FixedEmbeddingComposite(self.sampler, embedding=state.embedding)
-        if logical_srt:
+        if self.logical_srt:
             params.update(num_spin_reversal_transforms=1)
             sampler = SpinReversalTransformComposite(sampler)
         response = sampler.sample(state.subproblem, **params)
