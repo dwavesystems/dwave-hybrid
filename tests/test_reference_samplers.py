@@ -30,9 +30,9 @@ from hybrid.reference.pa import (
 class TestLatticeLNLS(unittest.TestCase):
 
     def test_basic_operation(self):
-        bqm = dimod.BinaryQuadraticModel({}, {((0,0,0),(0,0,1)): 1, ((1,1,0),(1,1,1)): 1}, 0, dimod.SPIN)
+        bqm = dimod.BinaryQuadraticModel({(i,j,k) : 0 for i in range(2) for j in range(2) for k in range(2)}, {((0,0,0),(0,0,1)): 1, ((1,1,0),(1,1,1)): 1}, 0, dimod.SPIN)
         sampleset = LatticeLNLSSampler().sample(
-            bqm, problem_dims=(2,2,2), qpu_sampler=MockDWaveSampler(), topology='cubic',
+            bqm=bqm, problem_dims=(2,2,2), qpu_sampler=MockDWaveSampler(), topology='cubic',max_iter=1,
             qpu_params=dict(chain_strength=2))
 
 
@@ -183,6 +183,8 @@ class TestReferenceWorkflowsSmoke(unittest.TestCase):
         (hybrid.HybridizedPopulationAnnealing, dict(num_reads=10, num_iter=10, num_sweeps=10)),
         (hybrid.Kerberos, dict(sa_sweeps=10, tabu_timeout=10, qpu_sampler=MockDWaveSampler())),
         (hybrid.LatticeLNLS, dict(topology='cubic',problem_dims=(18,18,18),qpu_sampler=MockDWaveSampler())),
+        (hybrid.LatticeLNLS, dict(topology='pegasus',problem_dims=(22,22),qpu_sampler=MockDWaveSampler(topology_type='pegasus'))),
+        (hybrid.LatticeLNLS, dict(topology='chimera',problem_dims=(22,22),qpu_sampler=MockDWaveSampler(topology_type='chimera'))),
         (hybrid.SimplifiedQbsolv, dict(max_iter=2)),
     ])
     def test_smoke(self, sampler_cls, sampler_params):

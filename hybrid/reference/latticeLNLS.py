@@ -57,6 +57,9 @@ def LatticeLNLS(topology,
         qpu_params (dict, optional, default = ``{'num_reads': 25, 'annealing_time': 100}``): 
             Dictionary of keyword arguments with values that will be used
             on every call of the QPU sampler.
+            A local copy of the parameter is made. If the dictionary does not 
+            include 'num_reads', it is defaulted as 25, if dictionary
+            does not include 'annealing_time', it is defaulted as 100.
     
         workflow_type (str, optional): 
             Supported values: 
@@ -97,12 +100,18 @@ def LatticeLNLS(topology,
     '''
     if qpu_sampler is None:
         qpu_sampler = DWaveSampler()
+    qpu_params0 = qpu_params.copy()
+    if 'num_reads' not in qpu_params0:
+        qpu_params0['num_reads'] = 25
+    if 'annealing_time' not in qpu_params0:
+        qpu_params0['annealing_time'] = 100
+    
     embs = hybrid.make_origin_embeddings(qpu_sampler,'cubic')
     qpu_branch = (hybrid.decomposers.SublatticeDecomposer()
                   | hybrid.QPUSubproblemExternalEmbeddingSampler(
                       qpu_sampler=qpu_sampler,
-                      sampling_params=qpu_params,
-                      num_reads = qpu_params['num_reads']))
+                      sampling_params=qpu_params0,
+                      num_reads=qpu_params0['num_reads']))
     
     if workflow_type == 'qpu-only':
         per_it_runnable =  (qpu_branch| hybrid.SplatComposer())
