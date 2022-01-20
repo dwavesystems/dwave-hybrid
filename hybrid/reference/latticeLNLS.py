@@ -203,7 +203,7 @@ class LatticeLNLSSampler(dimod.Sampler):
         }
         self.properties = {}
 
-    def sample(self, topology, bqm, problem_dims, exclude_dims = None, qpu_sampler=None, init_sample=None, num_reads=1, **kwargs):
+    def sample(self, topology, bqm, problem_dims, exclude_dims = None, reject_small_problems = True, qpu_sampler=None, init_sample=None, num_reads=1, **kwargs):
         """Solve large subspaces of a lattice structured problem sequentially 
         integrating proposals greedily to arrive at a global or local minima of the bqm.
 
@@ -235,6 +235,11 @@ class LatticeLNLSSampler(dimod.Sampler):
 
                 * 'cubic': [] all dimensions are dispaced.
 
+            reject_small_problems (bool, optional, default=True):
+                If the subsolver is bigger than the target problem, raise an error by
+                default (True), otherwise quietly shrink the embedding to be no larger 
+                than the target problem.
+
             additional workflow arguments:
                 per :class:`~hybrid.reference.latticeLNLS.LatticeLNLS`.
 
@@ -261,7 +266,9 @@ class LatticeLNLSSampler(dimod.Sampler):
             else:
                 exclude_dims = []
                 #Recreate on each call, no reuse:
-        self.origin_embeddings = hybrid.make_origin_embeddings(qpu_sampler,'cubic',problem_dims=problem_dims)
+        self.origin_embeddings = hybrid.make_origin_embeddings(qpu_sampler,'cubic',
+                                                               problem_dims=problem_dims,
+                                                               reject_small_problems=reject_small_problems)
     
         if callable(init_sample):
             init_state_gen = lambda: hybrid.State.from_sample(init_sample(), bqm,
