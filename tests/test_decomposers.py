@@ -769,7 +769,8 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
                         for key, val in orig_emb.items():
                             self.assertEqual(len(key), tuple_length)
                             self.assertEqual(len(val), chain_length)
-    
+
+        
     def test_all_embeddings_validity(self):
         """Check that embeddings are valid for supported lattice_types.
         Uses a default processor scale of 5, with 15 edge defects.
@@ -806,3 +807,29 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
                         emb=orig_emb,
                         source=proposed_source.subgraph(list(orig_emb.keys())),
                         target=qpu_sampler.properties['couplers']))
+
+    def test_all_embeddings_validity(self):
+        """Check that we can constrain an embedding to a given subspace
+        """
+        # Full scale is 16, a smaller default is used
+        qpu_scale = 5
+        constrained_scales = {'cubic' : (2,2,2),
+                              'pegasus' : (3,2,3,2,4), #2x3 nice-cells
+                              'chimera' : (1,1,2,4) #single cell
+        }
+        for qpu_top in ['pegasus', 'chimera']:
+            for lattice_type in ['cubic', qpu_top]:
+                # proposed_source: a defect free-lattice at sampler
+                # scale (hence inclusive of all keys).
+                qpu_sampler = MockDWaveSamplerGeneralization(
+                    qpu_topology=qpu_top,
+                    qpu_scale=4)
+                cs = constrained_scales[lattice_type]
+                orig_embs = make_origin_embeddings(qpu_sampler=qpu_sampler,
+                                                   lattice_type=lattice_type,
+                                                   problem_dims=cs,
+                                                   reject_small_problems=False)
+                for orig_emb in orig_embs:
+                    from math import prod
+                    self.assertTrue(len(orig_emb)==prod(cs))
+                    self.assertFalse(any(any(key[idx] >= bound for idx,bound in enumerate(cs)) for key in orig_emb))

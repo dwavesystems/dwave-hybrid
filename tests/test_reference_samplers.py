@@ -22,6 +22,7 @@ import hybrid
 from hybrid.samplers import QPUSubproblemAutoEmbeddingSampler
 from hybrid.reference.kerberos import KerberosSampler
 from hybrid.reference.latticeLNLS import LatticeLNLSSampler
+from hybrid.decomposers import make_origin_embeddings
 from hybrid.reference.pa import (
     EnergyWeightedResampler, ProgressBetaAlongSchedule,
     CalculateAnnealingBetaSchedule, PopulationAnnealing
@@ -182,16 +183,34 @@ class TestReferenceWorkflowsSmoke(unittest.TestCase):
         (hybrid.PopulationAnnealing, dict(num_reads=10, num_iter=10, num_sweeps=10)),
         (hybrid.HybridizedPopulationAnnealing, dict(num_reads=10, num_iter=10, num_sweeps=10)),
         (hybrid.Kerberos, dict(sa_sweeps=10, tabu_timeout=10, qpu_sampler=MockDWaveSampler())),
-        (hybrid.LatticeLNLS, dict(topology='cubic',problem_dims=(18,18,18),qpu_sampler=MockDWaveSampler())),
-        (hybrid.LatticeLNLS, dict(topology='pegasus',problem_dims=(22,22),qpu_sampler=MockDWaveSampler(topology_type='pegasus'))),
-        (hybrid.LatticeLNLS, dict(topology='chimera',problem_dims=(22,22),qpu_sampler=MockDWaveSampler(topology_type='chimera'))),
+        (hybrid.LatticeLNLS, dict(topology='cubic',problem_dims=(2,2,2),qpu_sampler=MockDWaveSampler(topology_type='pegasus')),
+         {'problem_dims' : (1,1,1)}), # 2x2x2 cubic over pegasus topology 
+        (hybrid.LatticeLNLS, dict(topology='cubic',problem_dims=(2,2,2),qpu_sampler=MockDWaveSampler(topology_type='chimera')),
+         {'problem_dims' : (1,1,1)}), # 2x2x2 cubic over chimera topology 
+        (hybrid.LatticeLNLS, dict(topology='pegasus',problem_dims=(3,1,1,2,4),qpu_sampler=MockDWaveSampler(topology_type='pegasus')),{'problem_dims' : (3,1,1,2,4)}), #Single Pegasus Cell
+        (hybrid.LatticeLNLS, dict(topology='chimera',problem_dims=(2,2,2,4),qpu_sampler=MockDWaveSampler(topology_type='chimera')),{'problem_dims' : (2,2,2,4)}), #2x2 Chimera-Cell problem
         (hybrid.SimplifiedQbsolv, dict(max_iter=2)),
     ])
-    def test_smoke(self, sampler_cls, sampler_params):
-        bqm = dimod.BinaryQuadraticModel.from_ising({}, {'ab': 1})
-        state = hybrid.State.from_problem(bqm)
-
+    def test_smoke(self, sampler_cls, sampler_params,state_params=None):
+        
+        if state_params is None:
+            bqm = dimod.BinaryQuadraticModel.from_ising({}, {'ab': 1})
+            state = hybrid.State.from_problem(bqm)
+        else:
+            from itertools import product
+            geometric_labels = [range(dim) for dim in sampler_params['problem_dims']]
+            var_names = product(*geometric_labels)
+            bqm = dimod.BinaryQuadraticModel.from_ising({var : 0 for var in var_names}, {})
+            bqm.linear[next(iter(bqm.linear))] = 1
+            state_params['origin_embeddings'] = make_origin_embeddings(
+                qpu_sampler=sampler_params['qpu_sampler'],
+                lattice_type=sampler_params['topology'],
+                problem_dims=sampler_params['problem_dims'],
+                reject_small_problems=False)
+            state = hybrid.State.from_problem(bqm,**state_params)
+            
         w = sampler_cls(**sampler_params)
         ss = w.run(state).result().samples
-
+        #The substitute for QPU (MockSampler) is not guaranteed
+        #to return a minima, so this is a bit risky (change later).
         self.assertEqual(ss.first.energy, -1)

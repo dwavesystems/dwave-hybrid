@@ -22,7 +22,7 @@ from dwave.system import DWaveSampler
 __all__ = ['LatticeLNLS','LatticeLNLSSampler']
 
 def LatticeLNLS(topology,
-                problem_dims,
+                exclude_dims = [],
                 qpu_sampler=None,
                 energy_threshold=None,
                 max_iter=128,
@@ -34,6 +34,14 @@ def LatticeLNLS(topology,
     Implements lattice workflows as described in [REFERENCE PAPER IN PREPARATION]
 
     LatticeLNLS workflow is used by :class:`LatticeLNLSSampler`.
+    Note that to operate this workflow a minimal set of lattice specific state 
+    variables must be instantiated:
+    
+    1. bqm: A :obj:`~dimod.BinaryQuadraticModel`, with variables indexed geometrically
+    
+    2. origin_embeddings: see :class:`~hybrid.decomposers.make_origin_embeddings`
+    
+    3. problem_dims: see :class:`~hybrid.decomposers.SublatticeDecomposer`
     
     Args:
 
@@ -42,15 +50,12 @@ def LatticeLNLS(topology,
             
             Supported values: 
             
-                'pegasus' (``qpu_sampler`` must be pegasus-structured)
+                * 'pegasus' (``qpu_sampler`` must be pegasus-structured)
                 
-                'cubic' (``qpu_sampler`` must be pegasus of chimera-structured)
+                * 'cubic' (``qpu_sampler`` must be pegasus of chimera-structured)
                 
-                'chimera' (``qpu_sampler`` must be chimera-structured)
+                * 'chimera' (``qpu_sampler`` must be chimera-structured)
 
-        problem_dims (tuple of ints): 
-            Lattice dimensions (e.g. (18,18,18))
-            
         qpu_sampler (:class:`dimod.Sampler`, optional, default=DWaveSampler()): 
             Sampler such as a D-Wave system.
     
@@ -62,16 +67,19 @@ def LatticeLNLS(topology,
             does not include 'annealing_time', it is defaulted as 100.
     
         workflow_type (str, optional): 
-            Supported values: 
+            Options are: 
                 
-               'qpu-only': Default workflow of this paper
+               * 'qpu-only'
+                   Default workflow of this paper
                 
-               'qpu+post-process': Steepest greedy descent run sequentially 
-               with the QPU.
+               * 'qpu+post-process'
+                   Steepest greedy descent over the subspace is run 
+                   sequentially on samples returned by the QPU.
 
-               'qpu+parallel-process': Steepest greedy descent is run in parallel
-               with the QPU, and best result is accepted (in effect, delayed
-               post-processing in parallel with QPU.
+               * 'qpu+parallel-process'
+                   Steepest greedy descent on the full space is run in 
+                   parallel with the QPU; the best result is accepted on
+                   each iteration.
 
         max_iter (int, optional, default=128):
             Number of iterations in the hybrid algorithm.
@@ -90,12 +98,11 @@ def LatticeLNLS(topology,
         Workflow (:class:`~hybrid.core.Runnable` instance).
         
     See also:
-        [REFERENCE PAPER IN PREPARATION]
-
-    Examples: 
-        This example creates a workflow for a cubic lattice problem
-        using the default online pegasus-structured solver.
+        :class:`~hybrid.decomposers.make_origin_embeddings`
     
+        :class:`~hybrid.decomposers.SublatticeDecomposer`
+        
+        [REFERENCE PAPER IN PREPARATION]
         
     '''
     if qpu_sampler is None:
@@ -106,7 +113,6 @@ def LatticeLNLS(topology,
     if 'annealing_time' not in qpu_params0:
         qpu_params0['annealing_time'] = 100
     
-    embs = hybrid.make_origin_embeddings(qpu_sampler,'cubic')
     qpu_branch = (hybrid.decomposers.SublatticeDecomposer()
                   | hybrid.QPUSubproblemExternalEmbeddingSampler(
                       qpu_sampler=qpu_sampler,
@@ -155,7 +161,6 @@ class LatticeLNLSSampler(dimod.Sampler):
         >>> topology = 'cubic'
         >>> qpu_sampler = DWaveSampler()                         # doctest: +SKIP
         >>> sampler = hybrid.LatticeLNLSSampler()               # doctest: +SKIP
-        >>> 
         >>> cuboid = (18,18,18)
         >>> edge_list = ([((i,j,k),((i+1)%cuboid[0],j,k)) for i in range(cuboid[0])
                       for j in  range(cuboid[1]) for k in range(cuboid[2])]
@@ -176,6 +181,13 @@ class LatticeLNLSSampler(dimod.Sampler):
                                       qpu_params=qpu_params)                           # doctest: +SKIP
         >>> response.data_vectors['energy']                      # doctest: +SKIP
         array([-17496]) 
+
+    See also:
+        :class:`~hybrid.decomposers.make_origin_embeddings`
+    
+        :class:`~hybrid.decomposers.SublatticeDecomposer`
+        
+        [REFERENCE PAPER IN PREPARATION]
     """
 
     properties = None
@@ -191,7 +203,7 @@ class LatticeLNLSSampler(dimod.Sampler):
         }
         self.properties = {}
 
-    def sample(self, topology, bqm, problem_dims, qpu_sampler=None, init_sample=None, num_reads=1, **kwargs):
+    def sample(self, topology, bqm, problem_dims, exclude_dims = None, qpu_sampler=None, init_sample=None, num_reads=1, **kwargs):
         """Solve large subspaces of a lattice structured problem sequentially 
         integrating proposals greedily to arrive at a global or local minima of the bqm.
 
@@ -209,20 +221,47 @@ class LatticeLNLSSampler(dimod.Sampler):
                 Number of reads. Each sample is the result of a single run of the
                 hybrid algorithm.
 
-            workflow arguments: see :class:`~hybrid.reference.latticeLNLS.LatticeLNLS`.
+            problem_dims (tuple of ints): 
+                Lattice dimensions (e.g. cubic case (18,18,18))
+            
+            exclude_dims (list of ints, optional):
+                Subspaces are selected by geometric displacement. In the case of 
+                cellular-level displacements only dimensions indexing cell-displacements
+                are considered. The defaults are topology dependent:
+
+                * 'chimera': [2,3] (u,k chimera coordinates are not displaced).
+
+                * 'pegasus': [0,3,4] (t,u,k nice pegasus coordinates are not displaced).
+
+                * 'cubic': [] all dimensions are dispaced.
+
+            additional workflow arguments:
+                per :class:`~hybrid.reference.latticeLNLS.LatticeLNLS`.
 
         Returns:
             :obj:`~dimod.SampleSet`: A `dimod` :obj:`.~dimod.SampleSet` object.
 
+        See also:
+            :class:`~hybrid.decomposers.make_origin_embeddings`
+    
+            :class:`~hybrid.decomposers.SublatticeDecomposer`
+        
+            [REFERENCE PAPER IN PREPARATION]
         """
         if 'qpu_sampler' not in kwargs:
             qpu_sampler = DWaveSampler()
             kwargs['qpu_sampler'] = qpu_sampler
         if 'energy_threshold' not in kwargs:
             kwargs['energy_threshold'] = None
-        
-        #Recreate on each call, no reuse:
-        self.origin_embeddings = hybrid.make_origin_embeddings(qpu_sampler,'cubic')
+        if exclude_dims == None:
+            if topology=='chimera':
+                exclude_dims = [2,3]
+            elif topology=='chimera':
+                exclude_dims = [0,3,4]
+            else:
+                exclude_dims = []
+                #Recreate on each call, no reuse:
+        self.origin_embeddings = hybrid.make_origin_embeddings(qpu_sampler,'cubic',problem_dims=problem_dims)
     
         if callable(init_sample):
             init_state_gen = lambda: hybrid.State.from_sample(init_sample(), bqm,
@@ -242,7 +281,6 @@ class LatticeLNLSSampler(dimod.Sampler):
 
         #Recreate on each call, no reuse:
         self.runnable = LatticeLNLS(topology=topology,
-                                    problem_dims=problem_dims,
                                     **kwargs)
 
         samples = []
