@@ -17,9 +17,6 @@ from parameterized import parameterized
 
 import dimod
 from dwave.system.testing import MockDWaveSampler
-# Legacy MockDWaveSampler does not include all necessary structure for unit tests
-# To support earlier versions of dwave-system use:
-from test_decomposers import MockDWaveSamplerGeneralization
 import hybrid
 from hybrid.samplers import QPUSubproblemAutoEmbeddingSampler
 from hybrid.reference.kerberos import KerberosSampler
@@ -29,6 +26,49 @@ from hybrid.reference.pa import (
     EnergyWeightedResampler, ProgressBetaAlongSchedule,
     CalculateAnnealingBetaSchedule, PopulationAnnealing
 )
+
+
+class MockDWaveSamplerGeneralization(MockDWaveSampler):
+    """Extend the `dwave.system.testing.MockDWaveSampler` to Pegasus topology.
+    
+    Adding topology and shape keywords to MockDWaveSampler for this purpose.
+    This function is mirrored in test_decomposers.py
+
+    MockDWaveSampler() in the latest version of dwave-system support these 
+    options, this function is included to support backward compatibility of the
+    dwave-system package.
+    """
+    def __init__(self, broken_nodes=None, topology_type=None, qpu_scale=4, **config):
+        import dwave_networkx as dnx
+    
+        super().__init__(broken_nodes, **config)
+        #An Advantage generation processor, only artificially smaller,
+        #replaces C4 in default MockDWaveSampler
+        if topology_type != 'chimera':
+            self.properties['topology'] = {'type': 'pegasus',
+                                           'shape': [qpu_scale]}
+            qpu_graph = dnx.pegasus_graph(qpu_scale,fabric_only=True)
+        else:
+            self.properties['topology'] = {'type': 'chimera',
+                                           'shape': [qpu_scale,qpu_scale,4]}
+            qpu_graph = dnx.chimera_graph(qpu_scale)
+            
+        #Adjust edge_list, 
+        if broken_nodes is None:
+            self.nodelist = sorted(qpu_graph.nodes)
+            self.edgelist = sorted(tuple(sorted(edge))
+                                   for edge in qpu_graph.edges)
+        else:
+            self.nodelist = sorted(v for v in qpu_graph.nodes
+                                   if v not in broken_nodes)
+            self.edgelist = sorted(tuple(sorted((u, v)))
+                                   for u, v in qpu_graph.edges
+                                   if u not in broken_nodes
+                                   and v not in broken_nodes)
+        self.properties['num_qubits'] = len(qpu_graph)
+        self.properties['qubits'] = self.nodelist
+        self.properties['couplers'] = self.edgelist
+        
 
 class TestLatticeLNLS(unittest.TestCase):
 
@@ -185,12 +225,12 @@ class TestReferenceWorkflowsSmoke(unittest.TestCase):
         (hybrid.PopulationAnnealing, dict(num_reads=10, num_iter=10, num_sweeps=10)),
         (hybrid.HybridizedPopulationAnnealing, dict(num_reads=10, num_iter=10, num_sweeps=10)),
         (hybrid.Kerberos, dict(sa_sweeps=10, tabu_timeout=10, qpu_sampler=MockDWaveSampler())),
-        (hybrid.LatticeLNLS, dict(topology='cubic',qpu_sampler=MockDWaveSamplerGeneralization(qpu_topology='pegasus')),
+        (hybrid.LatticeLNLS, dict(topology='cubic',qpu_sampler=MockDWaveSamplerGeneralization(topology_type='pegasus')),
          {'problem_dims' : (1,1,1)}), # 2x2x2 cubic over pegasus topology 
-        (hybrid.LatticeLNLS, dict(topology='cubic',qpu_sampler=MockDWaveSamplerGeneralization(qpu_topology='chimera')),
+        (hybrid.LatticeLNLS, dict(topology='cubic',qpu_sampler=MockDWaveSamplerGeneralization(topology_type='chimera')),
          {'problem_dims' : (1,1,1)}), # 2x2x2 cubic over chimera topology 
-        (hybrid.LatticeLNLS, dict(topology='pegasus',qpu_sampler=MockDWaveSamplerGeneralization(qpu_topology='pegasus')),{'problem_dims' : (3,1,1,2,4)}), #Single Pegasus Cell
-        (hybrid.LatticeLNLS, dict(topology='chimera',qpu_sampler=MockDWaveSamplerGeneralization(qpu_topology='chimera')),{'problem_dims' : (2,2,2,4)}), #2x2 Chimera-Cell problem
+        (hybrid.LatticeLNLS, dict(topology='pegasus',qpu_sampler=MockDWaveSamplerGeneralization(topology_type='pegasus')),{'problem_dims' : (3,1,1,2,4)}), #Single Pegasus Cell
+        (hybrid.LatticeLNLS, dict(topology='chimera',qpu_sampler=MockDWaveSamplerGeneralization(topology_type='chimera')),{'problem_dims' : (2,2,2,4)}), #2x2 Chimera-Cell problem
         (hybrid.SimplifiedQbsolv, dict(max_iter=2)),
     ])
     def test_smoke(self, sampler_cls, sampler_params,state_params=None):
