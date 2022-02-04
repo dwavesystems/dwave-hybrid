@@ -20,7 +20,8 @@ from dwave.system.testing import MockDWaveSampler
 import hybrid
 from hybrid.samplers import QPUSubproblemAutoEmbeddingSampler
 from hybrid.reference.kerberos import KerberosSampler
-from hybrid.reference.latticeLNLS import LatticeLNLSSampler
+from hybrid.reference.lattice_lnls import LatticeLNLSSampler
+from hybrid.reference.lattice_lnls import LatticeLNLS
 from hybrid.decomposers import make_origin_embeddings
 from hybrid.reference.pa import (
     EnergyWeightedResampler, ProgressBetaAlongSchedule,
@@ -71,8 +72,14 @@ class MockDWaveSamplerGeneralization(MockDWaveSampler):
         
 
 class TestLatticeLNLS(unittest.TestCase):
-
-    def test_basic_operation(self):
+    
+    def test_basic_workflow_operation(self):
+        for topology_type in ['pegasus','chimera']:
+            qpu_sampler=MockDWaveSamplerGeneralization(topology_type=topology_type)
+            for lattice_type in ['cubic',topology_type]:
+                LatticeLNLS(topology=lattice_type, qpu_sampler=qpu_sampler)
+                
+    def test_basic_sampler_operation(self):
         bqm = dimod.BinaryQuadraticModel({(i,j,k) : 0 for i in range(2) for j in range(2) for k in range(2)}, {((0,0,0),(0,0,1)): 1, ((1,1,0),(1,1,1)): 1}, 0, dimod.SPIN)
         sampleset = LatticeLNLSSampler().sample(
             bqm=bqm, problem_dims=(2,2,2), qpu_sampler=MockDWaveSamplerGeneralization(), topology='cubic',max_iter=1,
