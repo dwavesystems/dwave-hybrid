@@ -459,15 +459,15 @@ class SublatticeDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
 
 
     See also:
-        :class:`~hybrid.reference.latticeLNLS.LatticeLNLS`
+        :class:`~hybrid.reference.lattice_lnls.LatticeLNLS`
     
-        :class:`~hybrid.reference.latticeLNLS.LatticeLNLSSampler`
+        :class:`~hybrid.reference.lattice_lnls.LatticeLNLSSampler`
 
         :class:`~hybrid.decomposers.make_origin_embeddings`
         
-        [REFERENCE PAPER IN PREPARATION]
-
         :ref:`decomposers-examples`
+
+        [REFERENCE PAPER IN PREPARATION]
     """
 
     def __init__(self, seed=None, **runopts):
@@ -904,9 +904,9 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None, problem_dims = N
         ...                                     lattice_type='cubic')  # doctest: +SKIP
 
     See also:
-        :class:`~hybrid.reference.latticeLNLS.LatticeLNLS`
+        :class:`~hybrid.reference.lattice_lnls.LatticeLNLS`
     
-        :class:`~hybrid.reference.latticeLNLS.LatticeLNLSSampler`
+        :class:`~hybrid.reference.lattice_lnls.LatticeLNLSSampler`
 
         :class:`~hybrid.decomposers.SublatticeDecomposer`
         

@@ -75,7 +75,7 @@ class TestLatticeLNLS(unittest.TestCase):
     def test_basic_operation(self):
         bqm = dimod.BinaryQuadraticModel({(i,j,k) : 0 for i in range(2) for j in range(2) for k in range(2)}, {((0,0,0),(0,0,1)): 1, ((1,1,0),(1,1,1)): 1}, 0, dimod.SPIN)
         sampleset = LatticeLNLSSampler().sample(
-            bqm=bqm, problem_dims=(2,2,2), qpu_sampler=MockDWaveSampler(), topology='cubic',max_iter=1,
+            bqm=bqm, problem_dims=(2,2,2), qpu_sampler=MockDWaveSamplerGeneralization(), topology='cubic',max_iter=1,
             qpu_params=dict(chain_strength=2), reject_small_problems=False)
 
 

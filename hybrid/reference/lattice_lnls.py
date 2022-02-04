@@ -147,7 +147,7 @@ def LatticeLNLS(topology,
 class LatticeLNLSSampler(dimod.Sampler):
     """A dimod-compatible hybrid decomposition sampler for problems of lattice structure.
 
-    For workflow and lattice related arguments see: :class:`~hybrid.reference.latticeLNLS.LatticeLNLS`.
+    For workflow and lattice related arguments see: :class:`~hybrid.reference.lattice_lnls.LatticeLNLS`.
 
 
     Examples:
@@ -159,7 +159,7 @@ class LatticeLNLSSampler(dimod.Sampler):
         >>> import hybrid
         >>> from dwave.system import DWaveSampler
         >>> topology = 'cubic'
-        >>> qpu_sampler = DWaveSampler()                         # doctest: +SKIP
+        >>> qpu_sampler = DWaveSampler()                        # doctest: +SKIP
         >>> sampler = hybrid.LatticeLNLSSampler()               # doctest: +SKIP
         >>> cuboid = (18,18,18)
         >>> edge_list = ([((i,j,k),((i+1)%cuboid[0],j,k)) for i in range(cuboid[0])
@@ -203,9 +203,12 @@ class LatticeLNLSSampler(dimod.Sampler):
         }
         self.properties = {}
 
-    def sample(self, topology, bqm, problem_dims, exclude_dims = None, reject_small_problems = True, qpu_sampler=None, init_sample=None, num_reads=1, **kwargs):
+    def sample(self, topology, bqm, problem_dims, exclude_dims = None,
+               reject_small_problems = True, qpu_sampler=None,
+               init_sample=None, num_reads=1, **kwargs):
         """Solve large subspaces of a lattice structured problem sequentially 
-        integrating proposals greedily to arrive at a global or local minima of the bqm.
+        integrating proposals greedily to arrive at a global or local minima of
+        the bqm.
 
         Args:
         
@@ -218,8 +221,8 @@ class LatticeLNLSSampler(dimod.Sampler):
                 Use a random sample for each read by default.
 
             num_reads (int):
-                Number of reads. Each sample is the result of a single run of the
-                hybrid algorithm.
+                Number of reads. Each sample is the result of a single run of 
+                the hybrid algorithm.
 
             problem_dims (tuple of ints): 
                 Lattice dimensions (e.g. cubic case (18,18,18))
@@ -236,12 +239,12 @@ class LatticeLNLSSampler(dimod.Sampler):
                 * 'cubic': [] all dimensions are dispaced.
 
             reject_small_problems (bool, optional, default=True):
-                If the subsolver is bigger than the target problem, raise an error by
-                default (True), otherwise quietly shrink the embedding to be no larger 
-                than the target problem.
+                If the subsolver is bigger than the target problem, raise an
+                error by default (True), otherwise quietly shrink the embedding
+                to be no larger than the target problem.
 
             additional workflow arguments:
-                per :class:`~hybrid.reference.latticeLNLS.LatticeLNLS`.
+                per :class:`~hybrid.reference.lattice_lnls.LatticeLNLS`.
 
         Returns:
             :obj:`~dimod.SampleSet`: A `dimod` :obj:`.~dimod.SampleSet` object.
@@ -271,18 +274,23 @@ class LatticeLNLSSampler(dimod.Sampler):
                                                                reject_small_problems=reject_small_problems)
     
         if callable(init_sample):
-            init_state_gen = lambda: hybrid.State.from_sample(init_sample(), bqm,
-                                                              problem_dims=problem_dims,
-                                                              origin_embeddings=self.origin_embeddings)
+            init_state_gen = lambda: hybrid.State.from_sample(
+                init_sample(),
+                bqm,
+                problem_dims=problem_dims,
+                origin_embeddings=self.origin_embeddings)
         elif init_sample is None:
-            init_state_gen = lambda: hybrid.State.from_sample(hybrid.random_sample(bqm),
-                                                              bqm,
-                                                              problem_dims=problem_dims,
-                                                              origin_embeddings=self.origin_embeddings)
+            init_state_gen = lambda: hybrid.State.from_sample(
+                hybrid.random_sample(bqm),
+                bqm,
+                problem_dims=problem_dims,
+                origin_embeddings=self.origin_embeddings)
         elif isinstance(init_sample, dimod.SampleSet):
-            init_state_gen = lambda: hybrid.State.from_sample(init_sample, bqm,
-                                                              problem_dims=problem_dims,
-                                                              origin_embeddings=self.origin_embeddings)
+            init_state_gen = lambda: hybrid.State.from_sample(
+                init_sample,
+                bqm,
+                problem_dims=problem_dims,
+                origin_embeddings=self.origin_embeddings)
         else:
             raise TypeError("'init_sample' should be a SampleSet or a SampleSet generator")
 
@@ -301,41 +309,5 @@ class LatticeLNLSSampler(dimod.Sampler):
             samples.append(ss.first.sample)
             energies.append(ss.first.energy)
 
-        return dimod.SampleSet.from_samples(samples, vartype=bqm.vartype, energy=energies)
-
-if __name__ == "__main__":
-    #Example is an 18x18x18 Ferromagnet solved by the default QPU
-    #sampler
-    from dwave.system import DWaveSampler
-    cuboid = (18,18,18)
-    edge_list = ([((i,j,k),((i+1)%cuboid[0],j,k)) for i in range(cuboid[0])
-                  for j in  range(cuboid[1]) for k in range(cuboid[2])]
-                 + [((i,j,k),(i,(j+1)%cuboid[1],k)) for i in range(cuboid[0])
-                    for j in  range(cuboid[1]) for k in range(cuboid[2])]
-                 + [((i,j,k),(i,j,(k+1)%cuboid[2])) for i in range(cuboid[0])
-                    for j in range(cuboid[1]) for k in range(cuboid[2])])
-    bqm = dimod.BinaryQuadraticModel.from_ising({},{e : -1 for e in edge_list})
-    qpu_params={'num_reads': 25,
-                'annealing_time' : 100,
-                'auto_scale' : False,
-                'chain_strength' : 2}
-    EGS = - len(edge_list)
-    qpu_sampler = DWaveSampler()
-    
-    workflow = LatticeLNLS(topology='cubic',
-                           problem_dims=cuboid,
-                           qpu_sampler=qpu_sampler,
-                           qpu_params=qpu_params,
-                           energy_threshold=EGS)
-
-    sampler = LatticeLNLSSampler()
-    sampleset = sampler.sample(topology='cubic',bqm=bqm,problem_dims=cuboid,energy_threshold=EGS,qpu_params=qpu_params)
-    print(sampleset)
-    embs = hybrid.make_origin_embeddings(qpu_sampler,'cubic')
-    init_state = hybrid.State.from_sample(hybrid.random_sample(bqm),
-                                          bqm,
-                                          problem_dims=cuboid,
-                                          origin_embeddings=embs)
-    final_state = workflow.run(init_state)
-    
-    
+        return dimod.SampleSet.from_samples(samples, vartype=bqm.vartype,
+                                            energy=energies)
