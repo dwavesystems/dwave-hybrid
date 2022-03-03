@@ -26,6 +26,7 @@ import networkx as nx
 import dimod
 from dimod.traversal import connected_components
 import dwave_networkx as dnx
+import dwave.preprocessing
 
 from hybrid.core import Runnable, State
 from hybrid.exceptions import EndOfStream
@@ -265,7 +266,7 @@ class EnergyImpactDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
         or we could use a search/traverse method (BFS/PFS) which accepts a
         "node mask" - set of visited nodes.
         """
-        graph = bqm.to_networkx_graph()
+        graph = dimod.to_networkx_graph(bqm)
         graph.remove_nodes_from(visited)
 
         variables = set()
@@ -571,7 +572,7 @@ class RoofDualityDecomposer(traits.ProblemDecomposer, traits.ProblemSampler,
         bqm = state.problem
         sampleset = state.samples
 
-        fixed_vars = dimod.fix_variables(bqm, sampling_mode=self.sampling_mode)
+        _, fixed_vars = dwave.preprocessing.roof_duality(bqm, strict=self.sampling_mode)
 
         # make a new bqm of everything not-fixed
         subbqm = bqm.copy()

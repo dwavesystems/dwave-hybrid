@@ -376,7 +376,7 @@ def select_random_subgraph(bqm, n):
         ['d', 'b']
 
     """
-    return random.sample(bqm.linear.keys(), n)
+    return random.sample(bqm.variables, n)
 
 
 def chimera_tiles(bqm, m, n, t):
