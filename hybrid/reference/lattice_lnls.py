@@ -256,11 +256,9 @@ class LatticeLNLSSampler(dimod.Sampler):
         
             [REFERENCE PAPER IN PREPARATION]
         """
-        if 'qpu_sampler' not in kwargs:
+        if qpu_sampler is None:
             qpu_sampler = DWaveSampler()
-            kwargs['qpu_sampler'] = qpu_sampler
-        if 'energy_threshold' not in kwargs:
-            kwargs['energy_threshold'] = None
+            
         if exclude_dims == None:
             if topology=='chimera':
                 exclude_dims = [2,3]
@@ -296,6 +294,7 @@ class LatticeLNLSSampler(dimod.Sampler):
 
         #Recreate on each call, no reuse:
         self.runnable = LatticeLNLS(topology=topology,
+                                    qpu_sampler=qpu_sampler,
                                     **kwargs)
 
         samples = []

@@ -1042,6 +1042,7 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
         origin_embedding = _yield_limited_origin_embedding(origin_embedding,
                                                            proposed_source,
                                                            target)
+        
 
     if qpu_type == lattice_type:
         # Convert keys to standard vector scheme:

@@ -836,6 +836,5 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
                                                    reject_small_problems=False)
                 for orig_emb in orig_embs:
                     from numpy import prod
-                    print(cs,prod(cs),len(orig_emb))
                     self.assertTrue(len(orig_emb)==prod(cs))
                     self.assertFalse(any(any(key[idx] >= bound for idx,bound in enumerate(cs)) for key in orig_emb))
