@@ -1038,7 +1038,7 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
         raise ValueError('Unsupported combination of lattice_type '
                          'and qpu_sampler topology')
     
-    if allow_unyielded_edges:
+    if allow_unyielded_edges == False:
         origin_embedding = _yield_limited_origin_embedding(origin_embedding,
                                                            proposed_source,
                                                            target)
