@@ -829,11 +829,14 @@ def _make_cubic_lattice(dimensions):
     return cubic_lattice_graph
 
 
-def make_origin_embeddings(qpu_sampler=None, lattice_type=None, problem_dims = None, reject_small_problems = True):
+def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
+                           problem_dims = None, reject_small_problems = True,
+                           allow_unyielded_edges = False):
     """Creates optimal embeddings for a lattice.
 
-    The embeddings created are compatible with the topology and shape of a
-    specified ``qpu_sampler``. 
+    An embedding is a dictionary specifying the mapping from each lattice 
+    variable to a set of qubits (chain). The embeddings created are compatible 
+    with the topology and shape of a specified ``qpu_sampler``. 
 
     Args:
         qpu_sampler (:class:`dimod.Sampler`, optional):
@@ -866,16 +869,16 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None, problem_dims = N
             origin_embeddings over the solver are constrained to not exceed
             these dimensions.  
             For cubic lattices, dimension bounds are specified as (x, y, z).
-            For pegasus lattices, bounds are specified in nice coordinate 
+            For pegasus lattices, bounds are specified in nice coordinate
             (t, y, x, u, k): a P16 solver has bounds (3,15,15,2,4)
             For chimera lattices, bounds are specified in chimera coordinates
             (i,j,u,k): a C16 solver has bounds (16,16,2,4).
-            Where embedded variables exceed these bounds the embedding is 
+            Where embedded variables exceed these bounds the embedding is
             either truncated, or raises an error, according to the flag
             ``reject_small_problems``
-            Note that when the embedding scale exactly matches the problem 
-            scale, problems can also occur for the case of periodic boundary 
-            conditions that are not supported by these embeddings, which assume 
+            Note that when the embedding scale exactly matches the problem
+            scale, problems can also occur for the case of periodic boundary
+            conditions that are not supported by these embeddings, which assume
             open boundary induced problems in general.
 
         reject_small_problems (bool, optional, True):
@@ -883,8 +886,17 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None, problem_dims = N
             allowed by the origin embeddings, raise an error.
             Since these routines are intended to support workflows beyond
             solvable scale, a user override is required for the inappopriate
-            use case. This flag is only invoked if problem_dims is 
+            use case. This flag is only invoked if problem_dims is
             specified.
+
+        allow_unyielded_edges (bool, optional, False):
+            A requirement for certain sublattice based methods is that any two
+            variables connected in the lattice must also be connected in the
+            embedding. If two variables allow yielded chains, but are not
+            connected, then by default at least one of the two variables is
+            treated as unyielded. If the argument is set to False then yielded
+            chains of incomplete connectivity are returned as part of the
+            embedding.
 
     Returns:
         A list of embeddings. Each embedding is a dictionary, mapping
@@ -1025,10 +1037,11 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None, problem_dims = N
     else:
         raise ValueError('Unsupported combination of lattice_type '
                          'and qpu_sampler topology')
-
-    origin_embedding = _yield_limited_origin_embedding(origin_embedding,
-                                                       proposed_source,
-                                                       target)
+    
+    if allow_unyielded_edges:
+        origin_embedding = _yield_limited_origin_embedding(origin_embedding,
+                                                           proposed_source,
+                                                           target)
 
     if qpu_type == lattice_type:
         # Convert keys to standard vector scheme:
@@ -1052,7 +1065,8 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None, problem_dims = N
                                   for key, value in origin_embedding.items()})
         problem_dim_spec = 3
     elif lattice_type == 'pegasus':
-        # A horizontal to vertical flip is sufficient for demonstration purposes:       # Flip north-east to south-west axis (see draw_pegasus):
+        # A horizontal to vertical flip is sufficient for demonstration purposes.
+        # Flip north-east to south-west axis (see draw_pegasus):
         L = qpu_shape[0]
         origin_embeddings.append(
             {(key[0], L-2-key[2], L-2-key[1], 1-key[3], 3-key[4]): value
@@ -1073,7 +1087,9 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None, problem_dims = N
             pass
         for origin_embedding in origin_embeddings:
             rem_list = {key for key in origin_embedding
-                        if any(key[idx]>=problem_dims[idx] for idx in range(problem_dim_spec))}
+                        if any(key[idx]>=problem_dims[idx]
+                               for idx in range(problem_dim_spec))}
+            
             if len(rem_list)>0:
                 if reject_small_problems:
                     raise ValueError('embedding scale exceeds '
