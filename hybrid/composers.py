@@ -380,7 +380,7 @@ class IsoenergeticClusterMove(traits.SamplesProcessor, traits.ProblemSampler,
         symdiff = sample1 ^ sample2
 
         # for cluster detection we'll use a reduced problem graph
-        graph = bqm.to_networkx_graph()
+        graph = dimod.to_networkx_graph(bqm)
         # note: instead of numpy mask indexing of `notcluster`, we enumerate
         # non-cluster variables manually to avoid conversion of potentially
         # unhashable variable names to numpy types
