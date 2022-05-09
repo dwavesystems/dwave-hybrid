@@ -14,20 +14,13 @@
 
 from __future__ import print_function
 
-import time
 import logging
 import functools
+from time import perf_counter
 
 __all__ = ['perf_counter', 'tictoc', 'trace', 'print_structure', 'print_counters']
 
 logger = logging.getLogger(__name__)
-
-
-try:
-    perf_counter = time.perf_counter
-except AttributeError:  # pragma: no cover
-    # python 2
-    perf_counter = time.time
 
 
 class tictoc(object):
