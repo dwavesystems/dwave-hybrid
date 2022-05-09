@@ -191,7 +191,7 @@ workflows:
               pip-constraints:
                 - "dimod==0.10.13"
                 - "dimod~=0.10.0 dwave-system~=1.0"
-                - "dimod==0.11.0rc0 dwave-preprocessing==0.4.0rc0 dwave-system~=1.0"
+                - "dimod==0.11.0 dwave-preprocessing==0.4.0 dwave-system~=1.0"
 
       - test-macos:
           name: test-macos-<< matrix.python-version >>
