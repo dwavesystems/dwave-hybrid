@@ -162,6 +162,17 @@ class State(PliableDict):
         Energy is calculated from the binary quadratic model (BQM), and
         `State.problem` is also set to that BQM.
 
+        Args:
+            sample (:class:`dimod.SampleLike`):
+                A single sample. For recognized formats, see
+                :class:`~dimod.typing.SampleLike`.
+
+            bqm (:class:`dimod.BinaryQuadraticModel`):
+                Binary quadratic model compatible with the sample provided.
+
+            **kwargs:
+                Arbitrary state variables to be set.
+
         Example:
 
             >>> import dimod
@@ -169,7 +180,7 @@ class State(PliableDict):
             >>> state = State.from_sample({'a': -1, 'b': -1, 'c': -1}, bqm)
 
         """
-        return cls.from_samples([sample], bqm, **kwargs)
+        return cls.from_samples(sample, bqm, **kwargs)
 
     @classmethod
     def from_samples(cls, samples, bqm, **kwargs):
@@ -177,6 +188,17 @@ class State(PliableDict):
 
         Per-sample energy is calculated from the binary quadratic model (BQM),
         and `State.problem` is set to the BQM.
+
+        Args:
+            samples (:class:`dimod.SamplesLike`):
+                Collection of samples. For recognized formats, see
+                :class:`~dimod.typing.SamplesLike`.
+
+            bqm (:class:`dimod.BinaryQuadraticModel`):
+                Binary quadratic model compatible with samples provided.
+
+            **kwargs:
+                Arbitrary state variables to be set.
 
         Example:
 
@@ -193,7 +215,7 @@ class State(PliableDict):
         """Similar to :meth:`.from_sample`, but initializes `subproblem` and
         `subsamples`.
         """
-        return cls.from_subsamples([subsample], bqm, **kwargs)
+        return cls.from_subsamples(subsample, bqm, **kwargs)
 
     @classmethod
     def from_subsamples(cls, subsamples, bqm, **kwargs):

@@ -189,13 +189,9 @@ workflows:
             parameters:
               python-version: &python-versions ["3.7.9", "3.8.6", "3.9.0", "3.10.0"]
               pip-constraints:
-                - "dimod==0.10.5"
+                - "dimod==0.10.13"
                 - "dimod~=0.10.0 dwave-system~=1.0"
                 - "dimod==0.11.0rc0 dwave-preprocessing==0.4.0rc0 dwave-system~=1.0"
-            exclude:
-              # py310 not supported by dimod 0.10.5
-              - python-version: "3.10.0"
-                pip-constraints: "dimod==0.10.5"
 
       - test-macos:
           name: test-macos-<< matrix.python-version >>

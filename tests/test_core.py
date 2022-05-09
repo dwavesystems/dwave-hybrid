@@ -20,6 +20,7 @@ import itertools
 from unittest import mock
 
 import dimod
+import numpy as np
 from tabu import TabuSampler
 
 import hybrid
@@ -118,16 +119,24 @@ class TestState(unittest.TestCase):
         self.assertEqual(State(debug={'a': 1}).debug, {'a': 1})
 
     def test_from_samples(self):
+        bqm = dimod.BQM.from_qubo({(0, 0): 1, (1, 1): 2})
         s1 = [0, 1]
-        s2 = {0: 1, 1: 0}
-        bqm = dimod.BinaryQuadraticModel({0: 1, 1: 2}, {}, 0.0, 'BINARY')
+        s2 = {0: 0, 1: 1}
+        s3 = (np.array([0, 1], dtype=np.int8), [0, 1])
+        s4 = dimod.SampleSet.from_samples_bqm(s1, bqm)
+
         self.assertEqual(State.from_sample(s1, bqm).samples.first.energy, 2.0)
-        self.assertEqual(State.from_sample(s2, bqm).samples.first.energy, 1.0)
+        self.assertEqual(State.from_sample(s2, bqm).samples.first.energy, 2.0)
+        self.assertEqual(State.from_sample(s3, bqm).samples.first.energy, 2.0)
+        self.assertEqual(State.from_sample(s4, bqm).samples.first.energy, 2.0)
+
         self.assertEqual(State.from_sample(s1, bqm, beta=0.5).beta, 0.5)
-        self.assertEqual(State.from_samples([s1, s1], bqm).samples.first.energy, 2.0)
-        self.assertEqual(State.from_samples([s2, s2], bqm).samples.first.energy, 1.0)
+
+        np.testing.assert_array_equal(State.from_samples([s1, s2], bqm).samples.data_vectors['energy'], np.array([2.0, 2.0]))
+        np.testing.assert_array_equal(State.from_samples([s1, s2, s3], bqm).samples.data_vectors['energy'], np.array([2.0, 2.0, 2.0]))
+        self.assertEqual(State.from_samples(s4, bqm).samples.first.energy, 2.0)
         self.assertEqual(State.from_samples([s1, s1], bqm, beta=0.5).beta, 0.5)
-        self.assertEqual(State.from_samples([sample_as_dict(s1), s2], bqm).samples.first.energy, 1.0)
+        self.assertEqual(State.from_samples([sample_as_dict(s1), s2], bqm).samples.first.energy, 2.0)
 
     def test_from_subsamples(self):
         s1 = [0, 1]

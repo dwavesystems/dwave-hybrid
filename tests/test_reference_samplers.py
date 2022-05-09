@@ -29,11 +29,17 @@ from hybrid.reference.pa import (
 
 class TestKerberos(unittest.TestCase):
 
-    def test_basic_operation(self):
+    def test_basic(self):
         bqm = dimod.BinaryQuadraticModel({}, {'ab': 1, 'bc': 1, 'ca': 1}, 0, dimod.SPIN)
-        sampleset = KerberosSampler().sample(
+        KerberosSampler().sample(
             bqm, max_subproblem_size=1, qpu_sampler=MockDWaveSampler(),
             qpu_params=dict(chain_strength=2))
+
+    def test_init_state(self):
+        bqm = dimod.BQM.from_qubo({(0, 1): 1})
+        init = dimod.SampleSet.from_samples_bqm([0, 0], bqm)
+        KerberosSampler().sample(
+            bqm, qpu_sampler=MockDWaveSampler(), init_sample=init)
 
 
 class TestWeightedResampler(unittest.TestCase):
