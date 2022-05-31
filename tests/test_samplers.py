@@ -112,7 +112,7 @@ class TestQPUSamplers(unittest.TestCase):
         # verify mock sampler received custom kwargs
         self.assertEqual(res.subsamples.first.energy, -1)
 
-    @parameterized.expand([['chimera', 2], ['pegasus', 1]])
+    @parameterized.expand([['chimera', 2], ['pegasus', 1], ['zephyr', 1]])
     def test_clique_embedder(self, topology_type, expected_chain_length):
         bqm = dimod.BinaryQuadraticModel.from_ising({}, {'ab': 1, 'bc': 1, 'ca': 1})
         init = State.from_subproblem(bqm)
