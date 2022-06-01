@@ -26,12 +26,11 @@ from collections import namedtuple
 import dimod
 from dwave.system.samplers import DWaveSampler
 from dwave.system.composites import AutoEmbeddingComposite, FixedEmbeddingComposite
-from dwave.embedding.chimera import find_clique_embedding as find_chimera_clique_embedding
-from dwave.embedding.pegasus import find_clique_embedding as find_pegasus_clique_embedding
 
 from tabu import TabuSampler
 from neal import SimulatedAnnealingSampler
 from greedy import SteepestDescentSolver
+from minorminer.busclique import busgraph_cache
 
 from hybrid.core import Runnable, SampleSet
 from hybrid.flow import Loop
@@ -114,8 +113,7 @@ class SubproblemCliqueEmbedder(traits.SubproblemIntaking,
     Args:
         sampler (:class:`dimod.Structured`):
             Structured :class:`dimod.Sampler` such as a
-            :class:`~dwave.system.samplers.DWaveSampler`. The sampler has to
-            have a Chimera or Pegasus topology.
+            :class:`~dwave.system.samplers.DWaveSampler`.
 
     Example:
         To replace :class:`.QPUSubproblemAutoEmbeddingSampler` with a sampler
@@ -141,29 +139,17 @@ class SubproblemCliqueEmbedder(traits.SubproblemIntaking,
 
     @staticmethod
     def find_clique_embedding(variables, sampler):
-        """Given a Chimera- or Pegasus-based ``sampler``, and a list of
+        """Given a :class:`dimod.Structured` ``sampler``, and a list of
         variable labels, return a clique embedding.
 
         Returns:
             dict:
                 Clique embedding map with source variables from ``variables``
-                and target edges taken from ``sampler``.
+                and target graph taken from ``sampler``.
 
         """
-        topology_type = sampler.properties['topology']['type']
-        topology_shape = sampler.properties['topology']['shape']
-
-        clique_embedders = dict(chimera=find_chimera_clique_embedding,
-                                pegasus=find_pegasus_clique_embedding)
-        try:
-            find_clique_embedding = clique_embedders[topology_type]
-        except KeyError:
-            raise ValueError('unknown sampler topology')
-
-        embedding = find_clique_embedding(
-            variables, m=topology_shape[0], target_edges=sampler.edgelist)
-
-        return embedding
+        g = sampler.to_networkx_graph()
+        return busgraph_cache(g).find_clique_embedding(variables)
 
     def next(self, state, **runopts):
         embedding = self.find_clique_embedding(
