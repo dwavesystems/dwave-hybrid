@@ -447,7 +447,7 @@ class SublatticeDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
     If ``problem_dims`` is a state field, geometrically offset variables are
     wrapped around boundaries according to assumed periodic boundary condition.
     This is a required field when the ``geometric_offset`` is not specified.
-    Note that, the origin embedding must specify a lattice smaller than the 
+    Note that, the origin embedding must specify a lattice smaller than the
     target lattice.
 
     Args:
@@ -457,17 +457,17 @@ class SublatticeDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
     Returns:
         ``subproblem`` and ``embedding`` state fields
 
-
     See also:
         :class:`~hybrid.reference.lattice_lnls.LatticeLNLS`
-    
+
         :class:`~hybrid.reference.lattice_lnls.LatticeLNLSSampler`
 
         :class:`~hybrid.decomposers.make_origin_embeddings`
-        
+
         :ref:`decomposers-examples`
 
-        [REFERENCE PAPER IN PREPARATION]
+        Jack Raymond et al, `Hybrid quantum annealing for larger-than-QPU
+        lattice-structured problems <https://arxiv.org/abs/2202.03044>`_
     """
 
     def __init__(self, seed=None, **runopts):
@@ -514,7 +514,7 @@ class SublatticeDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
                     final_coordinates[idx] += val
             return tuple(final_coordinates)
 
-        # For now we explicitely encode different automorphism as different
+        # For now we explicitly encode different automorphism as different
         # origin_embeddings, but is would be natural to allow symmetry
         # operations (automorphisms) with respect to some fixed embedding
         # and lattice class.
@@ -830,20 +830,20 @@ def _make_cubic_lattice(dimensions):
 
 
 def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
-                           problem_dims = None, reject_small_problems = True,
-                           allow_unyielded_edges = False):
+                           problem_dims=None, reject_small_problems=True,
+                           allow_unyielded_edges=False):
     """Creates optimal embeddings for a lattice.
 
-    An embedding is a dictionary specifying the mapping from each lattice 
-    variable to a set of qubits (chain). The embeddings created are compatible 
-    with the topology and shape of a specified ``qpu_sampler``. 
+    An embedding is a dictionary specifying the mapping from each lattice
+    variable to a set of qubits (chain). The embeddings created are compatible
+    with the topology and shape of a specified ``qpu_sampler``.
 
     Args:
         qpu_sampler (:class:`dimod.Sampler`, optional):
             Quantum sampler such as a D-Wave system. If not specified, the
-            :class:`~dwave.system.samplers.DWaveSampler` sampler class is used 
+            :class:`~dwave.system.samplers.DWaveSampler` sampler class is used
             to select a QPU solver with a topology compatible with the specified
-            ``lattice_type`` (e.g. an Advantage system for a 'pegasus' lattice 
+            ``lattice_type`` (e.g. an Advantage system for a 'pegasus' lattice
             type).
 
         lattice_type (str, optional, default=qpu_sampler.properties['topology']['type']):
@@ -864,18 +864,23 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
                     If ``qpu_sampler`` topology type is 'chimera', maximum
                     scale chimera subgraphs are embedded using the chimera
                     vector labeling scheme for variables.
-        
+
         problem_dims (tuple of ints, optional):
             origin_embeddings over the solver are constrained to not exceed
-            these dimensions.  
+            these dimensions.
+
             For cubic lattices, dimension bounds are specified as (x, y, z).
+
             For pegasus lattices, bounds are specified in nice coordinate
             (t, y, x, u, k): a P16 solver has bounds (3,15,15,2,4)
+
             For chimera lattices, bounds are specified in chimera coordinates
             (i,j,u,k): a C16 solver has bounds (16,16,2,4).
+
             Where embedded variables exceed these bounds the embedding is
             either truncated, or raises an error, according to the flag
-            ``reject_small_problems``
+            ``reject_small_problems``.
+
             Note that when the embedding scale exactly matches the problem
             scale, problems can also occur for the case of periodic boundary
             conditions that are not supported by these embeddings, which assume
@@ -886,8 +891,7 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
             allowed by the origin embeddings, raise an error.
             Since these routines are intended to support workflows beyond
             solvable scale, a user override is required for the inappopriate
-            use case. This flag is only invoked if problem_dims is
-            specified.
+            use case. This flag is only invoked if problem_dims is specified.
 
         allow_unyielded_edges (bool, optional, False):
             A requirement for certain sublattice based methods is that any two
@@ -917,12 +921,13 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
 
     See also:
         :class:`~hybrid.reference.lattice_lnls.LatticeLNLS`
-    
+
         :class:`~hybrid.reference.lattice_lnls.LatticeLNLSSampler`
 
         :class:`~hybrid.decomposers.SublatticeDecomposer`
-        
-        [REFERENCE PAPER IN PREPARATION]
+
+        Jack Raymond et al, `Hybrid quantum annealing for larger-than-QPU
+        lattice-structured problems <https://arxiv.org/abs/2202.03044>`_
     """
     if qpu_sampler is None:
         if lattice_type == 'pegasus' or lattice_type == 'chimera':
@@ -955,7 +960,6 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
         if lattice_type == 'pegasus':
             # Trimming to nice_coordinate supported embeddings is not a unique,
             # options, it has some advantages and some disadvantages:
-            
             proposed_source = dnx.pegasus_graph(qpu_shape[0], nice_coordinates=True)
             proposed_source = nx.relabel_nodes(
                 proposed_source,
@@ -1037,12 +1041,11 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
     else:
         raise ValueError('Unsupported combination of lattice_type '
                          'and qpu_sampler topology')
-    
-    if allow_unyielded_edges == False:
+
+    if not allow_unyielded_edges:
         origin_embedding = _yield_limited_origin_embedding(origin_embedding,
                                                            proposed_source,
                                                            target)
-        
 
     if qpu_type == lattice_type:
         # Convert keys to standard vector scheme:
@@ -1051,7 +1054,7 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
     else:
         # Keys are already in geometric format:
         pass
-    
+
     # We can propose additional embeddings. Or we can use symmetries of the
     # target graph (automorphisms), to create additional embedding options.
     # This is important in the cubic case, because the subregion shape and
@@ -1090,8 +1093,8 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
             rem_list = {key for key in origin_embedding
                         if any(key[idx]>=problem_dims[idx]
                                for idx in range(problem_dim_spec))}
-            
-            if len(rem_list)>0:
+
+            if len(rem_list) > 0:
                 if reject_small_problems:
                     raise ValueError('embedding scale exceeds '
                                      'that of the problem target (problem_dims)')

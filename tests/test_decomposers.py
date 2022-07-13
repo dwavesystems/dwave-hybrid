@@ -670,6 +670,7 @@ class TestRoofDualityDecomposer(unittest.TestCase):
                          bqm.energies((new.samples.record.sample,
                                        new.samples.variables)))
 
+
 class MockDWaveSamplerGeneralization(MockDWaveSampler):
     """Extend the `dwave.system.testing.MockDWaveSampler` to Pegasus topology.
     
@@ -774,7 +775,6 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
                         for key, val in orig_emb.items():
                             self.assertEqual(len(key), tuple_length)
                             self.assertEqual(len(val), chain_length)
-
         
     def test_all_embeddings_validity(self):
         """Check that embeddings are valid for supported lattice_types.

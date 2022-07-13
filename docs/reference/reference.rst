@@ -37,5 +37,3 @@ latticeLNLS
 
 .. automodule:: hybrid.reference.latticeLNLS
    :members:
-
-      

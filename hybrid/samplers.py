@@ -78,11 +78,11 @@ class QPUSubproblemExternalEmbeddingSampler(traits.SubproblemSampler,
     """
 
     def __init__(self, num_reads=100, qpu_sampler=None, sampling_params=None,
-                 logical_srt = False, **runopts):
+                 logical_srt=False, **runopts):
         super(QPUSubproblemExternalEmbeddingSampler, self).__init__(**runopts)
 
         self.num_reads = num_reads
-        
+
         if qpu_sampler is None:
             qpu_sampler = DWaveSampler()
         self.sampler = qpu_sampler
@@ -92,7 +92,7 @@ class QPUSubproblemExternalEmbeddingSampler(traits.SubproblemSampler,
         self.sampling_params = sampling_params
 
         self.logical_srt = logical_srt
-        
+
     def __repr__(self):
         return ("{self}(num_reads={self.num_reads!r}, "
                        "qpu_sampler={self.sampler!r}, "
