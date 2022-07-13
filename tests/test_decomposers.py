@@ -670,16 +670,22 @@ class TestRoofDualityDecomposer(unittest.TestCase):
                          bqm.energies((new.samples.record.sample,
                                        new.samples.variables)))
 
+
 class MockDWaveSamplerGeneralization(MockDWaveSampler):
     """Extend the `dwave.system.testing.MockDWaveSampler` to Pegasus topology.
     
     Adding topology and shape keywords to MockDWaveSampler for this purpose.
+    This function is mirrored in test_reference_samplers.py
+
+    MockDWaveSampler() in the latest version of dwave-system support these 
+    options, this function is included to support backward compatibility of the
+    dwave-system package.
     """
-    def __init__(self, broken_nodes=None, qpu_topology=None, qpu_scale=4, **config):
+    def __init__(self, broken_nodes=None, topology_type=None, qpu_scale=4, **config):
         super().__init__(broken_nodes, **config)
         #An Advantage generation processor, only artificially smaller,
         #replaces C4 in default MockDWaveSampler
-        if qpu_topology != 'chimera':
+        if topology_type != 'chimera':
             self.properties['topology'] = {'type': 'pegasus',
                                            'shape': [qpu_scale]}
             qpu_graph = dnx.pegasus_graph(qpu_scale,fabric_only=True)
@@ -737,7 +743,7 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
         Uses a default processor scale of 4, with either 0 or 15
         edge defects.
         """
-        # Expected properties by (qpu_topology, lattice_topology):
+        # Expected properties by (topology_type, lattice_topology):
         # tuple length, chain length, number of embeddings
         shape_dicts = {('pegasus', 'pegasus'): {'tl': 5, 'cl': 1, 'ne': 2},
                        ('pegasus', 'cubic'): {'tl': 3, 'cl': 2, 'ne': 3},
@@ -747,7 +753,7 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
         for qpu_top in ['pegasus', 'chimera']:
             #Native by default:
             shape_dicts[(qpu_top, None)] = shape_dicts[(qpu_top, qpu_top)] 
-            qpu_sampler = MockDWaveSamplerGeneralization(qpu_topology=qpu_top)
+            qpu_sampler = MockDWaveSamplerGeneralization(topology_type=qpu_top)
 
             # pop final 15 edges to exercise edge cover routines.
             # 15 is a worst case upper bound on the number of defects that
@@ -769,7 +775,7 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
                         for key, val in orig_emb.items():
                             self.assertEqual(len(key), tuple_length)
                             self.assertEqual(len(val), chain_length)
-    
+        
     def test_all_embeddings_validity(self):
         """Check that embeddings are valid for supported lattice_types.
         Uses a default processor scale of 5, with 15 edge defects.
@@ -794,7 +800,7 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
                     proposed_source = dnx.chimera_graph(qpu_scale)
                 
                 qpu_sampler = MockDWaveSamplerGeneralization(
-                    qpu_topology=qpu_top,
+                    topology_type=qpu_top,
                     qpu_scale=qpu_scale)
                 for _ in range(15):
                     qpu_sampler.edgelist.pop()
@@ -806,3 +812,29 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
                         emb=orig_emb,
                         source=proposed_source.subgraph(list(orig_emb.keys())),
                         target=qpu_sampler.properties['couplers']))
+
+    def test_constrained_validity(self):
+        """Check that we can constrain an embedding to a given subspace
+        """
+        # Full scale is 16, a smaller default is used
+        qpu_scale = 5
+        constrained_scales = {'cubic' : (2,2,2),
+                              'pegasus' : (3,2,3,2,4), #2x3 nice-cells
+                              'chimera' : (1,1,2,4) #single cell
+        }
+        for qpu_top in ['pegasus', 'chimera']:
+            for lattice_type in ['cubic', qpu_top]:
+                # proposed_source: a defect free-lattice at sampler
+                # scale (hence inclusive of all keys).
+                qpu_sampler = MockDWaveSamplerGeneralization(
+                    topology_type=qpu_top,
+                    qpu_scale=4)
+                cs = constrained_scales[lattice_type]
+                orig_embs = make_origin_embeddings(qpu_sampler=qpu_sampler,
+                                                   lattice_type=lattice_type,
+                                                   problem_dims=cs,
+                                                   reject_small_problems=False)
+                for orig_emb in orig_embs:
+                    from numpy import prod
+                    self.assertTrue(len(orig_emb)==prod(cs))
+                    self.assertFalse(any(any(key[idx] >= bound for idx,bound in enumerate(cs)) for key in orig_emb))

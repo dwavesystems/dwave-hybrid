@@ -112,6 +112,25 @@ class TestQPUSamplers(unittest.TestCase):
         # verify mock sampler received custom kwargs
         self.assertEqual(res.subsamples.first.energy, -1)
 
+    def test_external_embedding_sampler_srt(self):
+        bqm = dimod.BinaryQuadraticModel.from_ising({'a': 1}, {})
+        init = State.from_subproblem(bqm, embedding={'a': [0]})
+
+        sampler = dimod.StructureComposite(
+            SimulatedAnnealingSampler(), nodelist=[0], edgelist=[])
+
+        # Test srt option, introduced as placeholder
+        # functionality for compatibility with latticeLNLS
+        # reference workflows (special case use of extended
+        # J-range)
+        workflow = QPUSubproblemExternalEmbeddingSampler(qpu_sampler=sampler,logical_srt=True)
+
+        # run mock sampling
+        res = workflow.run(init).result()
+
+        # verify mock sampler received custom kwargs
+        self.assertEqual(res.subsamples.first.energy, -1)
+
     @parameterized.expand([['chimera', 2], ['pegasus', 1], ['zephyr', 1]])
     def test_clique_embedder(self, topology_type, expected_chain_length):
         bqm = dimod.BinaryQuadraticModel.from_ising({}, {'ab': 1, 'bc': 1, 'ca': 1})

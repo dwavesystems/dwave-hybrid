@@ -11,8 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 from hybrid.reference.kerberos import *
 from hybrid.reference.pt import *
 from hybrid.reference.pa import *
 from hybrid.reference.qbsolv import *
+from hybrid.reference.lattice_lnls import *
