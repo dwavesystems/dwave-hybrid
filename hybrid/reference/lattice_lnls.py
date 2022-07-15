@@ -116,7 +116,6 @@ def LatticeLNLS(topology,
         qpu_params0['num_reads'] = 25
     if 'annealing_time' not in qpu_params0:
         qpu_params0['annealing_time'] = 100
-
     qpu_branch = (hybrid.decomposers.SublatticeDecomposer()
                   | hybrid.QPUSubproblemExternalEmbeddingSampler(
                       qpu_sampler=qpu_sampler,
@@ -275,7 +274,7 @@ class LatticeLNLSSampler(dimod.Sampler):
                 exclude_dims = []
                 #Recreate on each call, no reuse:
         self.origin_embeddings = hybrid.make_origin_embeddings(
-            qpu_sampler, 'cubic', problem_dims=problem_dims,
+            qpu_sampler, topology, problem_dims=problem_dims,
             reject_small_problems=reject_small_problems)
 
         if callable(init_sample):
@@ -283,18 +282,21 @@ class LatticeLNLSSampler(dimod.Sampler):
                 init_sample(),
                 bqm,
                 problem_dims=problem_dims,
+                exclude_dims=exclude_dims,
                 origin_embeddings=self.origin_embeddings)
         elif init_sample is None:
             init_state_gen = lambda: hybrid.State.from_sample(
                 hybrid.random_sample(bqm),
                 bqm,
                 problem_dims=problem_dims,
+                exclude_dims=exclude_dims,
                 origin_embeddings=self.origin_embeddings)
         elif isinstance(init_sample, dimod.SampleSet):
             init_state_gen = lambda: hybrid.State.from_sample(
                 init_sample,
                 bqm,
                 problem_dims=problem_dims,
+                exclude_dims=exclude_dims,
                 origin_embeddings=self.origin_embeddings)
         else:
             raise TypeError("'init_sample' should be a SampleSet or a SampleSet generator")
@@ -302,6 +304,7 @@ class LatticeLNLSSampler(dimod.Sampler):
         #Recreate on each call, no reuse:
         self.runnable = LatticeLNLS(topology=topology,
                                     qpu_sampler=qpu_sampler,
+                                    exclude_dims=exclude_dims,
                                     **kwargs)
 
         samples = []
