@@ -1,7 +1,7 @@
 dimod==0.10.13
 numpy>=1.19.1
 minorminer==0.2.7
-dwave-system==1.11.0
+dwave-system==1.13.0
 dwave-neal==0.5.9
 dwave-tabu==0.4.3
 dwave-greedy==0.2.3
