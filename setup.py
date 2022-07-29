@@ -17,7 +17,7 @@ install_requires = ['numpy>=1.19.1', 'networkx', 'click>5', 'plucky>=0.4.3',
                     # including it as a core dependency vs extra. Make it unbounded,
                     # as it's already constrained by dimod (if required).
                     'dwave-preprocessing',
-                    'minorminer>=0.1.7', 'dwave-networkx>=0.8.8', 'dwave-system>=0.7.6',
+                    'minorminer>=0.1.7', 'dwave-networkx>=0.8.8', 'dwave-system>=1.13.0',
                     'dwave-neal>=0.5.4', 'dwave-tabu>=0.2.0', 'dwave-greedy>=0.1.0']
 
 # Package extras requirements
