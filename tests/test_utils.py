@@ -80,6 +80,15 @@ class TestEnergyFlipGainUtils(unittest.TestCase):
         gains = flip_energy_gains(bqm, sample)
         self.assertEqual(gains, [(-2, 1), (-2, 0)])
 
+    def test_heterogeneous_variable_label_types(self):
+        variables = ['a', ('b', 1), frozenset((1,2,3))]
+        bqm = dimod.BQM.from_ising(zip(variables, [1, 2, 1]), {})
+        gains = flip_energy_gains(bqm, zip(variables, [1, 1, 1]))
+
+        self.assertEqual(
+            gains, list(zip((-2.0, -2.0, -4.0),
+                            (variables[2], variables[0], variables[1]))))
+
     def test_localsearch_adversaries(self):
         """When var flip increases energy."""
 
