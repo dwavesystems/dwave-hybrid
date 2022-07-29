@@ -296,14 +296,14 @@ def flip_energy_gains(bqm, sample, variables=None, min_gain=None):
         min_gain = float('-inf')
 
     energy_gains = []
-    for idx in variables:
-        val = sample[idx]
-        contrib = bqm.linear[idx] + sum(w * sample[neigh] for neigh, w in bqm.adj[idx].items())
+    for v in variables:
+        val = sample[v]
+        contrib = bqm.linear[v] + sum(w * sample[neigh] for neigh, w in bqm.adj[v].items())
         en = contrib * delta(val)
         if en >= min_gain:
-            energy_gains.append((en, idx))
+            energy_gains.append((en, v))
 
-    energy_gains.sort(reverse=True)
+    energy_gains.sort(reverse=True, key=lambda p: (p[0], bqm.variables.index(p[1])))
     return energy_gains
 
 
