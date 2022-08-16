@@ -65,6 +65,15 @@ or from source::
 .. installation-end-marker
 
 
+Testing
+=======
+
+Install test requirements and run ``unittest``::
+
+    pip install -r tests/requirements.txt
+    python -m unittest
+
+
 Example
 =======
 
