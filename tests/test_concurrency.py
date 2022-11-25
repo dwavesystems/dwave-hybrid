@@ -75,7 +75,7 @@ class TestMultithreading(unittest.TestCase, RunTimeAssertionMixin):
 
     @unittest.skipUnless(cpu_count() >= 2, "at least two threads required")
     def test_sa_concurrency(self):
-        params = dict(num_reads=1, num_sweeps=1000000)
+        params = dict(num_reads=1, num_sweeps=100000)
 
         # serial and parallel SA runs
         s = (
@@ -87,7 +87,7 @@ class TestMultithreading(unittest.TestCase, RunTimeAssertionMixin):
             hybrid.SimulatedAnnealingProblemSampler(**params)
         )
 
-        bqm = dimod.generators.uniform(graph=1, vartype=dimod.SPIN)
+        bqm = dimod.generators.uniform(graph=10, vartype=dimod.SPIN)
         state = hybrid.State.from_problem(bqm)
 
         # average wall clock workflow runtime over `repeat` runs
@@ -113,7 +113,7 @@ class TestMultithreading(unittest.TestCase, RunTimeAssertionMixin):
         # That's why we do multiple runs, and bail out on the first good speedup
         speedups = []
         best_speedup = 0
-        for run in range(250):  # alternatively, run for up to X sec
+        for run in range(100):  # alternatively, run for up to X sec
             t_s = time_workflow(s, state)
             t_p = time_workflow(p, state)
             speedup = t_s / t_p
