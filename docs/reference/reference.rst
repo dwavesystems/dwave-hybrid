@@ -35,5 +35,5 @@ qbsolv
 latticeLNLS
 ===========
 
-.. automodule:: hybrid.reference.latticeLNLS
+.. automodule:: hybrid.reference.lattice_lnls
    :members:
