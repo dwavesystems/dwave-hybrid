@@ -21,7 +21,10 @@ from unittest import mock
 
 import dimod
 import numpy as np
-from dwave.samplers import TabuSampler
+try:
+    from dwave.samplers import TabuSampler
+except ImportError:  # pragma: no cover
+    from tabu import TabuSampler
 
 import hybrid
 from hybrid.core import (

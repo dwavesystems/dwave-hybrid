@@ -25,11 +25,16 @@ import dimod
 from dwave.system.samplers import DWaveSampler
 from dwave.system.composites import AutoEmbeddingComposite, FixedEmbeddingComposite
 from dwave.preprocessing.composites import SpinReversalTransformComposite
-
-from dwave.samplers.tabu import TabuSampler
-from dwave.samplers.sa import SimulatedAnnealingSampler
-from dwave.samplers.greedy import SteepestDescentSolver
 from minorminer.busclique import busgraph_cache
+
+try:
+    from dwave.samplers.greedy import SteepestDescentSolver
+    from dwave.samplers.sa import SimulatedAnnealingSampler
+    from dwave.samplers.tabu import TabuSampler
+except ImportError:  # pragma: no cover
+    from greedy import SteepestDescentSolver
+    from neal import SimulatedAnnealingSampler
+    from tabu import TabuSampler
 
 from hybrid.core import Runnable, SampleSet
 from hybrid.flow import Loop

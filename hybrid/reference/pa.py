@@ -18,8 +18,12 @@ import warnings
 
 import numpy as np
 
-import dwave.samplers.sa.sampler as neal
 import dimod
+try:
+    import dwave.samplers.sa.sampler as neal
+except ImportError:  # pragma: no cover
+    import neal
+
 import hybrid
 
 __all__ = ['EnergyWeightedResampler',

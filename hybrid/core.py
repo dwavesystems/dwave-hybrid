@@ -646,7 +646,7 @@ class HybridRunnable(Runnable):
         :std:doc:`TabuSampler <oceandocs:docs_tabu/sdk_index>`, runs it on an Ising model, and
         finds the lowest energy.
 
-        >>> from dwave.samplers.tabu import TabuSampler
+        >>> from tabu import TabuSampler
         >>> import dimod
         >>> bqm = dimod.BinaryQuadraticModel.from_ising({}, {'ab': 0.5, 'bc': 0.5, 'ca': 0.5})
         >>> runnable = HybridRunnable(TabuSampler(), fields=('subproblem', 'subsamples'), timeout=100)

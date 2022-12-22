@@ -20,9 +20,12 @@ import numpy as np
 from parameterized import parameterized, parameterized_class
 
 import dimod
-from dwave.samplers import SimulatedAnnealingSampler
 from dwave.system import DWaveSampler
 from dwave.system.testing import MockDWaveSampler
+try:
+    from dwave.samplers import SimulatedAnnealingSampler
+except ImportError:  # pragma: no cover
+    from neal import SimulatedAnnealingSampler
 
 from hybrid.samplers import *
 from hybrid.core import State
