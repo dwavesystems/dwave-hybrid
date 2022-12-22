@@ -1,11 +1,13 @@
-dimod==0.10.13
+dimod==0.10.13; python_version<"3.11"
+dimod==0.12.3; python_version>="3.11"
+dwave-preprocessing==0.3.2; python_version<"3.11"
+dwave-preprocessing==0.5.4; python_version>="3.11"
+minorminer==0.2.7; python_version<"3.11"
+minorminer==0.2.10; python_version>="3.11"
 numpy>=1.19.1
-minorminer==0.2.7
-dwave-system==1.13.0
-dwave-neal==0.5.9
-dwave-tabu==0.4.3
-dwave-greedy==0.2.3
-dwave-preprocessing==0.3.2
+dwave-system==1.13.0; python_version<"3.11"
+dwave-system==1.18.0; python_version>="3.11"
+dwave-samplers==1.0.0
 networkx
 dwave-networkx==0.8.10
 click

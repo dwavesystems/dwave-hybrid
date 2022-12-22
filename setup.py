@@ -18,7 +18,8 @@ install_requires = ['numpy>=1.19.1', 'networkx', 'click>5', 'plucky>=0.4.3',
                     # as it's already constrained by dimod (if required).
                     'dwave-preprocessing',
                     'minorminer>=0.1.7', 'dwave-networkx>=0.8.8', 'dwave-system>=1.13.0',
-                    'dwave-neal>=0.5.4', 'dwave-tabu>=0.2.0', 'dwave-greedy>=0.1.0']
+                    'dwave-samplers>=1.0.0',
+                    ]
 
 # Package extras requirements
 extras_require = {
@@ -36,6 +37,7 @@ classifiers = [
     'Programming Language :: Python :: 3.8',
     'Programming Language :: Python :: 3.9',
     'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
 ]
 
 setup(
