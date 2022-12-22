@@ -9,7 +9,7 @@ jobs:
         type: string
 
     docker:
-      - image: circleci/python:<< parameters.python-version >>
+      - image: cimg/python:<< parameters.python-version >>
 
     steps:
       - checkout
@@ -112,7 +112,7 @@ jobs:
 
   test-docs:
     docker:
-      - image: circleci/python:3.7
+      - image: cimg/python:3.7
 
     steps:
       - checkout
@@ -158,7 +158,7 @@ jobs:
 
   pypi-deploy:
     docker:
-      - image: circleci/python:3.9
+      - image: cimg/python:3.9
 
     steps:
       - checkout
@@ -188,11 +188,19 @@ workflows:
           name: test-linux-<< matrix.python-version >> | << matrix.pip-constraints >>
           matrix:
             parameters:
-              python-version: &python-versions ["3.7.9", "3.8.6", "3.9.0", "3.10.0"]
+              python-version: &python-versions ["3.7.9", "3.8.6", "3.9.0", "3.10.0", "3.11.0"]
               pip-constraints:
                 - "dimod==0.10.13"
                 - "dimod~=0.10.0 dwave-system~=1.0"
                 - "dimod==0.11.0 dwave-preprocessing==0.4.0 dwave-system~=1.0"
+            exclude:
+              # dimod < 0.12 not supported on py311+
+              - python-version: "3.11.0"
+                pip-constraints: "dimod==0.10.13"
+              - python-version: "3.11.0"
+                pip-constraints: "dimod~=0.10.0 dwave-system~=1.0"
+              - python-version: "3.11.0"
+                pip-constraints: "dimod==0.11.0 dwave-preprocessing==0.4.0 dwave-system~=1.0"
 
       - test-macos:
           name: test-macos-<< matrix.python-version >>
