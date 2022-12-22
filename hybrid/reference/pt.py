@@ -18,7 +18,7 @@ import math
 import random
 
 import numpy as np
-import neal
+import dwave.samplers.sa.sampler as neal
 
 import dimod
 import hybrid
