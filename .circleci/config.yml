@@ -1,5 +1,10 @@
 version: 2.1
 
+parameters:
+  cache-generation:
+    type: integer
+    default: 1
+
 orbs:
   win: circleci/windows@2.2
 
@@ -21,7 +26,7 @@ jobs:
       - checkout
 
       - restore_cache: &restore-cache-env
-          key: v1-dependencies-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+          key: v<< pipeline.parameters.cache-generation >>-pip-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
 
       - run: &create-virtualenv
           name: Create virtual environment
@@ -38,7 +43,7 @@ jobs:
             pip install wheel twine
 
       - save_cache: &save-cache-env
-          key: v1-dependencies-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+          key: v<< pipeline.parameters.cache-generation >>-pip-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
           paths:
             - env
 
@@ -68,6 +73,7 @@ jobs:
         type: string
       xcode:
         type: string
+        default: "13.2.0"
 
     macos:
       xcode: << parameters.xcode >>
@@ -92,7 +98,7 @@ jobs:
 
       - restore_cache: &restore-cache-pyenv
           keys:
-            - v1-pyenv-{{ .Environment.CIRCLE_JOB }}-xcode-<< parameters.xcode >>
+            - v<< pipeline.parameters.cache-generation >>-pyenv-{{ .Environment.CIRCLE_JOB }}-xcode-<< parameters.xcode >>
 
       - run: &pyenv-install-python
           name: Install python
@@ -107,7 +113,7 @@ jobs:
             pyenv global << parameters.python-version >>
 
       - save_cache: &save-cache-pyenv
-          key: v1-pyenv-{{ .Environment.CIRCLE_JOB }}-xcode-<< parameters.xcode >>
+          key: v<< pipeline.parameters.cache-generation >>-pyenv-{{ .Environment.CIRCLE_JOB }}-xcode-<< parameters.xcode >>
           paths:
             - ~/.pyenv
 
@@ -139,7 +145,7 @@ jobs:
 
       - restore_cache:
           keys:
-            - v1-nuget-python-<< parameters.python-version >>-{{ .Environment.CIRCLE_JOB }}
+            - v<< pipeline.parameters.cache-generation >>-nuget-python-<< parameters.python-version >>-{{ .Environment.CIRCLE_JOB }}
 
       - run:
           name: Install python and create virtualenv
@@ -148,7 +154,7 @@ jobs:
             python.<< parameters.python-version >>\tools\python -m venv env
 
       - save_cache:
-          key: v1-nuget-python-<< parameters.python-version >>-{{ .Environment.CIRCLE_JOB }}
+          key: v<< pipeline.parameters.cache-generation >>-nuget-python-<< parameters.python-version >>-{{ .Environment.CIRCLE_JOB }}
           paths:
             - python.<< parameters.python-version >>
 
@@ -179,7 +185,7 @@ jobs:
       - checkout
 
       - restore_cache:
-          key: v1-dependencies-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ checksum "docs/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+          key: v<< pipeline.parameters.cache-generation >>-pip-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ checksum "docs/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
 
       - run: *create-virtualenv
 
@@ -190,7 +196,7 @@ jobs:
           command: env/bin/pip install -r docs/requirements.txt
 
       - save_cache:
-          key: v1-dependencies-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ checksum "docs/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+          key: v<< pipeline.parameters.cache-generation >>-pip-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ checksum "docs/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
           paths:
             - env
 
@@ -265,11 +271,14 @@ workflows:
                 pip-constraints: "dimod~=0.11.0 dwave-preprocessing~=0.4.0 dwave-system~=1.0"
 
       - test-macos:
-          name: test-macos-<< matrix.python-version >>
           matrix:
             parameters:
               python-version: *python-versions
-              xcode: ["13.2.0"]
+
+      - test-windows:
+          matrix:
+            parameters:
+              python-version: *python-versions
 
       - test-docs
 
