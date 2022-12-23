@@ -1,5 +1,11 @@
 version: 2.1
 
+orbs:
+  win: circleci/windows@2.2
+
+environment:
+  PIP_PROGRESS_BAR: 'off'
+
 jobs:
   test-linux:
     parameters:
@@ -119,6 +125,51 @@ jobs:
           command: env/bin/pip install .
 
       - run: *run-python-tests
+
+  test-windows:
+    parameters:
+      python-version:
+        type: string
+
+    executor:
+      name: win/default
+
+    steps:
+      - checkout
+
+      - restore_cache:
+          keys:
+            - v1-nuget-python-<< parameters.python-version >>-{{ .Environment.CIRCLE_JOB }}
+
+      - run:
+          name: Install python and create virtualenv
+          command: |
+            nuget install python -Version << parameters.python-version >>
+            python.<< parameters.python-version >>\tools\python -m venv env
+
+      - save_cache:
+          key: v1-nuget-python-<< parameters.python-version >>-{{ .Environment.CIRCLE_JOB }}
+          paths:
+            - python.<< parameters.python-version >>
+
+      - run:
+          name: Install requirements
+          command: |
+            env\Scripts\activate.ps1
+            pip install -U pip
+            pip install -r requirements.txt -r tests\requirements.txt
+
+      - run:
+          name: Install package
+          command: |
+            env\Scripts\activate.ps1
+            pip install .
+
+      - run:
+          name: Run tests
+          command: |
+            env\Scripts\activate.ps1
+            coverage run -m unittest discover
 
   test-docs:
     docker:
