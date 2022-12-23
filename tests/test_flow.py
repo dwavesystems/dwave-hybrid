@@ -1079,7 +1079,7 @@ class TestLog(unittest.TestCase):
         res = []
         while True:
             try:
-                res.append(memo.get_nowait())
+                res.append(memo.get(timeout=1))
             except queue.Empty:
                 break
 
