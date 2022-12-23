@@ -1,5 +1,16 @@
 version: 2.1
 
+parameters:
+  cache-generation:
+    type: integer
+    default: 1
+
+orbs:
+  win: circleci/windows@2.2
+
+environment:
+  PIP_PROGRESS_BAR: 'off'
+
 jobs:
   test-linux:
     parameters:
@@ -9,13 +20,13 @@ jobs:
         type: string
 
     docker:
-      - image: circleci/python:<< parameters.python-version >>
+      - image: cimg/python:<< parameters.python-version >>
 
     steps:
       - checkout
 
       - restore_cache: &restore-cache-env
-          key: v1-dependencies-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+          key: v<< pipeline.parameters.cache-generation >>-pip-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
 
       - run: &create-virtualenv
           name: Create virtual environment
@@ -32,7 +43,7 @@ jobs:
             pip install wheel twine
 
       - save_cache: &save-cache-env
-          key: v1-dependencies-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+          key: v<< pipeline.parameters.cache-generation >>-pip-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
           paths:
             - env
 
@@ -62,6 +73,7 @@ jobs:
         type: string
       xcode:
         type: string
+        default: "13.2.0"
 
     macos:
       xcode: << parameters.xcode >>
@@ -70,13 +82,23 @@ jobs:
       - checkout
 
       # install `python-version` and cache it
+      - when:
+          condition:
+            matches:
+              pattern: "^3\\.[123][123456789].*$"
+              value: << parameters.python-version >>
+          steps:
+            - run:
+                name: Update brew to get latest pyenv
+                command: brew update
+
       - run: &brew-install-pyenv
           name: Install pyenv
           command: HOMEBREW_NO_AUTO_UPDATE=1 brew install pyenv
 
       - restore_cache: &restore-cache-pyenv
           keys:
-            - v1-pyenv-{{ .Environment.CIRCLE_JOB }}-xcode-<< parameters.xcode >>
+            - v<< pipeline.parameters.cache-generation >>-pyenv-{{ .Environment.CIRCLE_JOB }}-xcode-<< parameters.xcode >>
 
       - run: &pyenv-install-python
           name: Install python
@@ -91,7 +113,7 @@ jobs:
             pyenv global << parameters.python-version >>
 
       - save_cache: &save-cache-pyenv
-          key: v1-pyenv-{{ .Environment.CIRCLE_JOB }}-xcode-<< parameters.xcode >>
+          key: v<< pipeline.parameters.cache-generation >>-pyenv-{{ .Environment.CIRCLE_JOB }}-xcode-<< parameters.xcode >>
           paths:
             - ~/.pyenv
 
@@ -110,15 +132,60 @@ jobs:
 
       - run: *run-python-tests
 
-  test-docs:
-    docker:
-      - image: circleci/python:3.7
+  test-windows:
+    parameters:
+      python-version:
+        type: string
+
+    executor:
+      name: win/default
 
     steps:
       - checkout
 
       - restore_cache:
-          key: v1-dependencies-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ checksum "docs/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+          keys:
+            - v<< pipeline.parameters.cache-generation >>-nuget-python-<< parameters.python-version >>-{{ .Environment.CIRCLE_JOB }}
+
+      - run:
+          name: Install python and create virtualenv
+          command: |
+            nuget install python -Version << parameters.python-version >>
+            python.<< parameters.python-version >>\tools\python -m venv env
+
+      - save_cache:
+          key: v<< pipeline.parameters.cache-generation >>-nuget-python-<< parameters.python-version >>-{{ .Environment.CIRCLE_JOB }}
+          paths:
+            - python.<< parameters.python-version >>
+
+      - run:
+          name: Install requirements
+          command: |
+            env\Scripts\activate.ps1
+            pip install -U pip
+            pip install -r requirements.txt -r tests\requirements.txt
+
+      - run:
+          name: Install package
+          command: |
+            env\Scripts\activate.ps1
+            pip install .
+
+      - run:
+          name: Run tests
+          command: |
+            env\Scripts\activate.ps1
+            coverage run -m unittest discover
+
+  test-docs:
+    docker:
+      - image: cimg/python:3.7
+
+    steps:
+      - checkout
+
+      - restore_cache:
+          key: v<< pipeline.parameters.cache-generation >>-pip-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ checksum "docs/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
 
       - run: *create-virtualenv
 
@@ -129,7 +196,7 @@ jobs:
           command: env/bin/pip install -r docs/requirements.txt
 
       - save_cache:
-          key: v1-dependencies-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ checksum "docs/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+          key: v<< pipeline.parameters.cache-generation >>-pip-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ checksum "docs/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
           paths:
             - env
 
@@ -158,7 +225,7 @@ jobs:
 
   pypi-deploy:
     docker:
-      - image: circleci/python:3.9
+      - image: cimg/python:3.9
 
     steps:
       - checkout
@@ -188,18 +255,30 @@ workflows:
           name: test-linux-<< matrix.python-version >> | << matrix.pip-constraints >>
           matrix:
             parameters:
-              python-version: &python-versions ["3.7.9", "3.8.6", "3.9.0", "3.10.0"]
+              python-version: &python-versions ["3.7.9", "3.8.6", "3.9.0", "3.10.0", "3.11.0"]
               pip-constraints:
                 - "dimod==0.10.13"
-                - "dimod~=0.10.0 dwave-system~=1.0"
-                - "dimod==0.11.0 dwave-preprocessing==0.4.0 dwave-system~=1.0"
+                - "dimod~=0.10.0 dwave-preprocessing~=0.3.0 dwave-system~=1.0"
+                - "dimod~=0.11.0 dwave-preprocessing~=0.4.0 dwave-system~=1.0"
+                - "dimod~=0.12.0 dwave-preprocessing~=0.5.0 dwave-system~=1.0"
+            exclude:
+              # dimod < 0.12 not supported on py311+
+              - python-version: "3.11.0"
+                pip-constraints: "dimod==0.10.13"
+              - python-version: "3.11.0"
+                pip-constraints: "dimod~=0.10.0 dwave-preprocessing~=0.3.0 dwave-system~=1.0"
+              - python-version: "3.11.0"
+                pip-constraints: "dimod~=0.11.0 dwave-preprocessing~=0.4.0 dwave-system~=1.0"
 
       - test-macos:
-          name: test-macos-<< matrix.python-version >>
           matrix:
             parameters:
               python-version: *python-versions
-              xcode: ["13.2.0"]
+
+      - test-windows:
+          matrix:
+            parameters:
+              python-version: *python-versions
 
       - test-docs
 
