@@ -22,6 +22,10 @@
     :target: https://pypi.org/project/dwave-hybrid/
     :alt: PyPI - Python Version
 
+.. image:: https://cdn-assets.cloud.dwavesys.com/shared/latest/badges/leapide.svg
+    :target: https://ide.dwavesys.io/from-referrer
+    :alt: Open in Leap IDE
+
 
 =============
 D-Wave Hybrid
