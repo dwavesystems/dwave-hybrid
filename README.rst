@@ -2,7 +2,7 @@
     :target: https://badge.fury.io/py/dwave-hybrid
     :alt: Last version on PyPI
 
-.. image:: https://circleci.com/gh/dwavesystems/dwave-hybrid.svg?style=svg
+.. image:: https://circleci.com/gh/dwavesystems/dwave-hybrid.svg?style=shield
     :target: https://circleci.com/gh/dwavesystems/dwave-hybrid
     :alt: Linux/Mac build status
 
