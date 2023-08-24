@@ -179,7 +179,7 @@ jobs:
 
   test-docs:
     docker:
-      - image: cimg/python:3.7
+      - image: cimg/python:3.9
 
     steps:
       - checkout
@@ -255,7 +255,7 @@ workflows:
           name: test-linux-<< matrix.python-version >> | << matrix.pip-constraints >>
           matrix:
             parameters:
-              python-version: &python-versions ["3.7.9", "3.8.6", "3.9.0", "3.10.0", "3.11.0"]
+              python-version: &python-versions ["3.8.6", "3.9.0", "3.10.0", "3.11.0"]
               pip-constraints:
                 - "dimod==0.10.13"
                 - "dimod~=0.10.0 dwave-preprocessing~=0.3.0 dwave-system~=1.0"
