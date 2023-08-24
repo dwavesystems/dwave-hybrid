@@ -73,7 +73,7 @@ jobs:
         type: string
       xcode:
         type: string
-        default: "13.2.0"
+        default: "14.2.0"
 
     macos:
       xcode: << parameters.xcode >>
