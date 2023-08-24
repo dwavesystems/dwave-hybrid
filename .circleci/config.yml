@@ -81,20 +81,9 @@ jobs:
     steps:
       - checkout
 
-      # install `python-version` and cache it
-      - when:
-          condition:
-            matches:
-              pattern: "^3\\.[123][123456789].*$"
-              value: << parameters.python-version >>
-          steps:
-            - run:
-                name: Update brew to get latest pyenv
-                command: brew update
-
       - run: &brew-install-pyenv
           name: Install pyenv
-          command: HOMEBREW_NO_AUTO_UPDATE=1 brew install pyenv
+          command: brew install pyenv
 
       - restore_cache: &restore-cache-pyenv
           keys:
