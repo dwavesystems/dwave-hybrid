@@ -40,18 +40,12 @@ jobs:
           command: |
             . env/bin/activate
             pip install -U pip
-            pip install -r requirements.txt
-            pip install -r tests/requirements.txt
-            pip install wheel twine
+            pip install -r requirements.txt -r tests/requirements.txt
 
       - save_cache: &save-cache-env
           key: v<< pipeline.parameters.cache-generation >>-pip-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
           paths:
             - env
-
-      - run: &build-package
-          name: Build package
-          command: env/bin/python setup.py sdist bdist_wheel
 
       - run: &install-package-with-constraints
           name: Install package (with constraints)
@@ -214,29 +208,47 @@ jobs:
             . env/bin/activate
             make -C docs/ linkcheck
 
-  pypi-deploy:
+  build-dist:
     docker:
       - image: cimg/python:3.10
 
     steps:
       - checkout
 
-      - restore_cache: *restore-cache-env
-
       - run: *create-virtualenv
 
       - run: *install-requirements
 
-      - save_cache: *save-cache-env
+      - run:
+          name: Install build deps
+          command: env/bin/pip install setuptools wheel
 
-      - run: *build-package
+      - run: &build-package
+          name: Build package
+          command: env/bin/python setup.py sdist bdist_wheel
 
       - store_artifacts:
           path: ./dist
 
+      - persist_to_workspace:
+          root: ./dist
+          paths: .
+
+  pypi-deploy:
+    docker:
+      - image: cimg/python:3.10
+
+    steps:
+      - attach_workspace:
+          at: ./dist
+
       - run:
           name: Upload package to PyPI
-          command: env/bin/twine upload -u "$PYPI_USERNAME" -p "$PYPI_PASSWORD" --skip-existing ./dist/*
+          command: |
+            python -m venv env
+            . env/bin/activate
+            pip install twine
+            twine upload -u "$PYPI_USERNAME" -p "$PYPI_PASSWORD" --skip-existing ./dist/*
 
 
 workflows:
@@ -244,6 +256,7 @@ workflows:
     jobs:
       - test-linux:
           name: test-linux-<< matrix.python-version >> | << matrix.pip-constraints >>
+          context: &ctx-build "ocean-build"
           matrix:
             parameters:
               python-version: &python-versions ["3.8", "3.9", "3.10", "3.11", "3.12"]
@@ -267,23 +280,31 @@ workflows:
               - python-version: "3.12"
                 pip-constraints: "dimod~=0.11.0 dwave-preprocessing~=0.4.0 dwave-system~=1.0"
 
-      - test-macos:
+      - test-macos: &test-job
+          name: test-macos-py<< matrix.python-version >>
+          context: *ctx-build
           matrix:
             parameters:
               python-version: *python-versions
 
       - test-windows:
-          matrix:
-            parameters:
-              python-version: *python-versions
+          <<: *test-job
+          name: test-windows-py<< matrix.python-version >>
 
       - test-docs
+      - build-dist
 
   deploy:
     jobs:
-      - pypi-deploy:
-          filters:
+      - build-dist:
+          filters: &on-tag
             tags:
               only: /^[0-9]+(\.[0-9]+)*((\.dev|rc)([0-9]+)?)?$/
             branches:
               ignore: /.*/
+
+      - pypi-deploy:
+          context: ocean-publish
+          requires:
+            - build-dist
+          filters: *on-tag
