@@ -143,7 +143,7 @@ jobs:
               curl -s 'https://azuresearch-usnc.nuget.org/query?q=python' \
               | jq -r '.data[] | select(.id == "python") .versions[] | .version' \
               | awk -F. -v ver='<< parameters.python-version >>' \
-                  'index($0, ver".") == 1 && $3 > m { m = $3; v = $0 } END { print v }'
+                  'index($0, ver".") == 1 && $3 >= m { m = $3; v = $0 } END { print v }'
             )
             nuget install python -Version "$full_version" -ExcludeVersion
             python/tools/python -V
@@ -170,7 +170,7 @@ jobs:
 
   test-docs:
     docker:
-      - image: cimg/python:3.9
+      - image: cimg/python:3.10
 
     steps:
       - checkout
@@ -216,7 +216,7 @@ jobs:
 
   pypi-deploy:
     docker:
-      - image: cimg/python:3.9
+      - image: cimg/python:3.10
 
     steps:
       - checkout
@@ -246,12 +246,12 @@ workflows:
           name: test-linux-<< matrix.python-version >> | << matrix.pip-constraints >>
           matrix:
             parameters:
-              python-version: &python-versions ["3.8", "3.9", "3.10", "3.11"]
+              python-version: &python-versions ["3.8", "3.9", "3.10", "3.11", "3.12"]
               pip-constraints:
                 - "dimod==0.10.13"
                 - "dimod~=0.10.0 dwave-preprocessing~=0.3.0 dwave-system~=1.0"
                 - "dimod~=0.11.0 dwave-preprocessing~=0.4.0 dwave-system~=1.0"
-                - "dimod~=0.12.0 dwave-preprocessing~=0.5.0 dwave-system~=1.0"
+                - "dimod~=0.12.0 dwave-preprocessing~=0.6.0 dwave-system~=1.0"
             exclude:
               # dimod < 0.12 not supported on py311+
               - python-version: "3.11"
@@ -259,6 +259,12 @@ workflows:
               - python-version: "3.11"
                 pip-constraints: "dimod~=0.10.0 dwave-preprocessing~=0.3.0 dwave-system~=1.0"
               - python-version: "3.11"
+                pip-constraints: "dimod~=0.11.0 dwave-preprocessing~=0.4.0 dwave-system~=1.0"
+              - python-version: "3.12"
+                pip-constraints: "dimod==0.10.13"
+              - python-version: "3.12"
+                pip-constraints: "dimod~=0.10.0 dwave-preprocessing~=0.3.0 dwave-system~=1.0"
+              - python-version: "3.12"
                 pip-constraints: "dimod~=0.11.0 dwave-preprocessing~=0.4.0 dwave-system~=1.0"
 
       - test-macos:
