@@ -6,25 +6,13 @@
     :target: https://circleci.com/gh/dwavesystems/dwave-hybrid
     :alt: Linux/Mac build status
 
-.. image:: https://ci.appveyor.com/api/projects/status/porqyytww2elwjv8/branch/master?svg=true
-    :target: https://ci.appveyor.com/project/dwave-adtt/dwave-hybrid/branch/master
-    :alt: Windows build status
-
 .. image:: https://img.shields.io/codecov/c/github/dwavesystems/dwave-hybrid/master.svg
     :target: https://codecov.io/gh/dwavesystems/dwave-hybrid
     :alt: Code coverage
 
-.. image:: https://readthedocs.com/projects/d-wave-systems-dwave-hybrid/badge/?version=latest
-    :target: https://docs.ocean.dwavesys.com/projects/hybrid/en/latest/
-    :alt: Documentation status
-
 .. image:: https://img.shields.io/pypi/pyversions/dwave-hybrid.svg?style=flat
     :target: https://pypi.org/project/dwave-hybrid/
     :alt: PyPI - Python Version
-
-.. image:: https://cdn-assets.cloud.dwavesys.com/shared/latest/badges/leapide.svg
-    :target: https://ide.dwavesys.io/from-referrer
-    :alt: Open in Leap IDE
 
 
 =============
@@ -59,12 +47,11 @@ Install from a package on PyPI::
 
     pip install dwave-hybrid
 
-or from source::
+or from source in development mode::
 
     git clone https://github.com/dwavesystems/dwave-hybrid.git
     cd dwave-hybrid
-    pip install -r requirements.txt
-    python setup.py install
+    pip install -e .
 
 .. installation-end-marker
 
@@ -110,6 +97,12 @@ Example
 
 .. example-end-marker
 
+
+Documentation
+=============
+
+Documentation for latest stable release included in Ocean is available as part
+of `Ocean docs <https://docs.ocean.dwavesys.com/en/stable/docs_hybrid/>`_.
 
 License
 =======
