@@ -26,8 +26,12 @@ jobs:
     steps:
       - checkout
 
+      - run: &save-python-version
+          name: Save full python version in file to be used as part of cache key
+          command: python -V > /tmp/python-V.txt
+
       - restore_cache: &restore-cache-env
-          key: v<< pipeline.parameters.cache-generation >>-pip-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+          key: &env-cache-key v<< pipeline.parameters.cache-generation >>-python-{{ checksum "/tmp/python-V.txt" }}-pip-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
 
       - run: &create-virtualenv
           name: Create virtual environment
@@ -43,7 +47,7 @@ jobs:
             pip install -r requirements.txt -r tests/requirements.txt
 
       - save_cache: &save-cache-env
-          key: v<< pipeline.parameters.cache-generation >>-pip-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
+          key: *env-cache-key
           paths:
             - env
 
@@ -103,6 +107,8 @@ jobs:
             - ~/.pyenv
 
       # install dependencies and cache them
+      - run: *save-python-version
+
       - restore_cache: *restore-cache-env
 
       - run: *create-virtualenv
@@ -169,9 +175,6 @@ jobs:
     steps:
       - checkout
 
-      - restore_cache:
-          key: v<< pipeline.parameters.cache-generation >>-pip-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ checksum "docs/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
-
       - run: *create-virtualenv
 
       - run: *install-requirements
@@ -179,11 +182,6 @@ jobs:
       - run:
           name: Install docs requirements
           command: env/bin/pip install -r docs/requirements.txt
-
-      - save_cache:
-          key: v<< pipeline.parameters.cache-generation >>-pip-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt" }}-{{ checksum "docs/requirements.txt" }}-{{ .Environment.CIRCLE_JOB }}
-          paths:
-            - env
 
       - run: *install-package
 
