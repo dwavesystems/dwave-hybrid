@@ -1,10 +1,10 @@
 .. image:: https://badge.fury.io/py/dwave-hybrid.svg
     :target: https://badge.fury.io/py/dwave-hybrid
-    :alt: Last version on PyPI
+    :alt: Latest version on PyPI
 
 .. image:: https://circleci.com/gh/dwavesystems/dwave-hybrid.svg?style=shield
     :target: https://circleci.com/gh/dwavesystems/dwave-hybrid
-    :alt: Linux/Mac build status
+    :alt: Linux/MacOS/Windows build status
 
 .. image:: https://img.shields.io/codecov/c/github/dwavesystems/dwave-hybrid/master.svg
     :target: https://codecov.io/gh/dwavesystems/dwave-hybrid
@@ -12,7 +12,7 @@
 
 .. image:: https://img.shields.io/pypi/pyversions/dwave-hybrid.svg?style=flat
     :target: https://pypi.org/project/dwave-hybrid/
-    :alt: PyPI - Python Version
+    :alt: Supported Python versions
 
 
 =============
