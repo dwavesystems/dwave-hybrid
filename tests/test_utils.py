@@ -282,6 +282,7 @@ class TestNumpyJSONEncoder(unittest.TestCase):
         (numpy.array([1, 2, 3], dtype=int), [1, 2, 3]),
         (numpy.array([[1], [2], [3]], dtype=float), [[1.0], [2.0], [3.0]]),
         (numpy.zeros((2, 2), dtype=bool), [[False, False], [False, False]]),
+
         (numpy.array([('Rex', 9, 81.0), ('Fido', 3, 27.0)],
                      dtype=[('name', 'U10'), ('age', 'i4'), ('weight', 'f4')]),
          [['Rex', 9, 81.0], ['Fido', 3, 27.0]]),
