@@ -940,23 +940,23 @@ def _make_cubic_lattice(dimensions):
                                         ])
     return cubic_lattice_graph
 
-def _make_kings_lattice(dimensions):
+def _make_kings_lattice(dimensions, is_open=(True,True)):
     """Returns an open boundary cubic lattice graph as function of lattice
     dimensions. Helper function for ``make_origin_embeddings``.
     """
     kings_lattice = nx.Graph()
-    kings_lattice.add_edges_from([((x, y), (x+1, y))
-                                  for x in range(dimensions[0]-1)
+    kings_lattice.add_edges_from([((x, y), ((x+1)%dimensions[0], y))
+                                  for x in range(dimensions[0]- is_open[0])
                                   for y in range(dimensions[1])])
-    kings_lattice.add_edges_from([((x, y), (x, y+1))
+    kings_lattice.add_edges_from([((x, y), (x, (y+1)%dimensions[1]))
                                   for x in range(dimensions[0])
-                                  for y in range(dimensions[1]-1)])
-    kings_lattice.add_edges_from([((x, y+1), (x, y+1))
-                                  for x in range(dimensions[0]-1)
-                                  for y in range(dimensions[1]-1)])
-    kings_lattice.add_edges_from([((x+1, y), (x, y+1))
-                                  for x in range(dimensions[0]-1)
-                                  for y in range(dimensions[1]-1)])
+                                  for y in range(dimensions[1]- is_open[1])])
+    kings_lattice.add_edges_from([((x, y), ((x+1)%dimensions[0], (y+1)%dimensions[1]))
+                                  for x in range(dimensions[0]- is_open[0])
+                                  for y in range(dimensions[1]- is_open[1])])
+    kings_lattice.add_edges_from([(((x+1)%dimensions[0], y), (x, (y+1)%dimensions[1]))
+                                  for x in range(dimensions[0]- is_open[0])
+                                  for y in range(dimensions[1]- is_open[1])])
     return kings_lattice
 
 
