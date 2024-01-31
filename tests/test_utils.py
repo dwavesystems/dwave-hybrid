@@ -279,7 +279,7 @@ class TestNumpyJSONEncoder(unittest.TestCase):
         )
 
     @parameterized.expand([
-        (numpy.array([1, 2, 3], dtype=numpy.int), [1, 2, 3]),
+        (numpy.array([1, 2, 3], dtype=int), [1, 2, 3]),
         (numpy.array([[1], [2], [3]], dtype=numpy.double), [[1.0], [2.0], [3.0]]),
         (numpy.zeros((2, 2), dtype=numpy.bool_), [[False, False], [False, False]]),
         (numpy.array([('Rex', 9, 81.0), ('Fido', 3, 27.0)],
