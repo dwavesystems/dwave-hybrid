@@ -850,33 +850,32 @@ def _kings_node_to_pegasus_chain(row: int, col: int) -> Tuple[
         elif col_par == 2:
             return (0, x+1, 4, y), (1, y, 10, x)
 
-def _zephyr_to_crosslike(coord, t=4):
+def _zephyr_to_chimeralike(coord, t=4, half_offset=1):
     """Map Zephyr[m,t] coordinates to Chimera[2m,2m,t]-style coordinates 
     
+    See tests. Chimeralike labeling proceeds from top corner.
     """
     u, w, k, j, z = coord
     row = u*w + (1-u)*(2*z + j)
     col = (1-u)*w + u*(2*z + j)
     half_cell = t//2  # note, t is even by Zephyr graph definition
-    return row + u*(k//half_cell) + (1-u) - 1, col + (1-u)*(k//half_cell) + u - 1, u, (k+half_cell)%t
+    return row + half_offset*(u*(k//half_cell) + (1-u) - 1), col + half_offset*((1-u)*(k//half_cell) + u - 1), u, (k+half_offset*half_cell)%t
 
-def _crosslike_to_zephyr(coord, t=4):
+def _chimeralike_to_zephyr(coord, t=4, half_offset=1):
     """Map Chimera-like[2m,2m,t] coordinates to Standard Zephyr[m,t] coordinates
-    e.g. (0,0,0,0) -> (0,0,2,0,0)
-         (0,0,0,4) -> (0,1,1,0,0)
-         (0,0,1,0) -> (1,0,2,0,0)
-         (0,0,1,4) -> (1,1,1,0,0)
+    
+    See tests. Chimera-like labeling proceeds from top corner.
     """
     r, c, u, k = coord
-    half_cell = t//2 
-    k = (k+half_cell)%t
-    
-    row = r - u*(k//half_cell) - (1-u) + 1
-    col = c - (1-u)*(k//half_cell) - u + 1
-    w = u*row + (1-u)*col  # w labels u-dependent displacement from the origin.
-    # row + col = w + 2*z + j  # displacement in other orientation is 2*z+j
-    j = (row + col - w) % 2
-    z = (row + col - w - j) // 2
+    half_cell = t//2
+    if half_offset:
+        k = (k+half_offset*half_cell)%t
+        r = r - half_offset*(u*(k//half_cell) + (1-u) - 1)
+        c = c - half_offset*((1-u)*(k//half_cell) + u - 1)
+    w = u*r + (1-u)*c  # w labels u-dependent displacement from the origin.
+    # r + c = w + 2*z + j  # displacement in other orientation is 2*z+j
+    j = (r + c - w) % 2
+    z = (r + c - w - j) // 2
     return u, w, k, j, z
 
 def _squareNNN_node_to_zephyr_chain(row: int, col: int) -> Tuple[
@@ -893,7 +892,7 @@ def _squareNNN_node_to_zephyr_chain(row: int, col: int) -> Tuple[
             chain representing the given node. 
 
     Zephyr[m,t] can be tiled with 4 Chimera[m,t]-like cells (minus boundary 
-    effect), _zephyr_to_crosslike(coord) creates a Chimera vector scheme
+    effect), _zephyr_to_chimeralike(coord) creates a Chimera vector scheme
     for this tiling.
     Grid (x,y) to chain (u,k) on each cell in chimera-like coordinate scheme, 
     we can embed one square per cell. So we can embed a 2m x 2m next-nearest 
@@ -907,18 +906,16 @@ def _squareNNN_node_to_zephyr_chain(row: int, col: int) -> Tuple[
      (0,0) (0,1)  (0,2) (0,3)
               (1, 2)
               (1, 3)
+    This embedding is sufficient for next-neighbor models on a square lattice.
+    The Kings graph is a subgraph of this, and can use the same embedding.
     
     """
     local_embedding = {(0,0): ((0,0,0,0), (0,0,1,1)),
                        (1,0): ((0,0,0,1), (0,0,1,3)),
                        (0,1): ((0,0,1,0), (0,0,0,2)),
                        (1,1): ((0,0,1,2), (0,0,0,3))}
-    if row == col:
-        local_key = (row % 2, col % 2)
-    else:
-        parity = (row//2 + col//2) % 2
-        local_key = ((row+parity) % 2, (col + parity) % 2)
-    return tuple([_crosslike_to_zephyr((coord[0]+2*row, coord[1]+2*col, coord[2], coord[3])) for coord in local_embedding[local_key]])
+    local_key = (row % 2, col % 2)  # In cell index
+    return tuple([_chimeralike_to_zephyr((row//2, col//2, coord[2], coord[3])) for coord in local_embedding[local_key]])
 
 
 def _make_cubic_lattice(dimensions):
@@ -1074,7 +1071,7 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
         lattice-structured problems <https://arxiv.org/abs/2202.03044>`_
     """
     if qpu_sampler is None:
-        if lattice_type == 'pegasus' or lattice_type == 'chimera':
+        if lattice_type is not None:
             qpu_sampler = DWaveSampler(solver={'topology__type': lattice_type})
         else:
             qpu_sampler = DWaveSampler()
@@ -1093,6 +1090,7 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
         target.add_edges_from(qpu_sampler.properties['couplers'])
     else:
         target.add_edges_from(qpu_sampler.edgelist)
+
     if qpu_type == lattice_type:
         # Fully yielded fully utilized native topology problem.
         # This method is also easily adapted to work for any chain-length 1
@@ -1202,23 +1200,16 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
         origin_embedding = {(x, y): to_chain(x, y)
                             for x in range(L) for y in range(L)
         }  # Defect free, coordinates
-        if qpu_type == 'zephyr':
-            print(qpu_type, origin_embedding, qpu_sampler.properties['topology'])
         origin_embedding = {k: tuple(vec_to_lin(q) for q in v)
                             for k, v in origin_embedding.items()
                             if target.has_edge(vec_to_lin(v[0]),vec_to_lin(v[1]))
         }  # Omit broken chains, map to linear
-        if qpu_type == 'zephyr':
-            print(qpu_type, origin_embedding, qpu_sampler.properties['topology'])
-            raise ValueError('Monkey')
         proposed_source = _make_kings_lattice(dimensions)
     else:
         raise ValueError(f'Unsupported combination of {lattice_type}'
                          f'and qpu_sampler topology ({topology})')
 
     if not allow_unyielded_edges:
-        if qpu_type == 'zephyr' and  lattice_type == 'kings':
-            print(origin_embedding, target)
         origin_embedding = _yield_limited_origin_embedding(origin_embedding,
                                                            proposed_source,
                                                            target)

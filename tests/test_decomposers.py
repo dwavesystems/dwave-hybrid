@@ -25,7 +25,9 @@ import dwave_networkx as dnx
 from hybrid.decomposers import (
     EnergyImpactDecomposer, RandomSubproblemDecomposer,
     RandomConstraintDecomposer, RoofDualityDecomposer, ComponentDecomposer,
-    SublatticeDecomposer, make_origin_embeddings, _make_cubic_lattice, _make_kings_lattice)
+    SublatticeDecomposer, make_origin_embeddings,
+    _make_cubic_lattice, _make_kings_lattice,
+    _zephyr_to_chimeralike, _chimeralike_to_zephyr)
 from hybrid.core import State
 from hybrid.utils import min_sample, random_sample
 from hybrid.exceptions import EndOfStream
@@ -691,7 +693,7 @@ class MockDWaveSamplerGeneralization(MockDWaveSampler):  # This can be replaced 
         elif topology_type == 'zephyr':
             self.properties['topology'] = {'type': 'zephyr',
                                            'shape': [qpu_scale, 4]}
-            qpu_graph = dnx.pegasus_graph(qpu_scale)
+            qpu_graph = dnx.zephyr_graph(qpu_scale)
         else:
             self.properties['topology'] = {'type': 'pegasus',
                                            'shape': [qpu_scale]}
@@ -755,7 +757,7 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
                        ('chimera', 'chimera'): {'tl': 4, 'cl': 1, 'ne': 2},
                        ('chimera', 'cubic'): {'tl': 3, 'cl': 4, 'ne': 3}}
         
-        for qpu_top in ['pegasus', 'chimera']: #, 'zephyr'
+        for qpu_top in ['pegasus', 'chimera', 'zephyr']:
             if qpu_top == 'chimera':
                 lattice_types = ['cubic', qpu_top, None]
             elif qpu_top == 'pegasus':
@@ -794,7 +796,7 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
         """
         # Full scale is 16, a smaller default is used
         qpu_scale = 5
-        for qpu_top in ['pegasus', 'chimera']: #, 'zephyr'
+        for qpu_top in ['pegasus', 'chimera', 'zephyr']:
             if qpu_top == 'pegasus':
                 qpu_shape = [qpu_scale]
                 lattice_types = ['cubic', qpu_top, 'kings']
@@ -804,7 +806,7 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
             elif qpu_top == 'zephyr':
                 qpu_shape = [qpu_scale, 4]
                 lattice_types = ['kings']
-                
+
             for lattice_type in lattice_types:
                 # proposed_source: a defect free-lattice at sampler
                 # scale (hence inclusive of all keys).
@@ -844,6 +846,21 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
                         source=proposed_source.subgraph(list(orig_emb.keys())),
                         target=qpu_sampler.properties['couplers']))
 
+    def test_chimeralike_coordinates(self):
+        known_maps = {(0,0,0,0): (0,0,2,0,0),
+                      (0,0,0,3): (0,1,1,0,0),
+                      (0,0,1,0): (1,0,2,0,0),
+                      (0,0,1,3): (1,1,1,0,0),
+                      (1,0,0,0): (0,0,2,1,0),
+                      (0,1,0,0): (0,1,2,0,0),
+                      (1,1,1,2): (1,2,0,1,0),
+                      (1,2,0,1): (0,2,3,1,0)}
+        for k,v in known_maps.items():
+            mapped_k = _chimeralike_to_zephyr(k)
+            self.assertEqual(mapped_k, v)
+            mapped_v = _zephyr_to_chimeralike(v)
+            self.assertEqual(mapped_v, k)
+
     def test_constrained_validity(self):
         """Check that we can constrain an embedding to a given subspace
         """
@@ -854,7 +871,7 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
                               'chimera': (1,1,2,4),  # single cell
                               'kings': (2,2)  # single cell
         }
-        for qpu_top in ['pegasus', 'chimera']: # , 'zephyr'
+        for qpu_top in ['pegasus', 'chimera', 'zephyr']:
             lattice_types = []
             if qpu_top != 'zephyr':
                 lattice_types += [qpu_top, 'cubic']
@@ -873,5 +890,5 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
                                                    reject_small_problems=False)
                 for orig_emb in orig_embs:
                     from numpy import prod
-                    self.assertTrue(len(orig_emb)==prod(cs))
+                    self.assertEqual(len(orig_emb), prod(cs))
                     self.assertFalse(any(any(key[idx] >= bound for idx,bound in enumerate(cs)) for key in orig_emb))
