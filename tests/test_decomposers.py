@@ -25,14 +25,13 @@ import dwave_networkx as dnx
 from hybrid.decomposers import (
     EnergyImpactDecomposer, RandomSubproblemDecomposer,
     RandomConstraintDecomposer, RoofDualityDecomposer, ComponentDecomposer,
-    SublatticeDecomposer, make_origin_embeddings, _make_cubic_lattice)
+    SublatticeDecomposer, make_origin_embeddings, _make_cubic_lattice, _make_kings_lattice)
 from hybrid.core import State
 from hybrid.utils import min_sample, random_sample
 from hybrid.exceptions import EndOfStream
 
 from dwave.system.testing import MockDWaveSampler
 from dwave.embedding import verify_embedding
-
 
 class TestComponentDecomposer(unittest.TestCase):
     bqm = dimod.BinaryQuadraticModel({'a': 2, 'b': -1, 'd': 1}, {'bc': 1, 'cd': 1}, 0, dimod.SPIN)
@@ -671,7 +670,7 @@ class TestRoofDualityDecomposer(unittest.TestCase):
                                        new.samples.variables)))
 
 
-class MockDWaveSamplerGeneralization(MockDWaveSampler):
+class MockDWaveSamplerGeneralization(MockDWaveSampler):  # This can be replaced with MockDWaveSampler()
     """Extend the `dwave.system.testing.MockDWaveSampler` to Pegasus topology.
     
     Adding topology and shape keywords to MockDWaveSampler for this purpose.
@@ -685,15 +684,18 @@ class MockDWaveSamplerGeneralization(MockDWaveSampler):
         super().__init__(broken_nodes, **config)
         #An Advantage generation processor, only artificially smaller,
         #replaces C4 in default MockDWaveSampler
-        if topology_type != 'chimera':
-            self.properties['topology'] = {'type': 'pegasus',
-                                           'shape': [qpu_scale]}
-            qpu_graph = dnx.pegasus_graph(qpu_scale,fabric_only=True)
-        else:
+        if topology_type == 'chimera':
             self.properties['topology'] = {'type': 'chimera',
                                            'shape': [qpu_scale,qpu_scale,4]}
             qpu_graph = dnx.chimera_graph(qpu_scale)
-            
+        elif topology_type == 'zephyr':
+            self.properties['topology'] = {'type': 'zephyr',
+                                           'shape': [qpu_scale, 4]}
+            qpu_graph = dnx.pegasus_graph(qpu_scale)
+        else:
+            self.properties['topology'] = {'type': 'pegasus',
+                                           'shape': [qpu_scale]}
+            qpu_graph = dnx.pegasus_graph(qpu_scale,fabric_only=True)
         #Adjust edge_list, 
         if broken_nodes is None:
             self.nodelist = sorted(qpu_graph.nodes)
@@ -707,8 +709,8 @@ class MockDWaveSamplerGeneralization(MockDWaveSampler):
                                    if u not in broken_nodes
                                    and v not in broken_nodes)
         self.properties['num_qubits'] = len(qpu_graph)
-        self.properties['qubits'] = self.nodelist
-        self.properties['couplers'] = self.edgelist
+        self.properties['qubits'] = self.nodelist  # This type of linking is absent in MockDWaveSampler!
+        self.properties['couplers'] = self.edgelist  # This type of linking is absent in MockDWaveSampler!
         
         
 class TestMakeOriginEmbeddings(unittest.TestCase):
@@ -745,12 +747,22 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
         """
         # Expected properties by (topology_type, lattice_topology):
         # tuple length, chain length, number of embeddings
-        shape_dicts = {('pegasus', 'pegasus'): {'tl': 5, 'cl': 1, 'ne': 2},
+        shape_dicts = {('zephyr', 'zephyr'): {'tl': 5, 'cl': 1, 'ne': 2}, # Implement later
+                       ('zephyr', 'kings'): {'tl': 2, 'cl': 2, 'ne': 2},
+                       ('pegasus', 'pegasus'): {'tl': 5, 'cl': 1, 'ne': 2},
                        ('pegasus', 'cubic'): {'tl': 3, 'cl': 2, 'ne': 3},
+                       ('pegasus', 'kings'): {'tl': 2, 'cl': 2, 'ne': 2},
                        ('chimera', 'chimera'): {'tl': 4, 'cl': 1, 'ne': 2},
                        ('chimera', 'cubic'): {'tl': 3, 'cl': 4, 'ne': 3}}
         
-        for qpu_top in ['pegasus', 'chimera']:
+        for qpu_top in ['pegasus', 'chimera']: #, 'zephyr'
+            if qpu_top == 'chimera':
+                lattice_types = ['cubic', qpu_top, None]
+            elif qpu_top == 'pegasus':
+                lattice_types = ['cubic', 'kings', qpu_top, None]
+            elif qpu_top == 'zephyr':
+                lattice_types = ['kings']
+            
             #Native by default:
             shape_dicts[(qpu_top, None)] = shape_dicts[(qpu_top, qpu_top)] 
             qpu_sampler = MockDWaveSamplerGeneralization(topology_type=qpu_top)
@@ -762,11 +774,11 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
                 for _ in range(pop_edges):
                     qpu_sampler.edgelist.pop()
                 self.assertEqual(qpu_sampler.edgelist,
-                                 qpu_sampler.properties['couplers'])
-                for lattice_type in ['cubic', qpu_top, None]:
+                                 qpu_sampler.properties['couplers']) # Linking is specific to MockDWaveSamplerGeneralization
+                for lattice_type in lattice_types:
                     orig_embs = make_origin_embeddings(
                         qpu_sampler=qpu_sampler,
-                        lattice_type = lattice_type)
+                        lattice_type=lattice_type)
                     shape_dict = shape_dicts[(qpu_top, lattice_type)]
                     tuple_length = shape_dict['tl'] 
                     chain_length = shape_dict['cl']
@@ -782,9 +794,18 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
         """
         # Full scale is 16, a smaller default is used
         qpu_scale = 5
-
-        for qpu_top in ['pegasus', 'chimera']:
-            for lattice_type in ['cubic', qpu_top]:
+        for qpu_top in ['pegasus', 'chimera']: #, 'zephyr'
+            if qpu_top == 'pegasus':
+                qpu_shape = [qpu_scale]
+                lattice_types = ['cubic', qpu_top, 'kings']
+            elif qpu_top == 'chimera':
+                qpu_shape = [qpu_scale, qpu_scale, 4]
+                lattice_types = ['cubic', qpu_top]
+            elif qpu_top == 'zephyr':
+                qpu_shape = [qpu_scale, 4]
+                lattice_types = ['kings']
+                
+            for lattice_type in lattice_types:
                 # proposed_source: a defect free-lattice at sampler
                 # scale (hence inclusive of all keys).
                 if lattice_type == 'cubic':
@@ -793,6 +814,15 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
                     else:
                         cubic_dims = (qpu_scale//2, qpu_scale//2, 8)
                     proposed_source = _make_cubic_lattice(cubic_dims)
+                elif lattice_type == 'kings':
+                    if qpu_top == 'chimera':
+                        continue
+                    elif qpu_top == 'pegasus':
+                        kings_dims = (3*(qpu_scale-1), 3*(qpu_scale-1))
+                    else:
+                        kings_dims = (4*qpu_scale, 4*qpu_scale)
+                    proposed_source = _make_kings_lattice(kings_dims)
+                    
                 elif lattice_type == 'pegasus':
                     proposed_source = dnx.pegasus_graph(qpu_scale,
                                                         fabric_only=True)
@@ -802,6 +832,7 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
                 qpu_sampler = MockDWaveSamplerGeneralization(
                     topology_type=qpu_top,
                     qpu_scale=qpu_scale)
+                
                 for _ in range(15):
                     qpu_sampler.edgelist.pop()
                 
@@ -818,12 +849,18 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
         """
         # Full scale is 16, a smaller default is used
         qpu_scale = 5
-        constrained_scales = {'cubic' : (2,2,2),
-                              'pegasus' : (3,2,3,2,4), #2x3 nice-cells
-                              'chimera' : (1,1,2,4) #single cell
+        constrained_scales = {'cubic': (2,2,2),
+                              'pegasus': (3,2,3,2,4),  # 2x3 nice-cells
+                              'chimera': (1,1,2,4),  # single cell
+                              'kings': (2,2)  # single cell
         }
-        for qpu_top in ['pegasus', 'chimera']:
-            for lattice_type in ['cubic', qpu_top]:
+        for qpu_top in ['pegasus', 'chimera']: # , 'zephyr'
+            lattice_types = []
+            if qpu_top != 'zephyr':
+                lattice_types += [qpu_top, 'cubic']
+            if qpu_top != 'chimera':
+                lattice_types.append('kings')
+            for lattice_type in lattice_types:
                 # proposed_source: a defect free-lattice at sampler
                 # scale (hence inclusive of all keys).
                 qpu_sampler = MockDWaveSamplerGeneralization(
