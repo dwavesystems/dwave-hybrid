@@ -984,11 +984,6 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
                     arXiv:2003.00133 are created for a ``qpu_sampler`` of
                     topology type either 'pegasus' or 'chimera'.
                 
-                * "square-next-neighbor"
-                    Embedding sufficient for a square lattice plus next-neighbor
-                    interactions for a ``qpu_sampler`` of type 'zephyr'. Chain
-                    length 2.
-
                 * "kings"
                     Embedding compatible with arXiv:2003.00133.pdf Table 1,
                     are created for a ``qpu_sampler`` of topology type either
