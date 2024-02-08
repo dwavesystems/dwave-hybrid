@@ -789,6 +789,38 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
                         for key, val in orig_emb.items():
                             self.assertEqual(len(key), tuple_length)
                             self.assertEqual(len(val), chain_length)
+
+    def test_make_cubic_lattice(self):
+        dims = (5,3,4)
+        g = _make_cubic_lattice(dims)
+        self.assertEqual(g.number_of_nodes(), dims[0]*dims[1]*dims[2])
+        self.assertEqual(g.number_of_edges(),
+                         (dims[0]-1)*dims[1]*dims[2] +
+                         dims[0]*(dims[1]-1)*dims[2] +
+                         dims[0]*dims[1]*(dims[2]-1))
+        for is_open in itertools.product((0, 1), (0, 1), (0, 1)):
+            g = _make_cubic_lattice(dims, is_open=is_open)
+            self.assertEqual(g.number_of_nodes(), dims[0]*dims[1]*dims[2])
+            self.assertEqual(g.number_of_edges(),
+                             (dims[0]-is_open[0])*dims[1]*dims[2] +
+                             dims[0]*(dims[1]-is_open[1])*dims[2] +
+                             dims[0]*dims[1]*(dims[2]-is_open[2]))
+        
+    def test_make_kings_lattice(self):
+        dims = (5,4)
+        g = _make_kings_lattice(dims)
+        self.assertEqual(g.number_of_nodes(), dims[0]*dims[1])
+        self.assertEqual(g.number_of_edges(),
+                         (dims[0]-1)*dims[1] +
+                         dims[0]*(dims[1]-1) +
+                         2*(dims[0]-1)*(dims[1]-1))
+        for is_open in itertools.product((0, 1), (0, 1)):
+            g = _make_kings_lattice(dims, is_open=is_open)
+            self.assertEqual(g.number_of_nodes(), dims[0]*dims[1])
+            self.assertEqual(g.number_of_edges(),
+                             (dims[0]-is_open[0])*dims[1] +
+                             dims[0]*(dims[1]-is_open[1]) +
+                             2*(dims[0]-is_open[0])*(dims[1]-is_open[1]))
         
     def test_all_embeddings_validity(self):
         """Check that embeddings are valid for supported lattice_types.

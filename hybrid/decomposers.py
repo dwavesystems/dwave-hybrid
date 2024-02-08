@@ -19,6 +19,7 @@ import itertools
 from heapq import heappush, heappop
 from functools import partial
 from itertools import product
+from typing import Tuple
 
 import numpy as np
 import networkx as nx
@@ -34,8 +35,6 @@ from hybrid import traits
 from hybrid.utils import (
     bqm_induced_by, flip_energy_gains, select_random_subgraph,
     chimera_tiles)
-
-from typing import Tuple
 
 __all__ = [
     'IdentityDecomposer', 'ComponentDecomposer', 'EnergyImpactDecomposer', 
@@ -847,24 +846,35 @@ def _kings_node_to_pegasus_chain(row: int, col: int) -> Tuple[
             return (0, x, 7, y), (1, y+1, 4, x)
         elif col_par == 1:
             return (0, x, 6, y), (1, y+1, 3, x)
-        elif col_par == 2:
+        else:
             return (0, x+1, 4, y), (1, y, 10, x)
 
-def _zephyr_to_chimeralike(coord, t=4, half_offset=1):
+def _zephyr_to_chimeralike(coord: Tuple[int, int, int, int, int],
+                           t: int=4, half_offset: int=1) -> Tuple[
+                               int, int, int, int]:
     """Map Zephyr[m,t] coordinates to Chimera[2m,2m,t]-style coordinates 
     
-    See tests. Chimeralike labeling proceeds from top corner.
+    Coordinates associated to a particular Chimera subgraph of 
+    Zephyr are created.
+    Each Chimera cell is size 2t, t should be even
+    Chimera-like coordinate
+    (row, column, orientation (vertical/horizontal), in cell offset)
+    is convenient for embedding enumeration and geometric displacements
     """
     u, w, k, j, z = coord
     row = u*w + (1-u)*(2*z + j)
     col = (1-u)*w + u*(2*z + j)
-    half_cell = t//2  # note, t is even by Zephyr graph definition
-    return row + half_offset*(u*(k//half_cell) + (1-u) - 1), col + half_offset*((1-u)*(k//half_cell) + u - 1), u, (k+half_offset*half_cell)%t
+    half_cell = t//2
+    return (row + half_offset*(u*(k//half_cell) + (1-u) - 1),
+            col + half_offset*((1-u)*(k//half_cell) + u - 1),
+            u, (k+half_offset*half_cell)%t)
 
-def _chimeralike_to_zephyr(coord, t=4, half_offset=1):
-    """Map Chimera-like[2m,2m,t] coordinates to Standard Zephyr[m,t] coordinates
+def _chimeralike_to_zephyr(coord: Tuple[int, int, int, int],
+                           t: int=4, half_offset: int=1) -> Tuple[
+                               int, int, int, int, int]:
+    """Map Chimera[2m,2m,t] coordinates to Standard Zephyr[m,t] coordinates
     
-    See tests. Chimera-like labeling proceeds from top corner.
+    Inverse of _zephyr_to_chimeralike
     """
     r, c, u, k = coord
     half_cell = t//2
@@ -878,7 +888,7 @@ def _chimeralike_to_zephyr(coord, t=4, half_offset=1):
     z = (r + c - w - j) // 2
     return u, w, k, j, z
 
-def _squareNNN_node_to_zephyr_chain(row: int, col: int) -> Tuple[
+def _squarenextneighbor_node_to_zephyr_chain(row: int, col: int) -> Tuple[
     Tuple[int, int, int, int], Tuple[int, int, int, int]]: 
     """"Embed a node into a chain for a grid plus next-neighbors lattice.
     
@@ -918,32 +928,67 @@ def _squareNNN_node_to_zephyr_chain(row: int, col: int) -> Tuple[
     return tuple([_chimeralike_to_zephyr((row//2, col//2, coord[2], coord[3])) for coord in local_embedding[local_key]])
 
 
-def _make_cubic_lattice(dimensions):
-    """Returns an open boundary cubic lattice graph as function of lattice
-    dimensions. Helper function for ``make_origin_embeddings``.
+def _make_cubic_lattice(dimensions: Tuple[int, int, int],
+                        is_open: Tuple[int, int, int]=(1, 1, 1)) -> nx.Graph:
+    """Returns a cubic lattice graph
+
+
+    Helper function for ``make_origin_embeddings``.
+    
+    Args:
+        dimensions:
+            width, depth, height
+        is_open:
+            Components of the tuple should be 0 or 1 to denote periodic or open 
+            boundary conditions in the respective dimension.
+    
+    Returns:
+        networkx cubic graph
     """
+    if not (len(dimensions) == len(is_open) == 3):
+        raise ValueError('Three dimensional specification is required')
+    
     cubic_lattice_graph = nx.Graph()
-    cubic_lattice_graph.add_edges_from([((x, y, z), (x+1, y, z))
-                                        for x in range(dimensions[0]-1)
+    cubic_lattice_graph.add_edges_from([((x, y, z),
+                                         ((x+1)%dimensions[0], y, z))
+                                        for x in range(dimensions[0]-is_open[0])
                                         for y in range(dimensions[1])
                                         for z in range(dimensions[2])
                                         ])
-    cubic_lattice_graph.add_edges_from([((x, y, z), (x, y+1, z))
+    cubic_lattice_graph.add_edges_from([((x, y, z), (x, (y+1)%dimensions[1], z))
                                         for x in range(dimensions[0])
-                                        for y in range(dimensions[1]-1)
+                                        for y in range(dimensions[1]-is_open[1])
                                         for z in range(dimensions[2])
                                         ])
-    cubic_lattice_graph.add_edges_from([((x, y, z), (x, y, z+1))
+    cubic_lattice_graph.add_edges_from([((x, y, z), (x, y, (z+1)%dimensions[2]))
                                         for x in range(dimensions[0])
                                         for y in range(dimensions[1])
-                                        for z in range(dimensions[2]-1)
+                                        for z in range(dimensions[2]-is_open[2])
                                         ])
     return cubic_lattice_graph
 
-def _make_kings_lattice(dimensions, is_open=(True,True)):
-    """Returns an open boundary cubic lattice graph as function of lattice
-    dimensions. Helper function for ``make_origin_embeddings``.
+def _make_kings_lattice(dimensions: Tuple[int, int],
+                        is_open: Tuple[int,int]=(1,1)) -> nx.Graph:
+    """Returns a Kings lattice graph
+
+    Helper function for ``make_origin_embeddings``.
+    A Kings graph has coordinates (x,y) and edges along vertical, horizontal and
+    diagonal directions (the moves a King can make on a chess board). The 
+    lattice is also called a Union Jack lattice.
+
+    Args:
+        dimensions:
+            Number of rows and columns 
+        is_open:
+            Components of the tuple should be 0 or 1 to denote periodic or open 
+            boundary conditions in the respective dimension.
+    
+    Returns:
+        networkx Kings graph
     """
+    if not (len(dimensions) == len(is_open) == 2):
+        raise ValueError('Two dimensional specification is required')
+    
     kings_lattice = nx.Graph()
     kings_lattice.add_edges_from([((x, y), ((x+1)%dimensions[0], y))
                                   for x in range(dimensions[0]- is_open[0])
@@ -1066,7 +1111,7 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
         lattice-structured problems <https://arxiv.org/abs/2202.03044>`_
     """
     if qpu_sampler is None:
-        if lattice_type is not None:
+        if lattice_type in {'chimera', 'pegasus', 'zephyr'}:
             qpu_sampler = DWaveSampler(solver={'topology__type': lattice_type})
         else:
             qpu_sampler = DWaveSampler()
@@ -1188,20 +1233,22 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
             vec_to_lin = dnx.zephyr_coordinates(qpu_shape[0], qpu_shape[1]).zephyr_to_linear
             L = 4 * qpu_shape[0]
             dimensions = (L, L)
-            to_chain = _squareNNN_node_to_zephyr_chain
+            to_chain = _squarenextneighbor_node_to_zephyr_chain
         else:
             raise ValueError(f'Unsupported qpu_sampler topology {qpu_type} '
                              'for kings lattice solver')
-        origin_embedding = {(x, y): to_chain(x, y)
-                            for x in range(L) for y in range(L)
-        }  # Defect free, coordinates
-        origin_embedding = {k: tuple(vec_to_lin(q) for q in v)
-                            for k, v in origin_embedding.items()
-                            if target.has_edge(vec_to_lin(v[0]),vec_to_lin(v[1]))
-        }  # Omit broken chains, map to linear
+        origin_embedding = {
+            (x, y): to_chain(x, y) for x in range(L)
+            for y in range(L)}  # Defect free, coordinates
+        origin_embedding = {
+            k: tuple(vec_to_lin(q) for q in v)
+            for k, v in origin_embedding.items()
+            if target.has_edge(
+                    vec_to_lin(v[0]),
+                    vec_to_lin(v[1]))}  # Omit broken chains, map to linear
         proposed_source = _make_kings_lattice(dimensions)
     else:
-        raise ValueError(f'Unsupported combination of {lattice_type}'
+        raise ValueError(f'Unsupported combination of {lattice_type} '
                          f'and qpu_sampler topology ({topology})')
 
     if not allow_unyielded_edges:
