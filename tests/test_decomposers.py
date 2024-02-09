@@ -671,56 +671,12 @@ class TestRoofDualityDecomposer(unittest.TestCase):
                          bqm.energies((new.samples.record.sample,
                                        new.samples.variables)))
 
-
-class MockDWaveSamplerGeneralization(MockDWaveSampler):  # This can be replaced with MockDWaveSampler()
-    """Extend the `dwave.system.testing.MockDWaveSampler` to Pegasus topology.
-    
-    Adding topology and shape keywords to MockDWaveSampler for this purpose.
-    This function is mirrored in test_reference_samplers.py
-
-    MockDWaveSampler() in the latest version of dwave-system support these 
-    options, this function is included to support backward compatibility of the
-    dwave-system package.
-    """
-    def __init__(self, broken_nodes=None, topology_type=None, qpu_scale=4, **config):
-        super().__init__(broken_nodes, **config)
-        #An Advantage generation processor, only artificially smaller,
-        #replaces C4 in default MockDWaveSampler
-        if topology_type == 'chimera':
-            self.properties['topology'] = {'type': 'chimera',
-                                           'shape': [qpu_scale,qpu_scale,4]}
-            qpu_graph = dnx.chimera_graph(qpu_scale)
-        elif topology_type == 'zephyr':
-            self.properties['topology'] = {'type': 'zephyr',
-                                           'shape': [qpu_scale, 4]}
-            qpu_graph = dnx.zephyr_graph(qpu_scale)
-        else:
-            self.properties['topology'] = {'type': 'pegasus',
-                                           'shape': [qpu_scale]}
-            qpu_graph = dnx.pegasus_graph(qpu_scale,fabric_only=True)
-        #Adjust edge_list, 
-        if broken_nodes is None:
-            self.nodelist = sorted(qpu_graph.nodes)
-            self.edgelist = sorted(tuple(sorted(edge))
-                                   for edge in qpu_graph.edges)
-        else:
-            self.nodelist = sorted(v for v in qpu_graph.nodes
-                                   if v not in broken_nodes)
-            self.edgelist = sorted(tuple(sorted((u, v)))
-                                   for u, v in qpu_graph.edges
-                                   if u not in broken_nodes
-                                   and v not in broken_nodes)
-        self.properties['num_qubits'] = len(qpu_graph)
-        self.properties['qubits'] = self.nodelist  # This type of linking is absent in MockDWaveSampler!
-        self.properties['couplers'] = self.edgelist  # This type of linking is absent in MockDWaveSampler!
-        
-        
 class TestMakeOriginEmbeddings(unittest.TestCase):
     
     def test_default_embeddings(self):
         """Check default workflow, and self-consistency of default dimensions.
         """
-        qpu_sampler = MockDWaveSamplerGeneralization()
+        qpu_sampler = MockDWaveSampler()
         orig_embs = make_origin_embeddings(qpu_sampler=qpu_sampler)
         # Non-empty list of non-empty dictionaries
         self.assertTrue(isinstance(orig_embs, list))
@@ -767,7 +723,7 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
             
             #Native by default:
             shape_dicts[(qpu_top, None)] = shape_dicts[(qpu_top, qpu_top)] 
-            qpu_sampler = MockDWaveSamplerGeneralization(topology_type=qpu_top)
+            qpu_sampler = MockDWaveSampler(topology_type=qpu_top)
 
             # pop final 15 edges to exercise edge cover routines.
             # 15 is a worst case upper bound on the number of defects that
@@ -775,8 +731,8 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
             for pop_edges in [0, 15]:
                 for _ in range(pop_edges):
                     qpu_sampler.edgelist.pop()
-                self.assertEqual(qpu_sampler.edgelist,
-                                 qpu_sampler.properties['couplers']) # Linking is specific to MockDWaveSamplerGeneralization
+                qpu_sampler.properties['couplers'] = qpu_sampler.edgelist
+
                 for lattice_type in lattice_types:
                     orig_embs = make_origin_embeddings(
                         qpu_sampler=qpu_sampler,
@@ -862,10 +818,10 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
                                                         fabric_only=True)
                 else:
                     proposed_source = dnx.chimera_graph(qpu_scale)
-                
-                qpu_sampler = MockDWaveSamplerGeneralization(
+
+                qpu_sampler = MockDWaveSampler(
                     topology_type=qpu_top,
-                    qpu_scale=qpu_scale)
+                    topology_shape=qpu_shape)
                 
                 for _ in range(15):
                     qpu_sampler.edgelist.pop()
@@ -909,12 +865,20 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
                 lattice_types += [qpu_top, 'cubic']
             if qpu_top != 'chimera':
                 lattice_types.append('kings')
+
+            if qpu_top == 'pegasus':
+                qpu_shape = [qpu_scale]
+            elif qpu_top == 'chimera':
+                qpu_shape = [qpu_scale, qpu_scale, 4]
+            elif qpu_top == 'zephyr':
+                qpu_shape = [qpu_scale, 4]
+
             for lattice_type in lattice_types:
                 # proposed_source: a defect free-lattice at sampler
                 # scale (hence inclusive of all keys).
-                qpu_sampler = MockDWaveSamplerGeneralization(
+                qpu_sampler = MockDWaveSampler(
                     topology_type=qpu_top,
-                    qpu_scale=4)
+                    topology_shape=qpu_shape)
                 cs = constrained_scales[lattice_type]
                 orig_embs = make_origin_embeddings(qpu_sampler=qpu_sampler,
                                                    lattice_type=lattice_type,
