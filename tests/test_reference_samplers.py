@@ -31,17 +31,17 @@ from hybrid.reference.pa import (
 
 class MockDWaveSamplerGeneralization(MockDWaveSampler):
     """Extend the `dwave.system.testing.MockDWaveSampler` to Pegasus topology.
-    
+
     Adding topology and shape keywords to MockDWaveSampler for this purpose.
     This function is mirrored in test_decomposers.py
 
-    MockDWaveSampler() in the latest version of dwave-system support these 
+    MockDWaveSampler() in the latest version of dwave-system support these
     options, this function is included to support backward compatibility of the
     dwave-system package.
     """
     def __init__(self, broken_nodes=None, topology_type=None, qpu_scale=4, **config):
         import dwave_networkx as dnx
-    
+
         super().__init__(broken_nodes, **config)
         #An Advantage generation processor, only artificially smaller,
         #replaces C4 in default MockDWaveSampler
@@ -53,8 +53,8 @@ class MockDWaveSamplerGeneralization(MockDWaveSampler):
             self.properties['topology'] = {'type': 'chimera',
                                            'shape': [qpu_scale,qpu_scale,4]}
             qpu_graph = dnx.chimera_graph(qpu_scale)
-            
-        #Adjust edge_list, 
+
+        #Adjust edge_list,
         if broken_nodes is None:
             self.nodelist = sorted(qpu_graph.nodes)
             self.edgelist = sorted(tuple(sorted(edge))
@@ -69,21 +69,51 @@ class MockDWaveSamplerGeneralization(MockDWaveSampler):
         self.properties['num_qubits'] = len(qpu_graph)
         self.properties['qubits'] = self.nodelist
         self.properties['couplers'] = self.edgelist
-        
+
 
 class TestLatticeLNLS(unittest.TestCase):
-    
+
     def test_basic_workflow_operation(self):
         for topology_type in ['pegasus','chimera']:
             qpu_sampler=MockDWaveSamplerGeneralization(topology_type=topology_type)
             for lattice_type in ['cubic',topology_type]:
                 LatticeLNLS(topology=lattice_type, qpu_sampler=qpu_sampler)
-                
+
     def test_basic_sampler_operation(self):
         bqm = dimod.BinaryQuadraticModel({(i,j,k) : 0 for i in range(2) for j in range(2) for k in range(2)}, {((0,0,0),(0,0,1)): 1, ((1,1,0),(1,1,1)): 1}, 0, dimod.SPIN)
         sampleset = LatticeLNLSSampler().sample(
             bqm=bqm, problem_dims=(2,2,2), qpu_sampler=MockDWaveSamplerGeneralization(), topology='cubic',max_iter=1,
             qpu_params=dict(chain_strength=2), reject_small_problems=False)
+
+    def test_track_data(self):
+        h = {(i,j,k) : 0 for i in range(2) for j in range(2) for k in range(2)}
+        J = {((0,0,0),(0,0,1)): 1, ((1,1,0),(1,1,1)): 1}
+        bqm = dimod.BinaryQuadraticModel(h, J, 0, dimod.SPIN)
+        max_iter = 3
+        num_reads = 2
+
+        sampleset = LatticeLNLSSampler().sample(
+            bqm=bqm, problem_dims=(2,2,2), num_reads=num_reads,
+            qpu_sampler=MockDWaveSamplerGeneralization(), topology='cubic',max_iter=max_iter,
+            qpu_params=dict(chain_strength=2), reject_small_problems=False,
+            track_data=False
+            )
+
+        sampleset = LatticeLNLSSampler().sample(
+            bqm=bqm, problem_dims=(2,2,2), num_reads=num_reads,
+            qpu_sampler=MockDWaveSamplerGeneralization(), topology='cubic',max_iter=max_iter,
+            qpu_params=dict(chain_strength=2), reject_small_problems=False,
+            track_data=True
+            )
+
+        self.assertEquals(num_reads, len(sampleset.info['tracked_samples']))
+        self.assertEquals(num_reads, len(sampleset.info['tracked_subsamples']))
+        self.assertEquals(num_reads, len(sampleset.info['tracked_subproblems']))
+
+        self.assertEquals(max_iter, len(sampleset.info['tracked_samples'][0]))
+        self.assertEquals(max_iter, len(sampleset.info['tracked_subsamples'][0]))
+        self.assertEquals(max_iter, len(sampleset.info['tracked_subproblems'][0]))
+
 
 
 class TestKerberos(unittest.TestCase):
@@ -233,15 +263,15 @@ class TestReferenceWorkflowsSmoke(unittest.TestCase):
         (hybrid.HybridizedPopulationAnnealing, dict(num_reads=10, num_iter=10, num_sweeps=10)),
         (hybrid.Kerberos, dict(sa_sweeps=10, tabu_timeout=10, qpu_sampler=MockDWaveSampler())),
         (hybrid.LatticeLNLS, dict(topology='cubic',qpu_sampler=MockDWaveSamplerGeneralization(topology_type='pegasus')),
-         {'problem_dims' : (1,1,1)}), # 2x2x2 cubic over pegasus topology 
+         {'problem_dims' : (1,1,1)}), # 2x2x2 cubic over pegasus topology
         (hybrid.LatticeLNLS, dict(topology='cubic',qpu_sampler=MockDWaveSamplerGeneralization(topology_type='chimera')),
-         {'problem_dims' : (1,1,1)}), # 2x2x2 cubic over chimera topology 
+         {'problem_dims' : (1,1,1)}), # 2x2x2 cubic over chimera topology
         (hybrid.LatticeLNLS, dict(topology='pegasus',qpu_sampler=MockDWaveSamplerGeneralization(topology_type='pegasus')),{'problem_dims' : (3,1,1,2,4)}), #Single Pegasus Cell
         (hybrid.LatticeLNLS, dict(topology='chimera',qpu_sampler=MockDWaveSamplerGeneralization(topology_type='chimera')),{'problem_dims' : (2,2,2,4)}), #2x2 Chimera-Cell problem
         (hybrid.SimplifiedQbsolv, dict(max_iter=2)),
     ])
     def test_smoke(self, sampler_cls, sampler_params,state_params=None):
-        
+
         if state_params is None:
             bqm = dimod.BinaryQuadraticModel.from_ising({}, {'ab': 1})
             state = hybrid.State.from_problem(bqm)
@@ -257,7 +287,7 @@ class TestReferenceWorkflowsSmoke(unittest.TestCase):
                 problem_dims=state_params['problem_dims'],
                 reject_small_problems=False)
             state = hybrid.State.from_problem(bqm,**state_params)
-            
+
         w = sampler_cls(**sampler_params)
         ss = w.run(state).result().samples
         #The substitute for QPU (MockSampler) is not guaranteed
