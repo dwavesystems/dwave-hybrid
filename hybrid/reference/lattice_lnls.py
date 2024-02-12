@@ -54,6 +54,8 @@ def LatticeLNLS(topology,
 
                 * 'cubic' (``qpu_sampler`` must be pegasus of chimera-structured)
 
+                * 'kings' (``qpu_sampler`` must be pegasus of zephyr-structured)
+
                 * 'chimera' (``qpu_sampler`` must be chimera-structured)
 
         qpu_sampler (:class:`dimod.Sampler`, optional, default=DWaveSampler()):

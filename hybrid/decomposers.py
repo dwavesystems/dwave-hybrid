@@ -19,6 +19,7 @@ import itertools
 from heapq import heappush, heappop
 from functools import partial
 from itertools import product
+from typing import Tuple
 
 import numpy as np
 import networkx as nx
@@ -729,7 +730,7 @@ def _all_minimal_covers(edgelist):
 
     if len(edgelist) > 16:
         raise ValueError(
-            'len(edgelist) > 16. Exponential scaling of this method means it '
+            f'len(edgelist) = {len(edgelist)} > 16. Exponential scaling of this method means it '
             'should only be used for small graphs. The use case for this function '
             'is in finding coverings over unyielded lattice subgraphs, which in '
             'the current online generation of processors are sufficiently small '
@@ -805,28 +806,203 @@ def _yield_limited_origin_embedding(origin_embedding, proposed_source, target):
     origin_embedding = {k: v for k, v in origin_embedding.items() if k in max_cc}
     return origin_embedding
 
+def _kings_node_to_pegasus_chain(row: int, col: int) -> Tuple[
+    Tuple[int, int, int, int], Tuple[int, int, int, int]]: 
+    """"Embed a node into a chain for a grid-with-diagonal (Kings) lattice.
 
-def _make_cubic_lattice(dimensions):
-    """Returns an open boundary cubic lattice graph as function of lattice
-    dimensions. Helper function for ``make_origin_embeddings``.
+    Args:
+        row: Row in the lattice.
+
+        col: Column in the lattice.
+
+    Returns:
+        Two-tuple of the two nodes, in Pegasus coordinates, that constitute a
+            chain representing the given node. 
+
+    References:
+    
+    * https://arxiv.org/pdf/2003.00133.pdf Table 1
     """
+    row_par = row%3
+    col_par = col%3
+    x = col//3
+    y = row//3
+    if row_par == 0:
+        if col_par == 0:
+            return (0, x, 2, y), (1 ,y, 7, x)
+        elif col_par == 1:
+            return (0, x+1, 0, y), (1, y, 2, x)
+        else:
+            return (0, x+1, 3, y), (1, y, 8, x)
+    elif row_par == 1:
+        if col_par == 0:
+            return (0, x, 8, y), (1, y, 6, x)
+        elif col_par == 1:
+            return (0, x, 11, y), (1, y+1, 0, x)
+        else:
+            return (0, x, 10, y), (1, y, 11, x)
+    else:
+        if col_par == 0:
+            return (0, x, 7, y), (1, y+1, 4, x)
+        elif col_par == 1:
+            return (0, x, 6, y), (1, y+1, 3, x)
+        else:
+            return (0, x+1, 4, y), (1, y, 10, x)
+
+def _zephyr_to_chimeralike(coord: Tuple[int, int, int, int, int],
+                           t: int=4, half_offset: int=1) -> Tuple[
+                               int, int, int, int]:
+    """Map Zephyr[m,t] coordinates to Chimera[2m,2m,t]-style coordinates 
+    
+    Coordinates associated to a particular Chimera subgraph of 
+    Zephyr are created.
+    Each Chimera cell is size 2t, t should be even
+    Chimera-like coordinate
+    (row, column, orientation (vertical/horizontal), in cell offset)
+    is convenient for embedding enumeration and geometric displacements
+    """
+    u, w, k, j, z = coord
+    row = u*w + (1-u)*(2*z + j)
+    col = (1-u)*w + u*(2*z + j)
+    half_cell = t//2
+    return (row + half_offset*(u*(k//half_cell) + (1-u) - 1),
+            col + half_offset*((1-u)*(k//half_cell) + u - 1),
+            u, (k+half_offset*half_cell)%t)
+
+def _chimeralike_to_zephyr(coord: Tuple[int, int, int, int],
+                           t: int=4, half_offset: int=1) -> Tuple[
+                               int, int, int, int, int]:
+    """Map Chimera[2m,2m,t] coordinates to Standard Zephyr[m,t] coordinates
+    
+    Inverse of _zephyr_to_chimeralike
+    """
+    r, c, u, k = coord
+    half_cell = t//2
+    if half_offset:
+        k = (k+half_offset*half_cell)%t
+        r = r - half_offset*(u*(k//half_cell) + (1-u) - 1)
+        c = c - half_offset*((1-u)*(k//half_cell) + u - 1)
+    w = u*r + (1-u)*c  # w labels u-dependent displacement from the origin.
+    # r + c = w + 2*z + j  # displacement in other orientation is 2*z+j
+    j = (r + c - w) % 2
+    z = (r + c - w - j) // 2
+    return u, w, k, j, z
+
+def _squarenextneighbor_node_to_zephyr_chain(row: int, col: int) -> Tuple[
+    Tuple[int, int, int, int], Tuple[int, int, int, int]]: 
+    """"Embed a node into a chain for a grid plus next-neighbors lattice.
+    
+    Args:
+        row: Row in the lattice.
+
+        col: Column in the lattice.
+
+    Returns:
+        Two-tuple of the two nodes, in Zephyr coordinates, that constitute a
+            chain representing the given node. 
+
+    Zephyr[m,t] can be tiled with 4 Chimera[m,t]-like cells (minus boundary 
+    effect), _zephyr_to_chimeralike(coord) creates a Chimera vector scheme
+    for this tiling.
+    Grid (x,y) to chain (u,k) on each cell in chimera-like coordinate scheme, 
+    we can embed one square per cell. So we can embed a 2m x 2m next-nearest 
+    neighbor 
+      Even parity cell relative coordinates     Odd parity
+              (0,0)    (1,0)                  (0,0)    (0,1)
+              (0,1)    (1,1)                  (1,0)    (1,1)
+     Standard chimera-like presentation of (u,k) (orientation, tile parameter)
+              (1, 0)
+              (1, 1)
+     (0,0) (0,1)  (0,2) (0,3)
+              (1, 2)
+              (1, 3)
+    This embedding is sufficient for next-neighbor models on a square lattice.
+    The Kings graph is a subgraph of this, and can use the same embedding.
+    
+    """
+    local_embedding = {(0,0): ((0,0,0,0), (0,0,1,1)),
+                       (1,0): ((0,0,0,1), (0,0,1,3)),
+                       (0,1): ((0,0,1,0), (0,0,0,2)),
+                       (1,1): ((0,0,1,2), (0,0,0,3))}
+    local_key = (row % 2, col % 2)  # In cell index
+    return tuple([_chimeralike_to_zephyr((row//2, col//2, coord[2], coord[3])) for coord in local_embedding[local_key]])
+
+
+def _make_cubic_lattice(dimensions: Tuple[int, int, int],
+                        is_open: Tuple[int, int, int]=(1, 1, 1)) -> nx.Graph:
+    """Returns a cubic lattice graph
+
+
+    Helper function for ``make_origin_embeddings``.
+    
+    Args:
+        dimensions:
+            width, depth, height
+        is_open:
+            Components of the tuple should be 0 or 1 to denote periodic or open 
+            boundary conditions in the respective dimension.
+    
+    Returns:
+        networkx cubic graph
+    """
+    if not (len(dimensions) == len(is_open) == 3):
+        raise ValueError('Three dimensional specification is required')
+    
     cubic_lattice_graph = nx.Graph()
-    cubic_lattice_graph.add_edges_from([((x, y, z), (x+1, y, z))
-                                        for x in range(dimensions[0]-1)
+    cubic_lattice_graph.add_edges_from([((x, y, z),
+                                         ((x+1)%dimensions[0], y, z))
+                                        for x in range(dimensions[0]-is_open[0])
                                         for y in range(dimensions[1])
                                         for z in range(dimensions[2])
                                         ])
-    cubic_lattice_graph.add_edges_from([((x, y, z), (x, y+1, z))
+    cubic_lattice_graph.add_edges_from([((x, y, z), (x, (y+1)%dimensions[1], z))
                                         for x in range(dimensions[0])
-                                        for y in range(dimensions[1]-1)
+                                        for y in range(dimensions[1]-is_open[1])
                                         for z in range(dimensions[2])
                                         ])
-    cubic_lattice_graph.add_edges_from([((x, y, z), (x, y, z+1))
+    cubic_lattice_graph.add_edges_from([((x, y, z), (x, y, (z+1)%dimensions[2]))
                                         for x in range(dimensions[0])
                                         for y in range(dimensions[1])
-                                        for z in range(dimensions[2]-1)
+                                        for z in range(dimensions[2]-is_open[2])
                                         ])
     return cubic_lattice_graph
+
+def _make_kings_lattice(dimensions: Tuple[int, int],
+                        is_open: Tuple[int,int]=(1,1)) -> nx.Graph:
+    """Returns a Kings lattice graph
+
+    Helper function for ``make_origin_embeddings``.
+    A Kings graph has coordinates (x,y) and edges along vertical, horizontal and
+    diagonal directions (the moves a King can make on a chess board). The 
+    lattice is also called a Union Jack lattice.
+
+    Args:
+        dimensions:
+            Number of rows and columns 
+        is_open:
+            Components of the tuple should be 0 or 1 to denote periodic or open 
+            boundary conditions in the respective dimension.
+    
+    Returns:
+        networkx Kings graph
+    """
+    if not (len(dimensions) == len(is_open) == 2):
+        raise ValueError('Two dimensional specification is required')
+    
+    kings_lattice = nx.Graph()
+    kings_lattice.add_edges_from([((x, y), ((x+1)%dimensions[0], y))
+                                  for x in range(dimensions[0]- is_open[0])
+                                  for y in range(dimensions[1])])
+    kings_lattice.add_edges_from([((x, y), (x, (y+1)%dimensions[1]))
+                                  for x in range(dimensions[0])
+                                  for y in range(dimensions[1]- is_open[1])])
+    kings_lattice.add_edges_from([((x, y), ((x+1)%dimensions[0], (y+1)%dimensions[1]))
+                                  for x in range(dimensions[0]- is_open[0])
+                                  for y in range(dimensions[1]- is_open[1])])
+    kings_lattice.add_edges_from([(((x+1)%dimensions[0], y), (x, (y+1)%dimensions[1]))
+                                  for x in range(dimensions[0]- is_open[0])
+                                  for y in range(dimensions[1]- is_open[1])])
+    return kings_lattice
 
 
 def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
@@ -852,7 +1028,12 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
                     Embeddings compatible with the schemes arXiv:2009.12479 and
                     arXiv:2003.00133 are created for a ``qpu_sampler`` of
                     topology type either 'pegasus' or 'chimera'.
-
+                
+                * "kings"
+                    Embedding compatible with arXiv:2003.00133.pdf Table 1,
+                    are created for a ``qpu_sampler`` of topology type either
+                    'pegasus', or 'zephyr'. Chain length 2. 
+    
                 * "pegasus"
                     Embeddings are chain length one (minimal and native).
                     If ``qpu_sampler`` topology type is 'pegasus', maximum
@@ -930,7 +1111,7 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
         lattice-structured problems <https://arxiv.org/abs/2202.03044>`_
     """
     if qpu_sampler is None:
-        if lattice_type == 'pegasus' or lattice_type == 'chimera':
+        if lattice_type in {'chimera', 'pegasus', 'zephyr'}:
             qpu_sampler = DWaveSampler(solver={'topology__type': lattice_type})
         else:
             qpu_sampler = DWaveSampler()
@@ -949,6 +1130,7 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
         target.add_edges_from(qpu_sampler.properties['couplers'])
     else:
         target.add_edges_from(qpu_sampler.edgelist)
+
     if qpu_type == lattice_type:
         # Fully yielded fully utilized native topology problem.
         # This method is also easily adapted to work for any chain-length 1
@@ -1033,14 +1215,41 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
                                      and target.has_edge(vec_to_lin((2*x+1, 2*y+1, 0, z)),
                                                          vec_to_lin((2*x,2*y+1,0,z)))
                                      })
+            
         else:
             raise ValueError(f'Unsupported qpu_sampler topology {qpu_type} '
                              'for cubic lattice solver')
 
         proposed_source = _make_cubic_lattice(dimensions)
+    elif lattice_type == 'kings':
+        if qpu_type == 'pegasus':
+            vec_to_lin = dnx.pegasus_coordinates(qpu_shape[0]).pegasus_to_linear
+            L = 3*(qpu_shape[0] - 1)
+            dimensions = (L, L)
+            to_chain = _kings_node_to_pegasus_chain
+        elif qpu_type == 'zephyr':
+            if qpu_shape[1] != 4:
+                raise ValueError('Method is suitable for Zephyr[m,t=4] only')
+            vec_to_lin = dnx.zephyr_coordinates(qpu_shape[0], qpu_shape[1]).zephyr_to_linear
+            L = 4 * qpu_shape[0]
+            dimensions = (L, L)
+            to_chain = _squarenextneighbor_node_to_zephyr_chain
+        else:
+            raise ValueError(f'Unsupported qpu_sampler topology {qpu_type} '
+                             'for kings lattice solver')
+        origin_embedding = {
+            (x, y): to_chain(x, y) for x in range(L)
+            for y in range(L)}  # Defect free, coordinates
+        origin_embedding = {
+            k: tuple(vec_to_lin(q) for q in v)
+            for k, v in origin_embedding.items()
+            if target.has_edge(
+                    vec_to_lin(v[0]),
+                    vec_to_lin(v[1]))}  # Omit broken chains, map to linear
+        proposed_source = _make_kings_lattice(dimensions)
     else:
-        raise ValueError('Unsupported combination of lattice_type '
-                         'and qpu_sampler topology')
+        raise ValueError(f'Unsupported combination of {lattice_type} '
+                         f'and qpu_sampler topology ({topology})')
 
     if not allow_unyielded_edges:
         origin_embedding = _yield_limited_origin_embedding(origin_embedding,
@@ -1068,6 +1277,11 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
         origin_embeddings.append({(key[1], key[2], key[0]): value
                                   for key, value in origin_embedding.items()})
         problem_dim_spec = 3
+    elif lattice_type == 'kings':
+        # A reflection is sufficient for demonstration purposes
+        origin_embeddings.append({(key[1], key[0]): value
+                                  for key, value in origin_embedding.items()})
+        problem_dim_spec = 2
     elif lattice_type == 'pegasus':
         # A horizontal to vertical flip is sufficient for demonstration purposes.
         # Flip north-east to south-west axis (see draw_pegasus):
@@ -1083,6 +1297,7 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
         problem_dim_spec = 4
     else:
         raise ValueError('Unsupported lattice_type')
+
     if problem_dims is not None:
         if len(problem_dims) != problem_dim_spec:
             raise ValueError('len(problem_dims) is incompatible with'
