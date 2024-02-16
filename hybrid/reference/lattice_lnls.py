@@ -85,8 +85,8 @@ def LatticeLNLS(topology,
                    each iteration.
 
         track_iteration_data (bool, optional, default=False):
-            Flag to indicate whether to track samples, subproblems, and subsamples (samples for the
-            subproblem).
+            Flag indicating whether to track samples, subproblems, and subsamples (samples for the
+            subproblem) in the `hybrid.State` of the workflow.
 
         max_iter (int, optional, default=128):
             Number of iterations in the hybrid algorithm.
@@ -250,9 +250,9 @@ class LatticeLNLSSampler(dimod.Sampler):
                 the hybrid algorithm.
 
             track_iteration_data (bool, optional, default=False):
-                Flag to indicate whether to track samples, subproblems, and subsamples (samples for
-                the subproblem).
-
+                Flag indicating whether to track samples, subproblems, and subsamples (samples for
+                the subproblem) in the returned sample set's `info` field. One list of tracked data
+                is stored per read (as in `num_reads`).
 
             problem_dims (tuple of ints):
                 Lattice dimensions (e.g. cubic case (18,18,18)).
