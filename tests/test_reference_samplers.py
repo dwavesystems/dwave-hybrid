@@ -85,7 +85,7 @@ class TestLatticeLNLS(unittest.TestCase):
             bqm=bqm, problem_dims=(2,2,2), qpu_sampler=MockDWaveSampler(), topology='cubic',max_iter=1,
             qpu_params=dict(chain_strength=2), reject_small_problems=False)
 
-    def test_track_iteration_data(self):
+    def test_track_qpu_branch(self):
         h = {(i,j,k) : 0 for i in range(2) for j in range(2) for k in range(2)}
         J = {((0,0,0),(0,0,1)): 1, ((1,1,0),(1,1,1)): 1}
         bqm = dimod.BinaryQuadraticModel(h, J, 0, dimod.SPIN)

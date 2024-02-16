@@ -139,8 +139,6 @@ def LatticeLNLS(topology,
                       qpu_sampler=qpu_sampler,
                       sampling_params=qpu_params0,
                       num_reads=qpu_params0['num_reads']))
-    if track_qpu_branch:
-        qpu_branch = qpu_branch | hybrid.Lambda(update_tracking_data)
 
     if workflow_type == 'qpu-only':
         per_it_runnable =  (qpu_branch| hybrid.SplatComposer())
@@ -149,6 +147,10 @@ def LatticeLNLS(topology,
                            | hybrid.SteepestDescentSubProblemSampler()
                            | hybrid.SplatComposer())
     elif workflow_type == 'qpu+parallel-process':
+        if track_qpu_branch:
+            raise NotImplementedError(
+                'Tracking qpu branch for the "qpu+parallel-process" workflow is not implemented'
+                )
         per_it_runnable = (
             hybrid.Parallel(
                 qpu_branch | hybrid.SplatComposer(),
@@ -156,6 +158,8 @@ def LatticeLNLS(topology,
             | hybrid.ArgMin())
     else:
         raise ValueError('Unknown workflow type')
+    if track_qpu_branch:
+        per_it_runnable = per_it_runnable | hybrid.Lambda(update_tracking_data)
     if energy_threshold is not None:
         energy_reached = lambda en: en <= energy_threshold
     else:
