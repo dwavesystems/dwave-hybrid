@@ -96,7 +96,7 @@ class TestLatticeLNLS(unittest.TestCase):
             bqm=bqm, problem_dims=(2,2,2), num_reads=num_reads,
             qpu_sampler=MockDWaveSampler(), topology='cubic',max_iter=max_iter,
             qpu_params=dict(chain_strength=2), reject_small_problems=False,
-            track_iteration_data=False
+            track_qpu_branch=False
             )
 
         self.assertEquals(False, 'tracked_samples' in sampleset.info)
@@ -107,7 +107,7 @@ class TestLatticeLNLS(unittest.TestCase):
             bqm=bqm, problem_dims=(2,2,2), num_reads=num_reads,
             qpu_sampler=MockDWaveSampler(), topology='cubic',max_iter=max_iter,
             qpu_params=dict(chain_strength=2), reject_small_problems=False,
-            track_iteration_data=True
+            track_qpu_branch=True
             )
 
         self.assertEquals(num_reads, len(sampleset.info['tracked_samples']))
