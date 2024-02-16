@@ -30,7 +30,7 @@ def LatticeLNLS(topology,
                 convergence=None,
                 qpu_params=None,
                 workflow_type='qpu-only',
-                track_data=False):
+                track_iteration_data=False):
     '''Implements lattice workflows as described in `Hybrid quantum annealing for
     larger-than-QPU lattice-structured problems <https://arxiv.org/abs/2202.03044>`_.
 
@@ -84,6 +84,10 @@ def LatticeLNLS(topology,
                    parallel with the QPU; the best result is accepted on
                    each iteration.
 
+        track_iteration_data (bool, optional, default=False):
+            Flag to indicate whether to track samples, subproblems, and subsamples (samples for the
+            subproblem).
+
         max_iter (int, optional, default=128):
             Number of iterations in the hybrid algorithm.
 
@@ -135,7 +139,7 @@ def LatticeLNLS(topology,
                       qpu_sampler=qpu_sampler,
                       sampling_params=qpu_params0,
                       num_reads=qpu_params0['num_reads']))
-    if track_data:
+    if track_iteration_data:
         qpu_branch = qpu_branch | hybrid.Lambda(update_tracking_data)
 
     if workflow_type == 'qpu-only':
@@ -227,7 +231,7 @@ class LatticeLNLSSampler(dimod.Sampler):
 
     def sample(self, topology, bqm, problem_dims, exclude_dims=None,
                reject_small_problems=True, qpu_sampler=None,
-               init_sample=None, num_reads=1, track_data=False, **kwargs):
+               init_sample=None, num_reads=1, track_iteration_data=False, **kwargs):
         """Solve large subspaces of a lattice structured problem sequentially
         integrating proposals greedily to arrive at a global or local minima of
         the bqm.
@@ -244,6 +248,11 @@ class LatticeLNLSSampler(dimod.Sampler):
             num_reads (int):
                 Number of reads. Each sample is the result of a single run of
                 the hybrid algorithm.
+
+            track_iteration_data (bool, optional, default=False):
+                Flag to indicate whether to track samples, subproblems, and subsamples (samples for
+                the subproblem).
+
 
             problem_dims (tuple of ints):
                 Lattice dimensions (e.g. cubic case (18,18,18)).
@@ -321,12 +330,12 @@ class LatticeLNLSSampler(dimod.Sampler):
         self.runnable = LatticeLNLS(topology=topology,
                                     qpu_sampler=qpu_sampler,
                                     exclude_dims=exclude_dims,
-                                    track_data=track_data,
+                                    track_iteration_data=track_iteration_data,
                                     **kwargs)
 
         samples = []
         energies = []
-        if track_data:
+        if track_iteration_data:
             info = dict(tracked_samples=[],
                         tracked_subsamples=[],
                         tracked_subproblems=[])
@@ -341,7 +350,7 @@ class LatticeLNLSSampler(dimod.Sampler):
             ss.change_vartype(bqm.vartype, inplace=True)
             samples.append(ss.first.sample)
             energies.append(ss.first.energy)
-            if track_data:
+            if track_iteration_data:
                 info['tracked_samples'].append(resolved_state.tracked_samples)
                 info['tracked_subsamples'].append(resolved_state.tracked_subsamples)
                 info['tracked_subproblems'].append(resolved_state.tracked_subproblems)

@@ -75,17 +75,17 @@ class TestLatticeLNLS(unittest.TestCase):
 
     def test_basic_workflow_operation(self):
         for topology_type in ['pegasus','chimera']:
-            qpu_sampler=MockDWaveSamplerGeneralization(topology_type=topology_type)
+            qpu_sampler=MockDWaveSampler(topology_type=topology_type)
             for lattice_type in ['cubic',topology_type]:
                 LatticeLNLS(topology=lattice_type, qpu_sampler=qpu_sampler)
 
     def test_basic_sampler_operation(self):
         bqm = dimod.BinaryQuadraticModel({(i,j,k) : 0 for i in range(2) for j in range(2) for k in range(2)}, {((0,0,0),(0,0,1)): 1, ((1,1,0),(1,1,1)): 1}, 0, dimod.SPIN)
         sampleset = LatticeLNLSSampler().sample(
-            bqm=bqm, problem_dims=(2,2,2), qpu_sampler=MockDWaveSamplerGeneralization(), topology='cubic',max_iter=1,
+            bqm=bqm, problem_dims=(2,2,2), qpu_sampler=MockDWaveSampler(), topology='cubic',max_iter=1,
             qpu_params=dict(chain_strength=2), reject_small_problems=False)
 
-    def test_track_data(self):
+    def test_track_iteration_data(self):
         h = {(i,j,k) : 0 for i in range(2) for j in range(2) for k in range(2)}
         J = {((0,0,0),(0,0,1)): 1, ((1,1,0),(1,1,1)): 1}
         bqm = dimod.BinaryQuadraticModel(h, J, 0, dimod.SPIN)
@@ -94,16 +94,20 @@ class TestLatticeLNLS(unittest.TestCase):
 
         sampleset = LatticeLNLSSampler().sample(
             bqm=bqm, problem_dims=(2,2,2), num_reads=num_reads,
-            qpu_sampler=MockDWaveSamplerGeneralization(), topology='cubic',max_iter=max_iter,
+            qpu_sampler=MockDWaveSampler(), topology='cubic',max_iter=max_iter,
             qpu_params=dict(chain_strength=2), reject_small_problems=False,
-            track_data=False
+            track_iteration_data=False
             )
+
+        self.assertEquals(False, 'tracked_samples' in sampleset.info)
+        self.assertEquals(False, 'tracked_subsamples' in sampleset.info)
+        self.assertEquals(False, 'tracked_subproblems' in sampleset.info)
 
         sampleset = LatticeLNLSSampler().sample(
             bqm=bqm, problem_dims=(2,2,2), num_reads=num_reads,
-            qpu_sampler=MockDWaveSamplerGeneralization(), topology='cubic',max_iter=max_iter,
+            qpu_sampler=MockDWaveSampler(), topology='cubic',max_iter=max_iter,
             qpu_params=dict(chain_strength=2), reject_small_problems=False,
-            track_data=True
+            track_iteration_data=True
             )
 
         self.assertEquals(num_reads, len(sampleset.info['tracked_samples']))
@@ -262,12 +266,12 @@ class TestReferenceWorkflowsSmoke(unittest.TestCase):
         (hybrid.PopulationAnnealing, dict(num_reads=10, num_iter=10, num_sweeps=10)),
         (hybrid.HybridizedPopulationAnnealing, dict(num_reads=10, num_iter=10, num_sweeps=10)),
         (hybrid.Kerberos, dict(sa_sweeps=10, tabu_timeout=10, qpu_sampler=MockDWaveSampler())),
-        (hybrid.LatticeLNLS, dict(topology='cubic',qpu_sampler=MockDWaveSamplerGeneralization(topology_type='pegasus')),
+        (hybrid.LatticeLNLS, dict(topology='cubic',qpu_sampler=MockDWaveSampler(topology_type='pegasus')),
          {'problem_dims' : (1,1,1)}), # 2x2x2 cubic over pegasus topology
-        (hybrid.LatticeLNLS, dict(topology='cubic',qpu_sampler=MockDWaveSamplerGeneralization(topology_type='chimera')),
+        (hybrid.LatticeLNLS, dict(topology='cubic',qpu_sampler=MockDWaveSampler(topology_type='chimera')),
          {'problem_dims' : (1,1,1)}), # 2x2x2 cubic over chimera topology
-        (hybrid.LatticeLNLS, dict(topology='pegasus',qpu_sampler=MockDWaveSamplerGeneralization(topology_type='pegasus')),{'problem_dims' : (3,1,1,2,4)}), #Single Pegasus Cell
-        (hybrid.LatticeLNLS, dict(topology='chimera',qpu_sampler=MockDWaveSamplerGeneralization(topology_type='chimera')),{'problem_dims' : (2,2,2,4)}), #2x2 Chimera-Cell problem
+        (hybrid.LatticeLNLS, dict(topology='pegasus',qpu_sampler=MockDWaveSampler(topology_type='pegasus')),{'problem_dims' : (3,1,1,2,4)}), #Single Pegasus Cell
+        (hybrid.LatticeLNLS, dict(topology='chimera',qpu_sampler=MockDWaveSampler(topology_type='chimera')),{'problem_dims' : (2,2,2,4)}), #2x2 Chimera-Cell problem
         (hybrid.SimplifiedQbsolv, dict(max_iter=2)),
     ])
     def test_smoke(self, sampler_cls, sampler_params,state_params=None):
