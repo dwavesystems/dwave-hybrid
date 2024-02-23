@@ -29,7 +29,8 @@ def LatticeLNLS(topology,
                 max_time=None,
                 convergence=None,
                 qpu_params=None,
-                workflow_type='qpu-only'):
+                workflow_type='qpu-only',
+                track_qpu_branch=False):
     '''Implements lattice workflows as described in `Hybrid quantum annealing for
     larger-than-QPU lattice-structured problems <https://arxiv.org/abs/2202.03044>`_.
 
@@ -83,6 +84,10 @@ def LatticeLNLS(topology,
                    parallel with the QPU; the best result is accepted on
                    each iteration.
 
+        track_qpu_branch (bool, optional, default=False):
+            Flag indicating whether to track samples, subproblems, and subsamples (samples for the
+            subproblem) in the `hybrid.State` of the workflow.
+
         max_iter (int, optional, default=128):
             Number of iterations in the hybrid algorithm.
 
@@ -118,6 +123,17 @@ def LatticeLNLS(topology,
         qpu_params0['num_reads'] = 25
     if 'annealing_time' not in qpu_params0:
         qpu_params0['annealing_time'] = 100
+
+
+    def update_tracking_data(lambda_next, state: hybrid.State):
+        updates = dict()
+        for k1, k2 in [('tracked_samples', 'samples'),
+                       ('tracked_subsamples', 'subsamples'),
+                       ('tracked_subproblems', 'subproblem')]:
+            updates[k1] = state.get(k1, []) + [state.get(k2)]
+        state = state.updated(**updates)
+        return state
+
     qpu_branch = (hybrid.decomposers.SublatticeDecomposer()
                   | hybrid.QPUSubproblemExternalEmbeddingSampler(
                       qpu_sampler=qpu_sampler,
@@ -131,6 +147,10 @@ def LatticeLNLS(topology,
                            | hybrid.SteepestDescentSubProblemSampler()
                            | hybrid.SplatComposer())
     elif workflow_type == 'qpu+parallel-process':
+        if track_qpu_branch:
+            raise NotImplementedError(
+                'Tracking qpu branch for the "qpu+parallel-process" workflow is not implemented'
+                )
         per_it_runnable = (
             hybrid.Parallel(
                 qpu_branch | hybrid.SplatComposer(),
@@ -138,6 +158,8 @@ def LatticeLNLS(topology,
             | hybrid.ArgMin())
     else:
         raise ValueError('Unknown workflow type')
+    if track_qpu_branch:
+        per_it_runnable = per_it_runnable | hybrid.Lambda(update_tracking_data)
     if energy_threshold is not None:
         energy_reached = lambda en: en <= energy_threshold
     else:
@@ -213,7 +235,7 @@ class LatticeLNLSSampler(dimod.Sampler):
 
     def sample(self, topology, bqm, problem_dims, exclude_dims=None,
                reject_small_problems=True, qpu_sampler=None,
-               init_sample=None, num_reads=1, **kwargs):
+               init_sample=None, num_reads=1, track_qpu_branch=False, **kwargs):
         """Solve large subspaces of a lattice structured problem sequentially
         integrating proposals greedily to arrive at a global or local minima of
         the bqm.
@@ -230,6 +252,11 @@ class LatticeLNLSSampler(dimod.Sampler):
             num_reads (int):
                 Number of reads. Each sample is the result of a single run of
                 the hybrid algorithm.
+
+            track_qpu_branch (bool, optional, default=False):
+                Flag indicating whether to track samples, subproblems, and subsamples (samples for
+                the subproblem) in the returned sample set's `info` field. One list of tracked data
+                is stored per read (as in `num_reads`).
 
             problem_dims (tuple of ints):
                 Lattice dimensions (e.g. cubic case (18,18,18)).
@@ -307,18 +334,30 @@ class LatticeLNLSSampler(dimod.Sampler):
         self.runnable = LatticeLNLS(topology=topology,
                                     qpu_sampler=qpu_sampler,
                                     exclude_dims=exclude_dims,
+                                    track_qpu_branch=track_qpu_branch,
                                     **kwargs)
 
         samples = []
         energies = []
+        if track_qpu_branch:
+            info = dict(tracked_samples=[],
+                        tracked_subsamples=[],
+                        tracked_subproblems=[])
+        else:
+            info = dict()
         for _ in range(num_reads):
             init_state = init_state_gen()
             final_state = self.runnable.run(init_state)
             # the best sample from each run is one "read"
-            ss = final_state.result().samples
+            resolved_state = final_state.result()
+            ss = resolved_state.samples
             ss.change_vartype(bqm.vartype, inplace=True)
             samples.append(ss.first.sample)
             energies.append(ss.first.energy)
+            if track_qpu_branch:
+                info['tracked_samples'].append(resolved_state.tracked_samples)
+                info['tracked_subsamples'].append(resolved_state.tracked_subsamples)
+                info['tracked_subproblems'].append(resolved_state.tracked_subproblems)
 
         return dimod.SampleSet.from_samples(samples, vartype=bqm.vartype,
-                                            energy=energies)
+                                            energy=energies, info=info)
