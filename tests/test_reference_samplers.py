@@ -99,9 +99,9 @@ class TestLatticeLNLS(unittest.TestCase):
             track_qpu_branch=False
             )
 
-        self.assertEquals(False, 'tracked_samples' in sampleset.info)
-        self.assertEquals(False, 'tracked_subsamples' in sampleset.info)
-        self.assertEquals(False, 'tracked_subproblems' in sampleset.info)
+        self.assertNotIn('tracked_samples', sampleset.info)
+        self.assertNotIn('tracked_subsamples', sampleset.info)
+        self.assertNotIn('tracked_subproblems', sampleset.info)
 
         sampleset = LatticeLNLSSampler().sample(
             bqm=bqm, problem_dims=(2,2,2), num_reads=num_reads,
@@ -110,13 +110,13 @@ class TestLatticeLNLS(unittest.TestCase):
             track_qpu_branch=True
             )
 
-        self.assertEquals(num_reads, len(sampleset.info['tracked_samples']))
-        self.assertEquals(num_reads, len(sampleset.info['tracked_subsamples']))
-        self.assertEquals(num_reads, len(sampleset.info['tracked_subproblems']))
+        self.assertEqual(num_reads, len(sampleset.info['tracked_samples']))
+        self.assertEqual(num_reads, len(sampleset.info['tracked_subsamples']))
+        self.assertEqual(num_reads, len(sampleset.info['tracked_subproblems']))
 
-        self.assertEquals(max_iter, len(sampleset.info['tracked_samples'][0]))
-        self.assertEquals(max_iter, len(sampleset.info['tracked_subsamples'][0]))
-        self.assertEquals(max_iter, len(sampleset.info['tracked_subproblems'][0]))
+        self.assertEqual(max_iter, len(sampleset.info['tracked_samples'][0]))
+        self.assertEqual(max_iter, len(sampleset.info['tracked_subsamples'][0]))
+        self.assertEqual(max_iter, len(sampleset.info['tracked_subproblems'][0]))
 
 
 
