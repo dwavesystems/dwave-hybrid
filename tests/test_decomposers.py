@@ -699,7 +699,7 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
   
     def test_all_embedding_shapes(self):
         """Check embeddings match anticipated optimal dimensions for Chimera,
-        and Pegasus processors with Cubic and Native embeddings.
+        Pegasus and Zephyr processors with Cubic, Kings and Native embeddings.
         Uses a default processor scale of 4, with either 0 or 15
         edge defects.
         """
@@ -707,6 +707,7 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
         # tuple length, chain length, number of embeddings
         shape_dicts = {('zephyr', 'zephyr'): {'tl': 5, 'cl': 1, 'ne': 2}, # Implement later
                        ('zephyr', 'kings'): {'tl': 2, 'cl': 2, 'ne': 2},
+                       ('zephyr', 'cubic'): {'tl': 3, 'cl': 2, 'ne': 3},
                        ('pegasus', 'pegasus'): {'tl': 5, 'cl': 1, 'ne': 2},
                        ('pegasus', 'cubic'): {'tl': 3, 'cl': 2, 'ne': 3},
                        ('pegasus', 'kings'): {'tl': 2, 'cl': 2, 'ne': 2},
@@ -719,8 +720,9 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
             elif qpu_top == 'pegasus':
                 lattice_types = ['cubic', 'kings', qpu_top, None]
             elif qpu_top == 'zephyr':
-                lattice_types = ['kings']
-            
+                lattice_types = ['cubic', 'kings']
+            else:
+                raise ValueError('Uknown qpu topology')
             #Native by default:
             shape_dicts[(qpu_top, None)] = shape_dicts[(qpu_top, qpu_top)] 
             qpu_sampler = MockDWaveSampler(topology_type=qpu_top)
@@ -793,13 +795,15 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
                 lattice_types = ['cubic', qpu_top]
             elif qpu_top == 'zephyr':
                 qpu_shape = [qpu_scale, 4]
-                lattice_types = ['kings']
+                lattice_types = ['cubic', 'kings']
 
             for lattice_type in lattice_types:
                 # proposed_source: a defect free-lattice at sampler
                 # scale (hence inclusive of all keys).
                 if lattice_type == 'cubic':
-                    if qpu_top == 'pegasus':
+                    if qpu_top == 'zephyr':
+                        cubic_dims = (max(qpu_scale-1,1), max(qpu_scale-1,1), 16)
+                    elif qpu_top == 'pegasus':
                         cubic_dims = (qpu_scale-1, qpu_scale-1, 12)
                     else:
                         cubic_dims = (qpu_scale//2, qpu_scale//2, 8)
@@ -860,9 +864,9 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
                               'kings': (2,2)  # single cell
         }
         for qpu_top in ['pegasus', 'chimera', 'zephyr']:
-            lattice_types = []
+            lattice_types = ['cubic']
             if qpu_top != 'zephyr':
-                lattice_types += [qpu_top, 'cubic']
+                lattice_types += [qpu_top]
             if qpu_top != 'chimera':
                 lattice_types.append('kings')
 

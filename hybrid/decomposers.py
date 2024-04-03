@@ -1161,25 +1161,41 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
                 'add subject to standard dwave_networkx library tool availability.')
 
     elif lattice_type == 'cubic':
-        if qpu_type == 'pegasus':
+        if qpu_type == 'zephyr':
+            vec_to_lin = dnx.zephyr_coordinates(qpu_shape[0], qpu_shape[1]).zephyr_to_linear
+            L = max(1, qpu_shape[0]-1)
+            _, t = qpu_shape
+            dimensions = [L, L, 4*t]
+            # A suitable, but not unique, scheme for L ~ 16 at chain length 2.
+            def zephyr_chain(x, y, z):
+                return (vec_to_lin((0, 2*y + (z//t)%2, z%t, z//(2*t), x)),
+                        vec_to_lin((1, 2*x + (z//t)%2, z%t, z//(2*t), y)))
+            origin_embedding = {(x, y, z): zephyr_chain(x,y,z)
+                                for x in range(dimensions[0])
+                                for y in range(dimensions[1])
+                                for z in range(dimensions[2])
+                                if target.has_edge(*zephyr_chain(x, y, z))}
+        elif qpu_type == 'pegasus':
             vec_to_lin = dnx.pegasus_coordinates(qpu_shape[0]).pegasus_to_linear
             L = qpu_shape[0] - 1
             dimensions = [L, L, 12]
             # See arXiv:2003.00133
-            origin_embedding = {(x, y, z): [vec_to_lin((0, x, z+4, y)),
-                                            vec_to_lin((1, y+1, 7-z, x))]
+            def pegasus_chain1(x, y, z):
+                return (vec_to_lin((0, x, z+4, y)),
+                        vec_to_lin((1, y+1, 7-z, x)))
+            origin_embedding = {(x, y, z): pegasus_chain1(x, y, z)
                                 for x in range(L)
                                 for y in range(L)
                                 for z in range(8)
-                                if target.has_edge(vec_to_lin((0, x, z+4, y)),
-                                                   vec_to_lin((1, y+1, 7-z, x)))}
-            origin_embedding.update({(x, y, z): [vec_to_lin((0, x+1, z-8, y)),
-                                                 vec_to_lin((1, y, 19-z, x))]
+                                if target.has_edge(*pegasus_chain1(x, y, z))}
+            def pegasus_chain2(x, y, z):
+                return (vec_to_lin((0, x+1, z-8, y)),
+                         vec_to_lin((1, y, 19-z, x)))
+            origin_embedding.update({(x, y, z): pegasus_chain2(x, y, z)
                                      for x in range(L)
                                      for y in range(L)
                                      for z in range(8, 12)
-                                     if target.has_edge(vec_to_lin((0, x+1, z-8, y)),
-                                                        vec_to_lin((1, y, 19-z, x)))})
+                                     if target.has_edge(*pegasus_chain2(x, y, z))})
         elif qpu_type == 'chimera':
             vec_to_lin = dnx.chimera_coordinates(qpu_shape[0],
                                                  qpu_shape[1],
