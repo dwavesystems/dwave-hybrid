@@ -63,10 +63,10 @@ class PliableDict(dict):
 
 
 class SampleSet(dimod.SampleSet):
-    """The `dimod.SampleSet` extended with a few helper methods.
+    """The :class:`dimod.SampleSet` class extended with a few helper methods.
 
-    Note: this is basically a staging area for new `dimod.SampleSet` features
-    before we merge them upstream.
+    Note: this is basically a staging area for new :class:`dimod.SampleSet` 
+    features before merging these upstream.
     """
 
     def __init__(self, *args, **kwargs):
@@ -212,15 +212,15 @@ class State(PliableDict):
 
     @classmethod
     def from_subsample(cls, subsample, bqm, **kwargs):
-        """Similar to :meth:`.from_sample`, but initializes `subproblem` and
-        `subsamples`.
+        """Similar to :meth:`~hybrid.core.State.from_sample`, but initializes 
+        ``subproblem`` and ``subsamples``.
         """
         return cls.from_subsamples(subsample, bqm, **kwargs)
 
     @classmethod
     def from_subsamples(cls, subsamples, bqm, **kwargs):
-        """Similar to :meth:`.from_samples`, but initializes `subproblem` and
-        `subsamples`.
+        """Similar to :meth:`~hybrid.core.State.from_samples`, but initializes 
+        ``subproblem`` and ``subsamples``.
         """
         return cls(subproblem=bqm,
                    subsamples=SampleSet.from_samples_bqm(subsamples, bqm), **kwargs)
