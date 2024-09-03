@@ -1170,11 +1170,11 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
             def zephyr_chain(x, y, z):
                 return (vec_to_lin((0, 2*y + (z//t)%2, z%t, z//(2*t), x)),
                         vec_to_lin((1, 2*x + (z//t)%2, z%t, z//(2*t), y)))
-            origin_embedding = {(x, y, z): zephyr_chain(x,y,z)
+            origin_embedding = {(x, y, z): c
                                 for x in range(dimensions[0])
                                 for y in range(dimensions[1])
                                 for z in range(dimensions[2])
-                                if target.has_edge(*zephyr_chain(x, y, z))}
+                                if target.has_edge(*(c := zephyr_chain(x, y, z)))}
         elif qpu_type == 'pegasus':
             vec_to_lin = dnx.pegasus_coordinates(qpu_shape[0]).pegasus_to_linear
             L = qpu_shape[0] - 1

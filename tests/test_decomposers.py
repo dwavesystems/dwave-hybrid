@@ -722,7 +722,7 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
             elif qpu_top == 'zephyr':
                 lattice_types = ['cubic', 'kings']
             else:
-                raise ValueError('Uknown qpu topology')
+                raise ValueError('Unknown qpu topology')
             #Native by default:
             shape_dicts[(qpu_top, None)] = shape_dicts[(qpu_top, qpu_top)] 
             qpu_sampler = MockDWaveSampler(topology_type=qpu_top)
