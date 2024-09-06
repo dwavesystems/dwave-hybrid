@@ -802,7 +802,7 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
                 # scale (hence inclusive of all keys).
                 if lattice_type == 'cubic':
                     if qpu_top == 'zephyr':
-                        cubic_dims = (max(qpu_scale-1,1), max(qpu_scale-1,1), 16)
+                        cubic_dims = (qpu_scale, qpu_scale, 16)
                     elif qpu_top == 'pegasus':
                         cubic_dims = (qpu_scale-1, qpu_scale-1, 12)
                     else:
@@ -819,17 +819,33 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
                     
                 elif lattice_type == 'pegasus':
                     proposed_source = dnx.pegasus_graph(qpu_scale,
-                                                        fabric_only=True)
+                                                        nice_coordinates=True)
                 else:
-                    proposed_source = dnx.chimera_graph(qpu_scale)
+                    proposed_source = dnx.chimera_graph(qpu_scale, coordinates=True)
 
                 qpu_sampler = MockDWaveSampler(
                     topology_type=qpu_top,
                     topology_shape=qpu_shape)
-                
+
+                orig_embs = make_origin_embeddings(qpu_sampler=qpu_sampler,
+                                                   lattice_type=lattice_type)
+
+                # No defects should be happy with all chains, and all edges,
+                # for full graph
+                for orig_emb in orig_embs:
+                    self.assertEqual(len(list(orig_emb.keys())),
+                                     proposed_source.number_of_nodes())
+                # NB, only emb[0] due to technicality
+                orig_emb = orig_embs[0]  
+                self.assertTrue(verify_embedding(
+                    emb=orig_emb,
+                    source=proposed_source,
+                    target=qpu_sampler.properties['couplers']),
+                                f'{qpu_top} and {lattice_type}')
+
+                # With defects, should be happy on subgraph
                 for _ in range(15):
                     qpu_sampler.edgelist.pop()
-                
                 orig_embs = make_origin_embeddings(qpu_sampler=qpu_sampler,
                                                    lattice_type=lattice_type)
                 for orig_emb in orig_embs:
