@@ -787,7 +787,6 @@ def _yield_limited_origin_embedding(origin_embedding, proposed_source, target):
     unyielded_edge_set = _unyielded_conditional_edges(emb=origin_embedding,
                                                       source=proposed_source,
                                                       target=target)
-
     # Remove minimal number of nodes such that edges yielded on subgraph:
     G = nx.Graph()
     G.add_edges_from(unyielded_edge_set)
@@ -887,6 +886,12 @@ def _chimeralike_to_zephyr(coord: Tuple[int, int, int, int],
     j = (r + c - w) % 2
     z = (r + c - w - j) // 2
     return u, w, k, j, z
+
+def _chimeralike_to_linear(coord: Tuple[int, int, int, int], m,
+                           t: int=4, half_offset: int=1) -> int:
+    return dnx.zephyr_coordinates(m,t).zephyr_to_linear(
+        _chimeralike_to_zephyr(coord=coord,
+                               t=t, half_offset=half_offset))
 
 def _squarenextneighbor_node_to_zephyr_chain(row: int, col: int) -> Tuple[
     Tuple[int, int, int, int], Tuple[int, int, int, int]]: 
@@ -1027,7 +1032,7 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
                 * "cubic"
                     Embeddings compatible with the schemes arXiv:2009.12479 and
                     arXiv:2003.00133 are created for a ``qpu_sampler`` of
-                    topology type either 'pegasus' or 'chimera'.
+                    topology type 'zephyr', 'pegasus' or 'chimera'.
                 
                 * "kings"
                     Embedding compatible with arXiv:2003.00133.pdf Table 1,
@@ -1160,14 +1165,23 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
 
     elif lattice_type == 'cubic':
         if qpu_type == 'zephyr':
-            vec_to_lin = dnx.zephyr_coordinates(*qpu_shape).zephyr_to_linear
-            L = max(1, qpu_shape[0]-1)
-            _, t = qpu_shape
-            dimensions = [L, L, 4*t]
-            # A suitable, but not unique, scheme for L ~ 16 at chain length 2.
+            m, t = qpu_shape
+            vec_to_lin = lambda coord: _chimeralike_to_linear(coord, m=m, t=t)
+            # In the chimera like scheme each
+            # block (x,y,*) maps to four cells
+            # (x, y, z=[0,t)), (x,y, z=[t,2t)),
+            # (x, y, z=[2t,3t)), (x, y, z=[3t,4t))  
+            # and supports x and y coupling to other blocks via
+            # external couplers. A sufficient scheme is
+            # thus similar to pegasus and chimera.
+            dimensions = [m, m, 4*t]
+            # A suitable, but not unique, scheme for L = m ~ 16 at chain length 2.
+            quadrant_map = {0 : (0, 0), 1: (0, 1), 2: (1, 1), 3: (1, 0)}
             def zephyr_chain(x, y, z):
-                return (vec_to_lin((0, 2*y + (z//t)%2, z%t, z//(2*t), x)),
-                        vec_to_lin((1, 2*x + (z//t)%2, z%t, z//(2*t), y)))
+                i = 2*x + quadrant_map[z%4][0]
+                j = 2*y + quadrant_map[z%4][1]
+                k = z//4  # Many permutations in z allow for periodic boundaries
+                return tuple(vec_to_lin((i, j, u, k)) for u in range(2))
             origin_embedding = {coord: c
                                 for coord in product(*map(range, dimensions))
                                 if target.has_edge(*(c := zephyr_chain(*coord)))}
@@ -1223,7 +1237,6 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
         else:
             raise ValueError(f'Unsupported qpu_sampler topology {qpu_type} '
                              'for cubic lattice solver')
-
         proposed_source = _make_cubic_lattice(dimensions)
     elif lattice_type == 'kings':
         if qpu_type == 'pegasus':
@@ -1254,12 +1267,10 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
     else:
         raise ValueError(f'Unsupported combination of {lattice_type} '
                          f'and qpu_sampler topology ({topology})')
-
     if not allow_unyielded_edges:
         origin_embedding = _yield_limited_origin_embedding(origin_embedding,
                                                            proposed_source,
                                                            target)
-
     if qpu_type == lattice_type:
         # Convert keys to standard vector scheme:
         origin_embedding = {lin_to_vec(node): origin_embedding[node]
