@@ -51,11 +51,13 @@ def LatticeLNLS(topology,
 
             Supported values:
 
+                * 'zephyr' (``qpu_sampler`` must be zephyr-structured)
+
                 * 'pegasus' (``qpu_sampler`` must be pegasus-structured)
 
-                * 'cubic' (``qpu_sampler`` must be pegasus of chimera-structured)
+                * 'cubic' (``qpu_sampler`` must be zephyr, pegasus of chimera-structured)
 
-                * 'kings' (``qpu_sampler`` must be pegasus of zephyr-structured)
+                * 'kings' (``qpu_sampler`` must be zephyr or pegasus-structured)
 
                 * 'chimera' (``qpu_sampler`` must be chimera-structured)
 
@@ -266,10 +268,10 @@ class LatticeLNLSSampler(dimod.Sampler):
                 cellular-level displacements only dimensions indexing cell-displacements
                 are considered. The defaults are topology dependent:
 
-                * 'chimera': [2,3] (u,k chimera coordinates are not displaced).
+                * 'chimera': [2] (u chimera coordinates are not displaced).
 
                 * 'pegasus': [0,3,4] (t,u,k nice pegasus coordinates are not displaced).
-
+                * 'zephyr': [2,3] (u chimera-like coordinates are not displaced).
                 * 'cubic': [] all dimensions are displaced.
 
             reject_small_problems (bool, optional, default=True):
@@ -296,9 +298,11 @@ class LatticeLNLSSampler(dimod.Sampler):
 
         if exclude_dims is None:
             if topology == 'chimera':
-                exclude_dims = [2,3]
+                exclude_dims = [2]
             elif topology == 'pegasus':
                 exclude_dims = [0,3,4]
+            elif topology == 'zephyr':
+                exclude_dims = [2]
             else:
                 exclude_dims = []
                 #Recreate on each call, no reuse:
