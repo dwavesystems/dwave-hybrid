@@ -92,16 +92,19 @@ def LatticeLNLS(topology,
 
         max_iter (int, optional, default=128):
             Number of iterations in the hybrid algorithm.
+            Applied per sample.
 
         max_time (float/None, optional):
             Wall clock runtime termination criterion. Unlimited by default.
+            Applied per sample.
 
         convergence (int, optional):
             Number of iterations with no improvement that terminates sampling.
+            Applied per sample.
 
         energy_threshold (float, optional):
             Terminate when this energy threshold is surpassed. Check is
-            performed at the end of each iteration.
+            performed at the end of each iteration. Applied per sample.
 
     Returns:
         Workflow (:class:`~hybrid.core.Runnable` instance).
@@ -334,12 +337,6 @@ class LatticeLNLSSampler(dimod.Sampler):
         else:
             raise TypeError("'init_sample' should be a SampleSet or a SampleSet generator")
 
-        #Recreate on each call, no reuse:
-        self.runnable = LatticeLNLS(topology=topology,
-                                    qpu_sampler=qpu_sampler,
-                                    exclude_dims=exclude_dims,
-                                    track_qpu_branch=track_qpu_branch,
-                                    **kwargs)
 
         samples = []
         energies = []
@@ -350,6 +347,12 @@ class LatticeLNLSSampler(dimod.Sampler):
         else:
             info = dict()
         for _ in range(num_reads):
+            #Recreate on each call, no reuse:
+            self.runnable = LatticeLNLS(topology=topology,
+                                        qpu_sampler=qpu_sampler,
+                                        exclude_dims=exclude_dims,
+                                        track_qpu_branch=track_qpu_branch,
+                                        **kwargs)  # Must be here, or else remembers best state
             init_state = init_state_gen()
             final_state = self.runnable.run(init_state)
             # the best sample from each run is one "read"
@@ -362,6 +365,5 @@ class LatticeLNLSSampler(dimod.Sampler):
                 info['tracked_samples'].append(resolved_state.tracked_samples)
                 info['tracked_subsamples'].append(resolved_state.tracked_subsamples)
                 info['tracked_subproblems'].append(resolved_state.tracked_subproblems)
-
         return dimod.SampleSet.from_samples(samples, vartype=bqm.vartype,
                                             energy=energies, info=info)
