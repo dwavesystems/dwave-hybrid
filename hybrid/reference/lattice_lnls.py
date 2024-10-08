@@ -271,7 +271,7 @@ class LatticeLNLSSampler(dimod.Sampler):
                 * 'chimera': [2] (u chimera coordinates are not displaced).
 
                 * 'pegasus': [0,3,4] (t,u,k nice pegasus coordinates are not displaced).
-                * 'zephyr': [2,3] (u chimera-like coordinates are not displaced).
+                * 'zephyr': [2] (u chimera-like coordinates are not displaced).
                 * 'cubic': [] all dimensions are displaced.
 
             reject_small_problems (bool, optional, default=True):
