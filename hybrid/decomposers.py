@@ -747,7 +747,6 @@ def _good_cover(edgelist, brute_force_threshold=16):
 
         # Choose best of two simple deterministic heuristics, randomized
         # heuristics (like QA) will typically work better in practice:
-        G = nx.from_edgelist(edgelist)
 
         # (1.) A networkx default with good behaviour in worst case
         cover1 = min_weighted_vertex_cover(G)
