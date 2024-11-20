@@ -822,7 +822,7 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
                     proposed_source= nx.relabel_nodes(
                         G=proposed_source,
                         mapping={n: _zephyr_to_chimeralike(
-                            n, t=qpu_shape[1], half_offset=0) for n in proposed_source})
+                            n, t=qpu_shape[1], half_offset=False) for n in proposed_source})
                 elif lattice_type == 'pegasus':
                     proposed_source = dnx.pegasus_graph(qpu_scale,
                                                         nice_coordinates=True)
@@ -862,16 +862,16 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
                         target=qpu_sampler.properties['couplers']))
 
     def test_chimeralike_coordinates(self):
-        known_mappings = {0: {(0,0,u,t): (u,0,t,0,0)
+        known_mappings = {False: {(0,0,u,t): (u,0,t,0,0)
                               for u in range(2) for t in range(4)},
-                          1: {(0,0,0,0): (0,0,2,0,0),
-                              (0,0,0,3): (0,1,1,0,0),
-                              (0,0,1,0): (1,0,2,0,0),
-                              (0,0,1,3): (1,1,1,0,0),
-                              (1,0,0,0): (0,0,2,1,0),
-                              (0,1,0,0): (0,1,2,0,0),
-                              (1,1,1,2): (1,2,0,1,0),
-                              (1,2,0,1): (0,2,3,1,0)}}
+                          True: {(0,0,0,0): (0,0,2,0,0),
+                                 (0,0,0,3): (0,1,1,0,0),
+                                 (0,0,1,0): (1,0,2,0,0),
+                                 (0,0,1,3): (1,1,1,0,0),
+                                 (1,0,0,0): (0,0,2,1,0),
+                                 (0,1,0,0): (0,1,2,0,0),
+                                 (1,1,1,2): (1,2,0,1,0),
+                                 (1,2,0,1): (0,2,3,1,0)}}
         for half_offset, known_mapping in known_mappings.items():
             for k, v in known_mapping.items():
                 mapped_k = _chimeralike_to_zephyr(k, half_offset=half_offset)

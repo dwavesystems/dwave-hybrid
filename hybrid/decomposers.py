@@ -20,15 +20,17 @@ from heapq import heappush, heappop
 from functools import partial
 from itertools import product
 from typing import Tuple
+import warnings
 
 import numpy as np
 import networkx as nx
+from networkx.algorithms.approximation.vertex_cover import min_weighted_vertex_cover
 
 import dimod
 from dimod.traversal import connected_components
 import dwave_networkx as dnx
 import dwave.preprocessing
-import warnings
+from dwave.samplers import SteepestDescentSolver, TreeDecompositionSolver
 
 from hybrid.core import Runnable, State
 from hybrid.exceptions import EndOfStream
@@ -36,9 +38,6 @@ from hybrid import traits
 from hybrid.utils import (
     bqm_induced_by, flip_energy_gains, select_random_subgraph,
     chimera_tiles)
-
-from networkx.algorithms.approximation.vertex_cover import min_weighted_vertex_cover
-from dwave.samplers import SteepestDescentSolver, TreeDecompositionSolver
 
 __all__ = [
     'IdentityDecomposer', 'ComponentDecomposer', 'EnergyImpactDecomposer', 
@@ -753,10 +752,8 @@ def _good_cover(edgelist, brute_force_threshold=16):
         sds = SteepestDescentSolver()
         cover2 = dnx.algorithms.cover.min_vertex_cover(
             G=G, sampler=sds, sampler_args=sds_args) # A dwave-networkx default
-        if len(cover1) < len(cover2):
-            return cover1
-        else:
-            return cover2
+
+        return min((cover1, cover2), key=len)
 
 
 def _unyielded_conditional_edges(emb, source, target):
@@ -856,13 +853,13 @@ def _kings_node_to_pegasus_chain(row: int, col: int) -> Tuple[
             return (0, x+1, 4, y), (1, y, 10, x)
 
 def _zephyr_to_chimeralike(coord: Tuple[int, int, int, int, int],
-                           t: int=4, half_offset: int=0) -> Tuple[
+                           t: int=4, half_offset: bool=False) -> Tuple[
                                int, int, int, int]:
     """Map Zephyr[m,t] coordinates to Chimera[2m,2m,t]-style coordinates 
     
     Coordinates associated to a particular Chimera subgraph of 
     Zephyr are created.
-    Each Chimera cell is size 2t, t should be even if half_offset=1
+    Each Chimera cell is size 2t, t should be even if half_offset=True
     Chimera-like coordinate
     (row, column, orientation (vertical/horizontal), in cell offset)
     is convenient for embedding enumeration and geometric displacements
@@ -872,14 +869,14 @@ def _zephyr_to_chimeralike(coord: Tuple[int, int, int, int, int],
     col = (1-u)*w + u*(2*z + j)
     if half_offset:
         half_cell = t//2
-        return (row + half_offset*(u*(k//half_cell) + (1-u) - 1),
-                col + half_offset*((1-u)*(k//half_cell) + u - 1),
-                u, (k+half_offset*half_cell)%t)
-    else:
-        return (row, col, u, k)
+        return (row + (u*(k//half_cell) + (1-u) - 1),
+                col + ((1-u)*(k//half_cell) + u - 1),
+                u, (k + half_cell)%t)
+
+    return (row, col, u, k)
 
 def _chimeralike_to_zephyr(coord: Tuple[int, int, int, int],
-                           t: int=4, half_offset: int=0) -> Tuple[
+                           t: int=4, half_offset: bool=False) -> Tuple[
                                int, int, int, int, int]:
     """Map Chimera[2m,2m,t] coordinates to Standard Zephyr[m,t] coordinates
     
@@ -889,9 +886,9 @@ def _chimeralike_to_zephyr(coord: Tuple[int, int, int, int],
     if half_offset:
         # Creates a more symmetric boundary condition
         half_cell = t//2
-        k = (k+half_offset*half_cell)%t
-        r = r - half_offset*(u*(k//half_cell) + (1-u) - 1)
-        c = c - half_offset*((1-u)*(k//half_cell) + u - 1)
+        k = (k + half_cell)%t
+        r = r - (u*(k//half_cell) + (1-u) - 1)
+        c = c - ((1-u)*(k//half_cell) + u - 1)
     w = u*r + (1-u)*c  # w labels u-dependent displacement from the origin.
     # r + c = w + 2*z + j  # displacement in other orientation is 2*z+j
     j = (r + c - w) % 2
@@ -899,7 +896,7 @@ def _chimeralike_to_zephyr(coord: Tuple[int, int, int, int],
     return u, w, k, j, z
 
 def _chimeralike_to_linear(coord: Tuple[int, int, int, int], m,
-                           t: int=4, half_offset: int=0) -> int:
+                           t: int=4, half_offset: bool=False) -> int:
     return dnx.zephyr_coordinates(m,t).zephyr_to_linear(
         _chimeralike_to_zephyr(coord=coord,
                                t=t, half_offset=half_offset))
@@ -941,7 +938,7 @@ def _squarenextneighbor_node_to_zephyr_chain(row: int, col: int) -> Tuple[
                        (0,1): ((0,0,1,0), (0,0,0,2)),
                        (1,1): ((0,0,1,2), (0,0,0,3))}
     local_key = (row % 2, col % 2)  # In cell index
-    return tuple([_chimeralike_to_zephyr((row//2, col//2, coord[2], coord[3]), half_offset=1) for coord in local_embedding[local_key]])
+    return tuple([_chimeralike_to_zephyr((row//2, col//2, coord[2], coord[3]), half_offset=True) for coord in local_embedding[local_key]])
 
 
 def _make_cubic_lattice(dimensions: Tuple[int, int, int],
@@ -1173,7 +1170,7 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
             proposed_source = dnx.zephyr_graph(*qpu_shape)
             l2z = dnx.zephyr_coordinates(*qpu_shape).linear_to_zephyr
             def lin_to_vec(q):
-                return _zephyr_to_chimeralike(l2z(q), t=qpu_shape[1], half_offset=0)
+                return _zephyr_to_chimeralike(l2z(q), t=qpu_shape[1], half_offset=False)
         elif lattice_type == 'pegasus':
             # Trimming to complete nice_coordinate cells is not a unique
             # options, it has some advantages and some disadvantages:
