@@ -736,7 +736,8 @@ def _good_cover(edgelist, brute_force_threshold=16):
     tree_width, elimination_order = min_fill_heuristic(bqm)
     if tree_width <= tds.properties['max_treewidth']:
         G = nx.from_edgelist(edgelist)
-        coverLTW = dnx.algorithms.cover.min_vertex_cover(G=G, sampler=tds)
+        coverLTW = dnx.algorithms.cover.min_vertex_cover(
+            G=G, sampler=tds, elimination_order=elimination_order)
         return coverLTW
     else:
         warnings.warn('A verifiable minimum cover is not found by default '
