@@ -730,15 +730,19 @@ class RandomConstraintDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable
 
 def _good_cover(edgelist, brute_force_threshold=16):
     # Attempt to solve by brute force (tree decomposition)
-    try:
-        tds = TreeDecompositionSolver()
+    tds = TreeDecompositionSolver()
+    bqm = dnx.algorithms.independent_set.maximum_weighted_independent_set_qubo(
+        G, lagrange=2.0) 
+    tree_width, elimination_order = min_fill_heuristic(bqm)
+    if tree_width <= tds.properties['max_treewidth']
         G = nx.from_edgelist(edgelist)
         coverLTW = dnx.algorithms.cover.min_vertex_cover(G=G, sampler=tds)
         return coverLTW
-    except:
-        warnings.warn('A verifiable minimum cover is not found '
-                      'a simple efficient heuristic is used; '
-                      'Additional care may be warranted.')
+    else:
+        warnings.warn('A verifiable minimum cover is not found by default '
+                      f'low tree width methods (tree_width={tree_width}). '
+                      'An efficient deterministic heuristic is used as a '
+                      'fallback; Additional attention may be warranted.')
 
         # Choose best of two simple deterministic heuristics, randomized
         # heuristics (like QA) will typically work better in practice:
