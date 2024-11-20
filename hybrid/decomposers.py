@@ -732,9 +732,11 @@ def _good_cover(edgelist, brute_force_threshold=16):
     # Attempt to solve by brute force (tree decomposition)
     G = nx.from_edgelist(edgelist)
     tds = TreeDecompositionSolver()
-    bqm = dnx.algorithms.independent_set.maximum_weighted_independent_set_qubo(
-        G, lagrange=2.0) 
-    tree_width, elimination_order = min_fill_heuristic(bqm)
+    Gbqm = nx.from_edgelist(
+        dnx.algorithms.independent_set.maximum_weighted_independent_set_qubo(
+            G, lagrange=2.0).keys())
+    tree_width, elimination_order = (
+        dnx.algorithms.elimination_ordering.min_fill_heuristic(Gbqm))
     if tree_width <= tds.properties['max_treewidth']:
         coverLTW = dnx.algorithms.cover.min_vertex_cover(
             G=G, sampler=tds, elimination_order=elimination_order)
@@ -758,7 +760,7 @@ def _good_cover(edgelist, brute_force_threshold=16):
                     'num_reads': 1}
         sds = SteepestDescentSolver()
         cover2 = dnx.algorithms.cover.min_vertex_cover(
-            G=G, sampler=sds, sampler_args=sds_args) # A dwave-networkx default
+            G=G, sampler=sds, sampler_args=sds_args)
 
         return min((cover1, cover2), key=len)
 
