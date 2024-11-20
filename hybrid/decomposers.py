@@ -730,7 +730,7 @@ class RandomConstraintDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable
 
 
 def _good_cover(edgelist, brute_force_threshold=16):
-    # Attempt to solve by brute force (tree decomposition, under tree decomposition)
+    # Attempt to solve by brute force (tree decomposition)
     try:
         tds = TreeDecompositionSolver()
         G = nx.from_edgelist(edgelist)
@@ -1337,7 +1337,7 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
             {(key[0], L-2-key[2], L-2-key[1], 1-key[3], 3-key[4]): value
              for key,value in origin_embedding.items()})
         problem_dim_spec = 5
-    elif lattice_type == 'chimera' or lattice_type == 'zephyr':
+    elif lattice_type in ('chimera', 'zephyr'):
         # A horizontal to vertical flip is sufficient for demonstration purposes:
         origin_embeddings.append({(key[1], key[0], 1-key[2], key[3]): value
                                   for key,value in origin_embedding.items()})
