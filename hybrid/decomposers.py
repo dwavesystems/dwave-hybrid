@@ -747,10 +747,13 @@ def _good_cover(edgelist, brute_force_threshold=16):
         # Choose best of two simple deterministic heuristics, randomized
         # heuristics (like QA) will typically work better in practice:
         G = nx.from_edgelist(edgelist)
-        cover1 = min_weighted_vertex_cover(G) # A networkx default
-        G = nx.from_edgelist(edgelist)
-        # Steepest greedy descent from all uncovered initial condition, which
-        # is equivalent to the standard (add highest connectivity node) recursively algorithm:
+
+        # (1.) A networkx default with good behaviour in worst case
+        cover1 = min_weighted_vertex_cover(G)
+
+        # (2.) Steepest greedy descent from all uncovered initial condition,
+        # which is equivalent to the standard (add highest connectivity node)
+        # recursively algorithm:
         sds_args = {'initial_states': (np.zeros(G.number_of_nodes()), G.nodes()),
                     'num_reads': 1}
         sds = SteepestDescentSolver()
