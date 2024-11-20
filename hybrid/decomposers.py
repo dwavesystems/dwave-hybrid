@@ -734,7 +734,7 @@ def _good_cover(edgelist, brute_force_threshold=16):
     bqm = dnx.algorithms.independent_set.maximum_weighted_independent_set_qubo(
         G, lagrange=2.0) 
     tree_width, elimination_order = min_fill_heuristic(bqm)
-    if tree_width <= tds.properties['max_treewidth']
+    if tree_width <= tds.properties['max_treewidth']:
         G = nx.from_edgelist(edgelist)
         coverLTW = dnx.algorithms.cover.min_vertex_cover(G=G, sampler=tds)
         return coverLTW
