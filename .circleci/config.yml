@@ -21,7 +21,7 @@ jobs:
         type: string
 
     docker:
-      - image: cimg/python:<< parameters.python-version >>
+      - image: python:<< parameters.python-version >>
 
     steps:
       - checkout
@@ -73,7 +73,7 @@ jobs:
         type: string
       xcode:
         type: string
-        default: "14.2.0"
+        default: "16.0.0"
 
     macos:
       xcode: << parameters.xcode >>
@@ -171,7 +171,7 @@ jobs:
 
   test-docs:
     docker:
-      - image: cimg/python:3.10
+      - image: python:3.12
 
     steps:
       - checkout
@@ -209,7 +209,7 @@ jobs:
 
   build-dist:
     docker:
-      - image: cimg/python:3.10
+      - image: python:3.12
 
     steps:
       - checkout
@@ -235,7 +235,7 @@ jobs:
 
   pypi-deploy:
     docker:
-      - image: cimg/python:3.10
+      - image: python:3.12
 
     steps:
       - attach_workspace:
@@ -258,7 +258,7 @@ workflows:
           context: &ctx-build "ocean-build"
           matrix:
             parameters:
-              python-version: &python-versions ["3.8", "3.9", "3.10", "3.11", "3.12"]
+              python-version: &python-versions ["3.9", "3.10", "3.11", "3.12", "3.13"]
               pip-constraints:
                 - "dimod==0.10.13"
                 - "dimod~=0.10.0 dwave-preprocessing~=0.3.0 dwave-system~=1.0"
@@ -277,6 +277,12 @@ workflows:
               - python-version: "3.12"
                 pip-constraints: "dimod~=0.10.0 dwave-preprocessing~=0.3.0 dwave-system~=1.0"
               - python-version: "3.12"
+                pip-constraints: "dimod~=0.11.0 dwave-preprocessing~=0.4.0 dwave-system~=1.0"
+              - python-version: "3.13"
+                pip-constraints: "dimod==0.10.13"
+              - python-version: "3.13"
+                pip-constraints: "dimod~=0.10.0 dwave-preprocessing~=0.3.0 dwave-system~=1.0"
+              - python-version: "3.13"
                 pip-constraints: "dimod~=0.11.0 dwave-preprocessing~=0.4.0 dwave-system~=1.0"
 
       - test-macos: &test-job

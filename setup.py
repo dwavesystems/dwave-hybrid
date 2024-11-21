@@ -19,25 +19,27 @@ install_requires = ['numpy>=1.19.1', 'networkx', 'click>5', 'plucky>=0.4.3',
                     'dwave-preprocessing',
                     'minorminer>=0.1.7', 'dwave-networkx>=0.8.8', 'dwave-system>=1.13.0',
                     'dwave-cloud-client>=0.10.6',   # avoid pydantic 2.0 backward compat break
-                    'dwave-neal>=0.5.4', 'dwave-tabu>=0.2.0', 'dwave-greedy>=0.1.0']
+                    # TODO: replace with `dwave-samplers>=1.1.0` when we drop dimod<0.12 support
+                    'dwave-neal>=0.5.4', 'dwave-tabu>=0.2.0', 'dwave-greedy>=0.1.0',
+                    ]
 
 # Package extras requirements
 extras_require = {
     'test': ['coverage'],
 }
 
-python_requires = ">=3.8"
+python_requires = ">=3.9"
 
 classifiers = [
     'License :: OSI Approved :: Apache Software License',
     'Operating System :: OS Independent',
     'Development Status :: 3 - Alpha',
     'Programming Language :: Python :: 3 :: Only',
-    'Programming Language :: Python :: 3.8',
     'Programming Language :: Python :: 3.9',
     'Programming Language :: Python :: 3.10',
     'Programming Language :: Python :: 3.11',
     'Programming Language :: Python :: 3.12',
+    'Programming Language :: Python :: 3.13',
 ]
 
 setup(
