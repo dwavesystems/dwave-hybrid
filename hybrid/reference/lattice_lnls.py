@@ -51,11 +51,13 @@ def LatticeLNLS(topology,
 
             Supported values:
 
+                * 'zephyr' (``qpu_sampler`` must be zephyr-structured)
+
                 * 'pegasus' (``qpu_sampler`` must be pegasus-structured)
 
-                * 'cubic' (``qpu_sampler`` must be pegasus of chimera-structured)
+                * 'cubic' (``qpu_sampler`` must be zephyr, pegasus of chimera-structured)
 
-                * 'kings' (``qpu_sampler`` must be pegasus of zephyr-structured)
+                * 'kings' (``qpu_sampler`` must be zephyr or pegasus-structured)
 
                 * 'chimera' (``qpu_sampler`` must be chimera-structured)
 
@@ -90,16 +92,19 @@ def LatticeLNLS(topology,
 
         max_iter (int, optional, default=128):
             Number of iterations in the hybrid algorithm.
+            Applied per sample.
 
         max_time (float/None, optional):
             Wall clock runtime termination criterion. Unlimited by default.
+            Applied per sample.
 
         convergence (int, optional):
             Number of iterations with no improvement that terminates sampling.
+            Applied per sample.
 
         energy_threshold (float, optional):
             Terminate when this energy threshold is surpassed. Check is
-            performed at the end of each iteration.
+            performed at the end of each iteration. Applied per sample.
 
     Returns:
         Workflow (:class:`~hybrid.core.Runnable` instance).
@@ -266,10 +271,10 @@ class LatticeLNLSSampler(dimod.Sampler):
                 cellular-level displacements only dimensions indexing cell-displacements
                 are considered. The defaults are topology dependent:
 
-                * 'chimera': [2,3] (u,k chimera coordinates are not displaced).
+                * 'chimera': [2] (u chimera coordinates are not displaced).
 
                 * 'pegasus': [0,3,4] (t,u,k nice pegasus coordinates are not displaced).
-
+                * 'zephyr': [2] (u chimera-like coordinates are not displaced).
                 * 'cubic': [] all dimensions are displaced.
 
             reject_small_problems (bool, optional, default=True):
@@ -296,9 +301,11 @@ class LatticeLNLSSampler(dimod.Sampler):
 
         if exclude_dims is None:
             if topology == 'chimera':
-                exclude_dims = [2,3]
+                exclude_dims = [2]
             elif topology == 'pegasus':
                 exclude_dims = [0,3,4]
+            elif topology == 'zephyr':
+                exclude_dims = [2]
             else:
                 exclude_dims = []
                 #Recreate on each call, no reuse:
@@ -330,12 +337,6 @@ class LatticeLNLSSampler(dimod.Sampler):
         else:
             raise TypeError("'init_sample' should be a SampleSet or a SampleSet generator")
 
-        #Recreate on each call, no reuse:
-        self.runnable = LatticeLNLS(topology=topology,
-                                    qpu_sampler=qpu_sampler,
-                                    exclude_dims=exclude_dims,
-                                    track_qpu_branch=track_qpu_branch,
-                                    **kwargs)
 
         samples = []
         energies = []
@@ -346,6 +347,12 @@ class LatticeLNLSSampler(dimod.Sampler):
         else:
             info = dict()
         for _ in range(num_reads):
+            #Recreate on each call, no reuse:
+            self.runnable = LatticeLNLS(topology=topology,
+                                        qpu_sampler=qpu_sampler,
+                                        exclude_dims=exclude_dims,
+                                        track_qpu_branch=track_qpu_branch,
+                                        **kwargs)  # Must be here, or else remembers best state
             init_state = init_state_gen()
             final_state = self.runnable.run(init_state)
             # the best sample from each run is one "read"
@@ -358,6 +365,5 @@ class LatticeLNLSSampler(dimod.Sampler):
                 info['tracked_samples'].append(resolved_state.tracked_samples)
                 info['tracked_subsamples'].append(resolved_state.tracked_subsamples)
                 info['tracked_subproblems'].append(resolved_state.tracked_subproblems)
-
         return dimod.SampleSet.from_samples(samples, vartype=bqm.vartype,
                                             energy=energies, info=info)

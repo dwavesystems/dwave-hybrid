@@ -20,14 +20,17 @@ from heapq import heappush, heappop
 from functools import partial
 from itertools import product
 from typing import Tuple
+import warnings
 
 import numpy as np
 import networkx as nx
+from networkx.algorithms.approximation.vertex_cover import min_weighted_vertex_cover
 
 import dimod
 from dimod.traversal import connected_components
 import dwave_networkx as dnx
 import dwave.preprocessing
+from dwave.samplers import SteepestDescentSolver, TreeDecompositionSolver
 
 from hybrid.core import Runnable, State
 from hybrid.exceptions import EndOfStream
@@ -725,31 +728,41 @@ class RandomConstraintDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable
         return state.updated(subproblem=subbqm)
 
 
-def _all_minimal_covers(edgelist):
-    """Create all minimal covers, provided graphs contain fewer than 17 edges."""
+def _good_cover(edgelist, brute_force_threshold=16):
+    # Attempt to solve by brute force (tree decomposition)
+    G = nx.from_edgelist(edgelist)
+    tds = TreeDecompositionSolver()
+    Gbqm = nx.from_edgelist(
+        dnx.algorithms.independent_set.maximum_weighted_independent_set_qubo(
+            G, lagrange=2.0).keys())
+    tree_width, elimination_order = (
+        dnx.algorithms.elimination_ordering.min_fill_heuristic(Gbqm))
+    if tree_width <= tds.properties['max_treewidth']:
+        coverLTW = dnx.algorithms.cover.min_vertex_cover(
+            G=G, sampler=tds, elimination_order=elimination_order)
+        return coverLTW
+    else:
+        warnings.warn('A verifiable minimum cover is not found by default '
+                      f'low tree width methods (tree_width={tree_width}). '
+                      'An efficient deterministic heuristic is used as a '
+                      'fallback; Additional attention may be warranted.')
 
-    if len(edgelist) > 16:
-        raise ValueError(
-            f'len(edgelist) = {len(edgelist)} > 16. Exponential scaling of this method means it '
-            'should only be used for small graphs. The use case for this function '
-            'is in finding coverings over unyielded lattice subgraphs, which in '
-            'the current online generation of processors are sufficiently small '
-            'so as to allow a brute force method.')
+        # Choose best of two simple deterministic heuristics, randomized
+        # heuristics (like QA) will typically work better in practice:
 
-    minimum_coverings = []
-    for cover in map(set, product(*edgelist)):
-        newmin = []
-        for s in minimum_coverings:
-            if s < cover:
-                break
-            elif cover < s:
-                pass
-            else:
-                newmin.append(s)
-        else:
-            minimum_coverings = newmin + [cover]
+        # (1.) A networkx default with good behaviour in worst case
+        cover1 = min_weighted_vertex_cover(G)
 
-    return minimum_coverings
+        # (2.) Steepest greedy descent from all uncovered initial condition,
+        # which is equivalent to the standard (add highest connectivity node)
+        # recursively algorithm:
+        sds_args = {'initial_states': (np.zeros(G.number_of_nodes()), G.nodes()),
+                    'num_reads': 1}
+        sds = SteepestDescentSolver()
+        cover2 = dnx.algorithms.cover.min_vertex_cover(
+            G=G, sampler=sds, sampler_args=sds_args)
+
+        return min((cover1, cover2), key=len)
 
 
 def _unyielded_conditional_edges(emb, source, target):
@@ -791,8 +804,8 @@ def _yield_limited_origin_embedding(origin_embedding, proposed_source, target):
     G = nx.Graph()
     G.add_edges_from(unyielded_edge_set)
     for subgraph_nodes in nx.algorithms.components.connected_components(G):
-        cover = _all_minimal_covers(G.subgraph(subgraph_nodes).edges)
-        for v in cover[0]:
+        cover = _good_cover(G.subgraph(subgraph_nodes).edges)
+        for v in cover:
             del origin_embedding[v]
 
     # Restrict to giant component. 
@@ -849,13 +862,13 @@ def _kings_node_to_pegasus_chain(row: int, col: int) -> Tuple[
             return (0, x+1, 4, y), (1, y, 10, x)
 
 def _zephyr_to_chimeralike(coord: Tuple[int, int, int, int, int],
-                           t: int=4, half_offset: int=1) -> Tuple[
+                           t: int=4, half_offset: bool=False) -> Tuple[
                                int, int, int, int]:
     """Map Zephyr[m,t] coordinates to Chimera[2m,2m,t]-style coordinates 
     
     Coordinates associated to a particular Chimera subgraph of 
     Zephyr are created.
-    Each Chimera cell is size 2t, t should be even
+    Each Chimera cell is size 2t, t should be even if half_offset=True
     Chimera-like coordinate
     (row, column, orientation (vertical/horizontal), in cell offset)
     is convenient for embedding enumeration and geometric displacements
@@ -863,24 +876,28 @@ def _zephyr_to_chimeralike(coord: Tuple[int, int, int, int, int],
     u, w, k, j, z = coord
     row = u*w + (1-u)*(2*z + j)
     col = (1-u)*w + u*(2*z + j)
-    half_cell = t//2
-    return (row + half_offset*(u*(k//half_cell) + (1-u) - 1),
-            col + half_offset*((1-u)*(k//half_cell) + u - 1),
-            u, (k+half_offset*half_cell)%t)
+    if half_offset:
+        half_cell = t//2
+        return (row + (u*(k//half_cell) + (1-u) - 1),
+                col + ((1-u)*(k//half_cell) + u - 1),
+                u, (k + half_cell)%t)
+
+    return (row, col, u, k)
 
 def _chimeralike_to_zephyr(coord: Tuple[int, int, int, int],
-                           t: int=4, half_offset: int=1) -> Tuple[
+                           t: int=4, half_offset: bool=False) -> Tuple[
                                int, int, int, int, int]:
     """Map Chimera[2m,2m,t] coordinates to Standard Zephyr[m,t] coordinates
     
     Inverse of _zephyr_to_chimeralike
     """
     r, c, u, k = coord
-    half_cell = t//2
     if half_offset:
-        k = (k+half_offset*half_cell)%t
-        r = r - half_offset*(u*(k//half_cell) + (1-u) - 1)
-        c = c - half_offset*((1-u)*(k//half_cell) + u - 1)
+        # Creates a more symmetric boundary condition
+        half_cell = t//2
+        k = (k + half_cell)%t
+        r = r - (u*(k//half_cell) + (1-u) - 1)
+        c = c - ((1-u)*(k//half_cell) + u - 1)
     w = u*r + (1-u)*c  # w labels u-dependent displacement from the origin.
     # r + c = w + 2*z + j  # displacement in other orientation is 2*z+j
     j = (r + c - w) % 2
@@ -888,7 +905,7 @@ def _chimeralike_to_zephyr(coord: Tuple[int, int, int, int],
     return u, w, k, j, z
 
 def _chimeralike_to_linear(coord: Tuple[int, int, int, int], m,
-                           t: int=4, half_offset: int=1) -> int:
+                           t: int=4, half_offset: bool=False) -> int:
     return dnx.zephyr_coordinates(m,t).zephyr_to_linear(
         _chimeralike_to_zephyr(coord=coord,
                                t=t, half_offset=half_offset))
@@ -930,7 +947,7 @@ def _squarenextneighbor_node_to_zephyr_chain(row: int, col: int) -> Tuple[
                        (0,1): ((0,0,1,0), (0,0,0,2)),
                        (1,1): ((0,0,1,2), (0,0,0,3))}
     local_key = (row % 2, col % 2)  # In cell index
-    return tuple([_chimeralike_to_zephyr((row//2, col//2, coord[2], coord[3])) for coord in local_embedding[local_key]])
+    return tuple([_chimeralike_to_zephyr((row//2, col//2, coord[2], coord[3]), half_offset=True) for coord in local_embedding[local_key]])
 
 
 def _make_cubic_lattice(dimensions: Tuple[int, int, int],
@@ -1032,24 +1049,36 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
                 * "cubic"
                     Embeddings compatible with the schemes arXiv:2009.12479 and
                     arXiv:2003.00133 are created for a ``qpu_sampler`` of
-                    topology type 'zephyr', 'pegasus' or 'chimera'.
+                    topology type 'zephyr', 'pegasus' or 'chimera'. This 
+                    embedding supports a subset of couplings in addition to
+                    those of a cubic lattice (such as next neigbor couplings in
+                    z-dimension).
                 
                 * "kings"
                     Embedding compatible with arXiv:2003.00133.pdf Table 1,
                     are created for a ``qpu_sampler`` of topology type either
-                    'pegasus', or 'zephyr'. Chain length 2. 
+                    'zephyr', 'pegasus', or 'zephyr'. Chain length 2. These
+                    embeddings support some couplings beyond those of a kings
+                    lattice, e.g. the embedding on zephyr supports all
+                    next-neighbor couplings on a square lattice.
     
+                * "zephyr"
+                    Embeddings are chain length one (minimal and native).
+                    If ``qpu_sampler`` topology type is 'zephyr', maximum
+                    scale subgraphs are embedded using the ``_chimeralike``
+                    vector labeling scheme for embedding keys.
+
                 * "pegasus"
                     Embeddings are chain length one (minimal and native).
                     If ``qpu_sampler`` topology type is 'pegasus', maximum
                     scale subgraphs are embedded using the ``nice_coordinates``
-                    vector labeling scheme for variables.
+                    vector labeling scheme for embedding keys.
 
                 * "chimera"
                     Embeddings are chain length one (minimal and native).
                     If ``qpu_sampler`` topology type is 'chimera', maximum
                     scale chimera subgraphs are embedded using the chimera
-                    vector labeling scheme for variables.
+                    vector labeling scheme for embedding keys.
 
         problem_dims (tuple of ints, optional):
             origin_embeddings over the solver are constrained to not exceed
@@ -1144,8 +1173,15 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
             origin_embedding = {q: [q] for q in qpu_sampler.properties['qubits']}
         else:
             origin_embedding = {q: [q] for q in qpu_sampler.nodelist}
-        if lattice_type == 'pegasus':
-            # Trimming to nice_coordinate supported embeddings is not a unique,
+
+        if lattice_type == 'zephyr':
+            # Trimming (w=0 and w=2*m) nodes, similar to nice-pegasus is an option not pursued.
+            proposed_source = dnx.zephyr_graph(*qpu_shape)
+            l2z = dnx.zephyr_coordinates(*qpu_shape).linear_to_zephyr
+            def lin_to_vec(q):
+                return _zephyr_to_chimeralike(l2z(q), t=qpu_shape[1], half_offset=False)
+        elif lattice_type == 'pegasus':
+            # Trimming to complete nice_coordinate cells is not a unique
             # options, it has some advantages and some disadvantages:
             proposed_source = dnx.pegasus_graph(qpu_shape[0], nice_coordinates=True)
             proposed_source = nx.relabel_nodes(
@@ -1153,7 +1189,6 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
                 {q: dnx.pegasus_coordinates(*qpu_shape).nice_to_linear(q)
                  for q in proposed_source.nodes()})
             lin_to_vec = dnx.pegasus_coordinates(*qpu_shape).linear_to_nice
-
         elif lattice_type == 'chimera':
             proposed_source = dnx.chimera_graph(*qpu_shape)
             lin_to_vec = dnx.chimera_coordinates(*qpu_shape).linear_to_chimera
@@ -1185,6 +1220,7 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
             origin_embedding = {coord: c
                                 for coord in product(*map(range, dimensions))
                                 if target.has_edge(*(c := zephyr_chain(*coord)))}
+
         elif qpu_type == 'pegasus':
             vec_to_lin = dnx.pegasus_coordinates(*qpu_shape).pegasus_to_linear
             L = qpu_shape[0] - 1
@@ -1202,6 +1238,7 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
             origin_embedding.update({(x, y, z+8): c
                                      for x, y, z in product(*map(range, (L, L, 4)))
                                      if target.has_edge(*(c := pegasus_chain2(x, y, z+8)))})
+
         elif qpu_type == 'chimera':
             vec_to_lin = dnx.chimera_coordinates(*qpu_shape).chimera_to_linear
             L = qpu_shape[0] // 2 
@@ -1233,11 +1270,12 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
                                      and target.has_edge(vec_to_lin((2*x+1, 2*y+1, 0, z)),
                                                          vec_to_lin((2*x,2*y+1,0,z)))
                                      })
-            
+
         else:
             raise ValueError(f'Unsupported qpu_sampler topology {qpu_type} '
                              'for cubic lattice solver')
         proposed_source = _make_cubic_lattice(dimensions)
+
     elif lattice_type == 'kings':
         if qpu_type == 'pegasus':
             vec_to_lin = dnx.pegasus_coordinates(*qpu_shape).pegasus_to_linear
@@ -1305,7 +1343,7 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
             {(key[0], L-2-key[2], L-2-key[1], 1-key[3], 3-key[4]): value
              for key,value in origin_embedding.items()})
         problem_dim_spec = 5
-    elif lattice_type == 'chimera':
+    elif lattice_type in ('chimera', 'zephyr'):
         # A horizontal to vertical flip is sufficient for demonstration purposes:
         origin_embeddings.append({(key[1], key[0], 1-key[2], key[3]): value
                                   for key,value in origin_embedding.items()})
