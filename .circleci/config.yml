@@ -21,7 +21,7 @@ jobs:
         type: string
 
     docker:
-      - image: cimg/python:<< parameters.python-version >>
+      - image: python:<< parameters.python-version >>
 
     steps:
       - checkout
@@ -73,7 +73,7 @@ jobs:
         type: string
       xcode:
         type: string
-        default: "14.2.0"
+        default: "16.0.0"
 
     macos:
       xcode: << parameters.xcode >>
@@ -171,7 +171,7 @@ jobs:
 
   test-docs:
     docker:
-      - image: cimg/python:3.10
+      - image: python:3.12
 
     steps:
       - checkout
@@ -209,7 +209,7 @@ jobs:
 
   build-dist:
     docker:
-      - image: cimg/python:3.10
+      - image: python:3.12
 
     steps:
       - checkout
@@ -235,7 +235,7 @@ jobs:
 
   pypi-deploy:
     docker:
-      - image: cimg/python:3.10
+      - image: python:3.12
 
     steps:
       - attach_workspace:
