@@ -258,7 +258,7 @@ workflows:
           context: &ctx-build "ocean-build"
           matrix:
             parameters:
-              python-version: &python-versions ["3.8", "3.9", "3.10", "3.11", "3.12"]
+              python-version: &python-versions ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
               pip-constraints:
                 - "dimod==0.10.13"
                 - "dimod~=0.10.0 dwave-preprocessing~=0.3.0 dwave-system~=1.0"
@@ -277,6 +277,12 @@ workflows:
               - python-version: "3.12"
                 pip-constraints: "dimod~=0.10.0 dwave-preprocessing~=0.3.0 dwave-system~=1.0"
               - python-version: "3.12"
+                pip-constraints: "dimod~=0.11.0 dwave-preprocessing~=0.4.0 dwave-system~=1.0"
+              - python-version: "3.13"
+                pip-constraints: "dimod==0.10.13"
+              - python-version: "3.13"
+                pip-constraints: "dimod~=0.10.0 dwave-preprocessing~=0.3.0 dwave-system~=1.0"
+              - python-version: "3.13"
                 pip-constraints: "dimod~=0.11.0 dwave-preprocessing~=0.4.0 dwave-system~=1.0"
 
       - test-macos: &test-job
