@@ -28,14 +28,13 @@ extras_require = {
     'test': ['coverage'],
 }
 
-python_requires = ">=3.8"
+python_requires = ">=3.9"
 
 classifiers = [
     'License :: OSI Approved :: Apache Software License',
     'Operating System :: OS Independent',
     'Development Status :: 3 - Alpha',
     'Programming Language :: Python :: 3 :: Only',
-    'Programming Language :: Python :: 3.8',
     'Programming Language :: Python :: 3.9',
     'Programming Language :: Python :: 3.10',
     'Programming Language :: Python :: 3.11',
