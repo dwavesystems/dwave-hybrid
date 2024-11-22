@@ -18,7 +18,6 @@ for completeness (for lack of a better place).
 .. [1] https://www.youtube.com/watch?v=EW44reo8Bn0
 """
 
-import numpy as np
 import networkx as nx
 
 # use this for inline jupyter lab plots:
@@ -34,9 +33,6 @@ import matplotlib
 matplotlib.use('Qt5Agg')
 
 import matplotlib.pyplot as plt
-
-import dwave_networkx as dnx
-import dimod
 
 
 def plot(G, subgraph=None, pos=None):

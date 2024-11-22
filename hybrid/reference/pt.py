@@ -18,9 +18,8 @@ import math
 import random
 
 import numpy as np
-import neal
+from dwave.samplers.sa.sampler import default_beta_range, SimulatedAnnealingSampler
 
-import dimod
 import hybrid
 
 __all__ = [
@@ -74,7 +73,7 @@ class FixedTemperatureSampler(hybrid.traits.SISO, hybrid.Runnable):
         seed = runopts.pop('seed', self.seed)
         aggregate = runopts.pop('aggregate', self.aggregate)
 
-        new_samples = neal.SimulatedAnnealingSampler().sample(
+        new_samples = SimulatedAnnealingSampler().sample(
             state.problem, initial_states=state.samples,
             beta_range=(beta, beta), beta_schedule_type='linear',
             num_reads=self.num_reads, initial_states_generator='tile',
@@ -185,7 +184,7 @@ class SpawnParallelTemperingReplicas(hybrid.traits.SIMO, hybrid.Runnable):
         bqm = state.problem
 
         # get a reasonable beta range
-        beta_hot, beta_cold = neal.default_beta_range(bqm)
+        beta_hot, beta_cold = default_beta_range(bqm)
 
         # generate betas for all branches/replicas
         betas = np.geomspace(beta_hot, beta_cold, self.num_replicas)

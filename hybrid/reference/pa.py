@@ -16,10 +16,10 @@
 
 import warnings
 
-import numpy as np
-
-import neal
 import dimod
+import numpy as np
+from dwave.samplers.sa.sampler import default_beta_range
+
 import hybrid
 
 __all__ = ['EnergyWeightedResampler',
@@ -146,7 +146,7 @@ class CalculateAnnealingBetaSchedule(hybrid.traits.SISO, hybrid.Runnable):
             where beta is the inverse temperature. The schedule is derived by
             interpolating the range with ``interpolation`` method. Default range
             is set based on the total bias associated with each node (see
-            :meth:`neal.default_beta_range`).
+            :meth:`~dwave.samplers.sa.sampler.default_beta_range`).
 
     """
 
@@ -161,7 +161,7 @@ class CalculateAnnealingBetaSchedule(hybrid.traits.SISO, hybrid.Runnable):
 
         if self.beta_range is None:
             # get a reasonable beta range
-            beta_range = neal.default_beta_range(bqm)
+            beta_range = default_beta_range(bqm)
         else:
             beta_range = self.beta_range
 

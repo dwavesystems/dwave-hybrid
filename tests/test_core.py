@@ -21,7 +21,7 @@ from unittest import mock
 
 import dimod
 import numpy as np
-from tabu import TabuSampler
+from dwave.samplers import TabuSampler
 
 import hybrid
 from hybrid.core import (

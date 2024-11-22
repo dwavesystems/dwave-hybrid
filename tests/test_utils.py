@@ -253,7 +253,7 @@ class TestSampleSetUtils(unittest.TestCase):
 class TestNumpyJSONEncoder(unittest.TestCase):
 
     @parameterized.expand([
-        (numpy.bool_(1), True), (numpy.bool8(1), True),
+        (numpy.bool_(1), True),
         (numpy.byte(1), 1), (numpy.int8(1), 1),
         (numpy.ubyte(1), 1), (numpy.uint8(1), 1),
         (numpy.short(1), 1), (numpy.int16(1), 1),

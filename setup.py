@@ -12,15 +12,10 @@ with open(package_info_path, encoding='utf-8') as f:
 
 # Package requirements, minimal pinning
 install_requires = ['numpy>=1.19.1', 'networkx', 'click>5', 'plucky>=0.4.3',
-                    'dimod>=0.10.13,<0.13',
-                    # Include dwave-preprocessing, as dimod went back and forth with
-                    # including it as a core dependency vs extra. Make it unbounded,
-                    # as it's already constrained by dimod (if required).
-                    'dwave-preprocessing',
-                    'minorminer>=0.1.7', 'dwave-networkx>=0.8.8', 'dwave-system>=1.13.0',
+                    'dimod>=0.12.2,<0.13', 'dwave-preprocessing>=0.5.4',
+                    'minorminer>=0.1.7', 'dwave-networkx>=0.8.8', 'dwave-system>=1.15.1',
                     'dwave-cloud-client>=0.10.6',   # avoid pydantic 2.0 backward compat break
-                    # TODO: replace with `dwave-samplers>=1.1.0` when we drop dimod<0.12 support
-                    'dwave-neal>=0.5.4', 'dwave-tabu>=0.2.0', 'dwave-greedy>=0.1.0',
+                    'dwave-samplers>=1.0.0',    # combines neal, greedy, tabu and orang
                     ]
 
 # Package extras requirements

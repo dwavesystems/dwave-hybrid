@@ -17,14 +17,11 @@
 """Hybridized parallel tempering: use QPU as a high-temperature sampler."""
 
 import sys
-import math
-import random
 
-import numpy as np
-
-import neal
 import dimod
 import hybrid
+import numpy as np
+from dwave.samplers.sa.sampler import default_beta_range
 
 from hybrid.reference.pt import FixedTemperatureSampler
 from hybrid.reference.pt import SwapReplicasDownsweep
@@ -50,7 +47,7 @@ state = hybrid.State.from_problem(bqm)
 replicas = hybrid.States(*[state.updated() for _ in range(n_replicas)])
 
 # get a reasonable beta range
-beta_hot, beta_cold = neal.default_beta_range(bqm)
+beta_hot, beta_cold = default_beta_range(bqm)
 
 # generate betas for all branches/replicas
 betas = np.geomspace(beta_hot, beta_cold, n_replicas)
