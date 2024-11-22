@@ -16,7 +16,6 @@
 
 import sys
 
-import neal
 import dimod
 import hybrid
 
