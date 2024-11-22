@@ -13,7 +13,7 @@ with open(package_info_path, encoding='utf-8') as f:
 # Package requirements, minimal pinning
 install_requires = ['numpy>=1.19.1', 'networkx', 'click>5', 'plucky>=0.4.3',
                     'dimod>=0.12.2,<0.13', 'dwave-preprocessing>=0.5.4',
-                    'minorminer>=0.1.7', 'dwave-networkx>=0.8.8', 'dwave-system>=1.13.0',
+                    'minorminer>=0.1.7', 'dwave-networkx>=0.8.8', 'dwave-system>=1.15.1',
                     'dwave-cloud-client>=0.10.6',   # avoid pydantic 2.0 backward compat break
                     'dwave-samplers>=1.0.0',    # combines neal, greedy, tabu and orang
                     ]
