@@ -24,9 +24,10 @@ minorminer==0.2.16; python_version~="3.13.0"
 # >=1.15.1 required as older versions are too restricitve on dwave-preprocessing
 dwave-system==1.15.1; python_version<"3.11"
 dwave-system==1.18.0; python_version~="3.11.0"
-dwave-system==1.22.0; python_version>="3.12"
+# >=1.23.0 required as older versions restrict networkx so it conflicts with dwave-samplers
+dwave-system==1.23.0; python_version>="3.12"
 
 networkx
-dwave-networkx==0.8.10
+dwave-networkx>=0.8.10
 click
 plucky>=0.4.3
