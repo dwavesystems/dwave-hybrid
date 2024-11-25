@@ -15,7 +15,6 @@
 # limitations under the License.
 
 import sys
-import operator
 
 import dimod
 import hybrid

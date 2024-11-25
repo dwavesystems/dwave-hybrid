@@ -118,10 +118,8 @@ def setup(app):
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
-    'neal': ('https://docs.ocean.dwavesys.com/projects/neal/en/latest/', None),
-    'tabu': ('https://docs.ocean.dwavesys.com/projects/tabu/en/latest/', None),
-    'greedy': ('https://docs.ocean.dwavesys.com/projects/greedy/en/latest/', None),
-    'qbsolv': ('https://docs.ocean.dwavesys.com/projects/qbsolv/en/latest/', None),
+    'numpy': ('https://numpy.org/doc/stable/', None),
+    'networkx': ('https://networkx.org/documentation/stable/', None),
     'oceandocs': ('https://docs.ocean.dwavesys.com/en/latest/', None),
     'sysdocs_gettingstarted': ('https://docs.dwavesys.com/docs/latest/', None),
 }

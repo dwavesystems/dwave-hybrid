@@ -260,30 +260,19 @@ workflows:
             parameters:
               python-version: &python-versions ["3.9", "3.10", "3.11", "3.12", "3.13"]
               pip-constraints:
-                - "dimod==0.10.13"
-                - "dimod~=0.10.0 dwave-preprocessing~=0.3.0 dwave-system~=1.0"
-                - "dimod~=0.11.0 dwave-preprocessing~=0.4.0 dwave-system~=1.0"
-                - "dimod~=0.12.0 dwave-preprocessing~=0.6.0 dwave-system~=1.0"
+                - "dimod==0.12.2 dwave-preprocessing~=0.5.0"
+                - "dimod==0.12.13 dwave-preprocessing~=0.6.0"
+                - "dimod==0.12.17 dwave-preprocessing~=0.6.0"
+                - "dimod~=0.12.0"
             exclude:
-              # dimod < 0.12 not supported on py311+
-              - python-version: "3.11"
-                pip-constraints: "dimod==0.10.13"
-              - python-version: "3.11"
-                pip-constraints: "dimod~=0.10.0 dwave-preprocessing~=0.3.0 dwave-system~=1.0"
-              - python-version: "3.11"
-                pip-constraints: "dimod~=0.11.0 dwave-preprocessing~=0.4.0 dwave-system~=1.0"
+              # dimod<0.12.13 not supported on py312+
               - python-version: "3.12"
-                pip-constraints: "dimod==0.10.13"
-              - python-version: "3.12"
-                pip-constraints: "dimod~=0.10.0 dwave-preprocessing~=0.3.0 dwave-system~=1.0"
-              - python-version: "3.12"
-                pip-constraints: "dimod~=0.11.0 dwave-preprocessing~=0.4.0 dwave-system~=1.0"
+                pip-constraints: "dimod==0.12.2 dwave-preprocessing~=0.5.0"
               - python-version: "3.13"
-                pip-constraints: "dimod==0.10.13"
+                pip-constraints: "dimod==0.12.2 dwave-preprocessing~=0.5.0"
+              # dimod<0.12.17 not supported on py313+
               - python-version: "3.13"
-                pip-constraints: "dimod~=0.10.0 dwave-preprocessing~=0.3.0 dwave-system~=1.0"
-              - python-version: "3.13"
-                pip-constraints: "dimod~=0.11.0 dwave-preprocessing~=0.4.0 dwave-system~=1.0"
+                pip-constraints: "dimod==0.12.13 dwave-preprocessing~=0.6.0"
 
       - test-macos: &test-job
           name: test-macos-py<< matrix.python-version >>
