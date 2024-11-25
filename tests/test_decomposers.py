@@ -705,7 +705,7 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
         """
         # Expected properties by (topology_type, lattice_topology):
         # tuple length, chain length, number of embeddings
-        shape_dicts = {('zephyr', 'zephyr'): {'tl': 5, 'cl': 1, 'ne': 2}, # Implement later
+        shape_dicts = {('zephyr', 'zephyr'): {'tl': 4, 'cl': 1, 'ne': 2},
                        ('zephyr', 'kings'): {'tl': 2, 'cl': 2, 'ne': 2},
                        ('zephyr', 'cubic'): {'tl': 3, 'cl': 2, 'ne': 3},
                        ('pegasus', 'pegasus'): {'tl': 5, 'cl': 1, 'ne': 2},
@@ -720,7 +720,7 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
             elif qpu_top == 'pegasus':
                 lattice_types = ['cubic', 'kings', qpu_top, None]
             elif qpu_top == 'zephyr':
-                lattice_types = ['cubic', 'kings']
+                lattice_types = ['cubic', 'kings', qpu_top, None]
             else:
                 raise ValueError('Unknown qpu topology')
             #Native by default:
@@ -795,7 +795,7 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
                 lattice_types = ['cubic', qpu_top]
             elif qpu_top == 'zephyr':
                 qpu_shape = [qpu_scale, 4]
-                lattice_types = ['cubic', 'kings']
+                lattice_types = ['cubic', 'kings', qpu_top]
 
             for lattice_type in lattice_types:
                 # proposed_source: a defect free-lattice at sampler
@@ -816,7 +816,13 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
                     else:
                         kings_dims = (4*qpu_scale, 4*qpu_scale)
                     proposed_source = _make_kings_lattice(kings_dims)
-                    
+                elif lattice_type == 'zephyr':
+                    # Chimeralike system for geometric interpretation
+                    proposed_source = dnx.zephyr_graph(qpu_scale, coordinates=True)
+                    proposed_source= nx.relabel_nodes(
+                        G=proposed_source,
+                        mapping={n: _zephyr_to_chimeralike(
+                            n, t=qpu_shape[1], half_offset=False) for n in proposed_source})
                 elif lattice_type == 'pegasus':
                     proposed_source = dnx.pegasus_graph(qpu_scale,
                                                         nice_coordinates=True)
@@ -834,7 +840,8 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
                 # for full graph
                 for orig_emb in orig_embs:
                     self.assertEqual(len(list(orig_emb.keys())),
-                                     proposed_source.number_of_nodes())
+                                     proposed_source.number_of_nodes(),
+                                     f'Failed: {qpu_top} {lattice_type}')
                 # NB, only emb[0] due to technicality
                 orig_emb = orig_embs[0]  
                 self.assertTrue(verify_embedding(
@@ -855,19 +862,22 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
                         target=qpu_sampler.properties['couplers']))
 
     def test_chimeralike_coordinates(self):
-        known_maps = {(0,0,0,0): (0,0,2,0,0),
-                      (0,0,0,3): (0,1,1,0,0),
-                      (0,0,1,0): (1,0,2,0,0),
-                      (0,0,1,3): (1,1,1,0,0),
-                      (1,0,0,0): (0,0,2,1,0),
-                      (0,1,0,0): (0,1,2,0,0),
-                      (1,1,1,2): (1,2,0,1,0),
-                      (1,2,0,1): (0,2,3,1,0)}
-        for k,v in known_maps.items():
-            mapped_k = _chimeralike_to_zephyr(k)
-            self.assertEqual(mapped_k, v)
-            mapped_v = _zephyr_to_chimeralike(v)
-            self.assertEqual(mapped_v, k)
+        known_mappings = {False: {(0,0,u,t): (u,0,t,0,0)
+                              for u in range(2) for t in range(4)},
+                          True: {(0,0,0,0): (0,0,2,0,0),
+                                 (0,0,0,3): (0,1,1,0,0),
+                                 (0,0,1,0): (1,0,2,0,0),
+                                 (0,0,1,3): (1,1,1,0,0),
+                                 (1,0,0,0): (0,0,2,1,0),
+                                 (0,1,0,0): (0,1,2,0,0),
+                                 (1,1,1,2): (1,2,0,1,0),
+                                 (1,2,0,1): (0,2,3,1,0)}}
+        for half_offset, known_mapping in known_mappings.items():
+            for k, v in known_mapping.items():
+                mapped_k = _chimeralike_to_zephyr(k, half_offset=half_offset)
+                self.assertEqual(mapped_k, v)
+                mapped_v = _zephyr_to_chimeralike(v, half_offset=half_offset)
+                self.assertEqual(mapped_v, k)
 
     def test_constrained_validity(self):
         """Check that we can constrain an embedding to a given subspace
