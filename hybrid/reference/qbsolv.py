@@ -14,7 +14,6 @@
 
 """QBSolv inspired simple workflows."""
 
-import dimod
 import hybrid
 
 __all__ = ['SimplifiedQbsolv']

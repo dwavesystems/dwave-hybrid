@@ -20,7 +20,7 @@ import numpy as np
 from parameterized import parameterized, parameterized_class
 
 import dimod
-from neal import SimulatedAnnealingSampler
+from dwave.samplers import SimulatedAnnealingSampler
 from dwave.system import DWaveSampler
 from dwave.system.testing import MockDWaveSampler
 

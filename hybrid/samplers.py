@@ -18,19 +18,13 @@ Classical and quantum :class:`.Runnable`
 samplers for problems and subproblems.
 """
 
-import time
 import logging
 import threading
-from collections import namedtuple
 
-import dimod
-from dwave.system.samplers import DWaveSampler
-from dwave.system.composites import AutoEmbeddingComposite, FixedEmbeddingComposite
 from dwave.preprocessing.composites import SpinReversalTransformComposite
-
-from tabu import TabuSampler
-from neal import SimulatedAnnealingSampler
-from greedy import SteepestDescentSolver
+from dwave.samplers import SimulatedAnnealingSampler, SteepestDescentSolver, TabuSampler
+from dwave.system.composites import AutoEmbeddingComposite, FixedEmbeddingComposite
+from dwave.system.samplers import DWaveSampler
 from minorminer.busclique import busgraph_cache
 
 from hybrid.core import Runnable, SampleSet
@@ -356,7 +350,7 @@ class SimulatedAnnealingSubproblemSampler(traits.SubproblemSampler, traits.SISO,
         initial_states_generator (str, 'none'/'tile'/'random', optional, default='random'):
             Defines the expansion of input state subsamples into `initial_states`
             for the simulated annealing, if fewer than `num_reads` subsamples are
-            present. See :meth:`~neal.SimulatedAnnealingSampler.sample`.
+            present. See :meth:`~dwave.samplers.sa.sampler.SimulatedAnnealingSampler.sample`.
 
     See :ref:`samplers-examples`.
     """
@@ -419,7 +413,7 @@ class SimulatedAnnealingProblemSampler(traits.ProblemSampler, traits.SISO, Runna
         initial_states_generator (str, 'none'/'tile'/'random', optional, default='random'):
             Defines the expansion of input state samples into `initial_states`
             for the simulated annealing, if fewer than `num_reads` samples are
-            present. See :meth:`~neal.SimulatedAnnealingSampler.sample`.
+            present. See :meth:`~dwave.samplers.sa.sampler.SimulatedAnnealingSampler.sample`.
 
     """
 
@@ -476,7 +470,7 @@ class TabuSubproblemSampler(traits.SubproblemSampler, traits.SISO, Runnable):
         initial_states_generator (str, 'none'/'tile'/'random', optional, default='random'):
             Defines the expansion of input state subsamples into `initial_states`
             for the Tabu search, if fewer than `num_reads` subsamples are
-            present. See :meth:`~tabu.TabuSampler.sample`.
+            present. See :meth:`~dwave.samplers.tabu.sampler.TabuSampler.sample`.
 
     See :ref:`samplers-examples`.
     """
@@ -522,7 +516,7 @@ class TabuProblemSampler(traits.ProblemSampler, traits.SISO, Runnable):
         initial_states_generator (str, 'none'/'tile'/'random', optional, default='random'):
             Defines the expansion of input state samples into `initial_states`
             for the Tabu search, if fewer than `num_reads` samples are
-            present. See :meth:`~tabu.TabuSampler.sample`.
+            present. See :meth:`~dwave.samplers.tabu.sampler.TabuSampler.sample`.
 
     See :ref:`samplers-examples`.
     """
@@ -572,7 +566,7 @@ class InterruptableTabuSampler(Loop):
         initial_states_generator (str, 'none'/'tile'/'random', optional, default='random'):
             Defines the expansion of input state samples into `initial_states`
             for the Tabu search, if fewer than `num_reads` samples are
-            present. See :meth:`~tabu.TabuSampler.sample`.
+            present. See :meth:`~dwave.samplers.tabu.sampler.TabuSampler.sample`.
 
         max_time (float, optional, default=None):
             Total running time in milliseconds.
@@ -595,7 +589,7 @@ class SteepestDescentSubproblemSampler(traits.SubproblemSampler, traits.SISO, Ru
         initial_states_generator (str, 'none'/'tile'/'random', optional, default='random'):
             Defines the expansion of input state subsamples into `initial_states`
             for the steepest descent, if fewer than `num_reads` subsamples are
-            present. See :meth:`greedy.sampler.SteepestDescentSolver.sample`.
+            present. See :meth:`~dwave.samplers.greedy.sampler.SteepestDescentSolver.sample`.
 
     See :ref:`samplers-examples`.
     """
@@ -631,7 +625,7 @@ class SteepestDescentProblemSampler(traits.ProblemSampler, traits.SISO, Runnable
         initial_states_generator (str, 'none'/'tile'/'random', optional, default='random'):
             Defines the expansion of input state samples into `initial_states`
             for the steepest descent, if fewer than `num_reads` samples are
-            present. See :meth:`greedy.sampler.SteepestDescentSolver.sample`.
+            present. See :meth:`~dwave.samplers.greedy.sampler.SteepestDescentSolver.sample`.
 
     """
 
