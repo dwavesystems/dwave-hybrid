@@ -506,7 +506,7 @@ class TestHybridRunnable(unittest.TestCase):
 
         workflow = (
             hybrid.IdentityDecomposer()
-            | HybridSubproblemRunnable(Sampler())
+            | HybridSubproblemRunnable(Sampler(), unknown_sampler_argument=1)
             | hybrid.IdentityComposer()
         )
         response = workflow.run(self.init_state)
