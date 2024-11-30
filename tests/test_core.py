@@ -480,10 +480,15 @@ class TestHybridRunnable(unittest.TestCase):
         self.assertEqual(response.result().samples.record[0].energy, -3.0)
 
     def test_racing_workflow_with_oracle_subsolver(self):
+        class ExactSolver(dimod.ExactSolver):
+            """Exact solver that returns only the ground state."""
+            def sample(self, bqm):
+                return super().sample(bqm).truncate(1)
+
         workflow = hybrid.LoopUntilNoImprovement(hybrid.RacingBranches(
             hybrid.InterruptableTabuSampler(),
             hybrid.EnergyImpactDecomposer(size=1)
-            | HybridSubproblemRunnable(dimod.ExactSolver())
+            | HybridSubproblemRunnable(ExactSolver())
             | hybrid.SplatComposer()
         ) | hybrid.ArgMin(), convergence=3)
         state = State.from_sample(min_sample(self.bqm), self.bqm)
@@ -497,7 +502,7 @@ class TestHybridRunnable(unittest.TestCase):
             """Exact solver that fails if a sampling parameter is provided."""
             parameters = {}
             def sample(self, bqm):
-                return super().sample(bqm)
+                return super().sample(bqm).truncate(1)
 
         workflow = hybrid.LoopUntilNoImprovement(hybrid.RacingBranches(
             hybrid.InterruptableTabuSampler(),
