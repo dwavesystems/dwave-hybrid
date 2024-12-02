@@ -435,13 +435,14 @@ class TestHybridSampler(unittest.TestCase):
 class TestHybridRunnable(unittest.TestCase):
     bqm = dimod.BinaryQuadraticModel({}, {'ab': 1, 'bc': 1, 'ca': -1}, 0, dimod.SPIN)
     init_state = State.from_sample(min_sample(bqm), bqm)
+    ground_energy = dimod.ExactSolver().sample(bqm).first.energy
 
     def test_generic(self):
         runnable = HybridRunnable(TabuSampler(), fields=('problem', 'samples'))
         response = runnable.run(self.init_state)
 
         self.assertIsInstance(response, concurrent.futures.Future)
-        self.assertEqual(response.result().samples.record[0].energy, -3.0)
+        self.assertEqual(response.result().samples.record[0].energy, self.ground_energy)
 
     def test_validation(self):
         with self.assertRaises(TypeError):
@@ -462,7 +463,7 @@ class TestHybridRunnable(unittest.TestCase):
         response = runnable.run(self.init_state)
 
         self.assertIsInstance(response, concurrent.futures.Future)
-        self.assertEqual(response.result().samples.record[0].energy, -3.0)
+        self.assertEqual(response.result().samples.record[0].energy, self.ground_energy)
 
     def test_subproblem_sampler_runnable(self):
         runnable = HybridSubproblemRunnable(TabuSampler())
@@ -470,46 +471,48 @@ class TestHybridRunnable(unittest.TestCase):
         response = runnable.run(state)
 
         self.assertIsInstance(response, concurrent.futures.Future)
-        self.assertEqual(response.result().subsamples.record[0].energy, -3.0)
+        self.assertEqual(response.result().subsamples.record[0].energy, self.ground_energy)
 
     def test_runnable_composition(self):
         runnable = IdentityDecomposer() | HybridSubproblemRunnable(TabuSampler()) | IdentityComposer()
         response = runnable.run(self.init_state)
 
         self.assertIsInstance(response, concurrent.futures.Future)
-        self.assertEqual(response.result().samples.record[0].energy, -3.0)
+        self.assertEqual(response.result().samples.record[0].energy, self.ground_energy)
 
     def test_racing_workflow_with_oracle_subsolver(self):
+        class ExactSolver(dimod.ExactSolver):
+            """Exact solver that returns only the ground state."""
+            def sample(self, bqm):
+                return super().sample(bqm).truncate(1)
+
         workflow = hybrid.LoopUntilNoImprovement(hybrid.RacingBranches(
             hybrid.InterruptableTabuSampler(),
             hybrid.EnergyImpactDecomposer(size=1)
-            | HybridSubproblemRunnable(dimod.ExactSolver())
+            | HybridSubproblemRunnable(ExactSolver())
             | hybrid.SplatComposer()
         ) | hybrid.ArgMin(), convergence=3)
-        state = State.from_sample(min_sample(self.bqm), self.bqm)
-        response = workflow.run(state)
+        response = workflow.run(self.init_state)
 
         self.assertIsInstance(response, concurrent.futures.Future)
-        self.assertEqual(response.result().samples.record[0].energy, -3.0)
+        self.assertEqual(response.result().samples.record[0].energy, self.ground_energy)
 
     def test_sampling_parameters_filtering(self):
         class Sampler(dimod.ExactSolver):
             """Exact solver that fails if a sampling parameter is provided."""
             parameters = {}
             def sample(self, bqm):
-                return super().sample(bqm)
+                return super().sample(bqm).truncate(1)
 
-        workflow = hybrid.LoopUntilNoImprovement(hybrid.RacingBranches(
-            hybrid.InterruptableTabuSampler(),
-            hybrid.EnergyImpactDecomposer(size=1)
-            | HybridSubproblemRunnable(Sampler())
-            | hybrid.SplatComposer()
-        ) | hybrid.ArgMin(), convergence=3)
-        state = State.from_sample(min_sample(self.bqm), self.bqm)
-        response = workflow.run(state)
+        workflow = (
+            hybrid.IdentityDecomposer()
+            | HybridSubproblemRunnable(Sampler(), unknown_sampler_argument=1)
+            | hybrid.IdentityComposer()
+        )
+        response = workflow.run(self.init_state)
 
         self.assertIsInstance(response, concurrent.futures.Future)
-        self.assertEqual(response.result().samples.record[0].energy, -3.0)
+        self.assertEqual(response.result().samples.record[0].energy, self.ground_energy)
 
 
 class TestLogging(unittest.TestCase):

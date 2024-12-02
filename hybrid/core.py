@@ -663,9 +663,10 @@ class HybridRunnable(Runnable):
         if not isinstance(sampler, dimod.Sampler):
             raise TypeError("'sampler' should be 'dimod.Sampler'")
         try:
-            assert len(tuple(fields)) == 2
+            if len(tuple(fields)) != 2:
+                raise ValueError
         except:
-            raise ValueError("'fields' should be two-tuple with input/output state fields")
+            raise ValueError("'fields' should be a two-tuple with input/output state fields")
 
         self.sampler = sampler
         self.input, self.output = fields

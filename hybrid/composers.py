@@ -94,9 +94,10 @@ class GreedyPathMerge(traits.SamplesProcessor, traits.MISO, Runnable):
         synthesis_en = thesis_en
 
         # input sanity check
-        # TODO: convert to hard input validation
-        assert len(thesis) == len(antithesis)
-        assert state_thesis.problem == state_antithesis.problem
+        if len(thesis) != len(antithesis):
+            raise ValueError("thesis-antithesis length mismatch")
+        if state_thesis.problem != state_antithesis.problem:
+            raise ValueError("thesis and antithesis refer to different problems")
 
         diff = {v for v in thesis if thesis[v] != antithesis[v]}
 
@@ -116,7 +117,8 @@ class GreedyPathMerge(traits.SamplesProcessor, traits.MISO, Runnable):
         synthesis_samples = SampleSet.from_samples_bqm(synthesis, bqm)
 
         # calculation sanity check
-        assert synthesis_samples.first.energy == synthesis_en
+        if synthesis_samples.first.energy != synthesis_en:
+            logger.error("Synthesis error: lowest energy sample is not on synthesis path.")
 
         return state_thesis.updated(samples=synthesis_samples)
 
