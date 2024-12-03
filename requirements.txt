@@ -21,8 +21,8 @@ minorminer==0.2.10; python_version<"3.12"
 minorminer==0.2.13; python_version~="3.12.0"
 minorminer==0.2.16; python_version~="3.13.0"
 
-# >=1.15.1 required as older versions are too restricitve on dwave-preprocessing
-dwave-system==1.15.1; python_version<"3.11"
+# >=1.16.0 required as MockDWaveSampler is prohibitively slow in older versions
+dwave-system==1.16.0; python_version<"3.11"
 dwave-system==1.18.0; python_version~="3.11.0"
 # >=1.23.0 required as older versions restrict networkx so it conflicts with dwave-samplers
 dwave-system==1.23.0; python_version>="3.12"
