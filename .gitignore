@@ -6,6 +6,7 @@ coverage.xml
 
 env/
 build/
+_build/
 dist/
 wheels/
 docs/**/generated/

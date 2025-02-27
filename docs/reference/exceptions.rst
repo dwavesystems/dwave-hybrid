@@ -1,4 +1,4 @@
-.. _exceptions_hybrid:
+.. _hybrid_exceptions:
 
 ==========
 Exceptions

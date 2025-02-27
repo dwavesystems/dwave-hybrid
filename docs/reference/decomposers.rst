@@ -1,4 +1,4 @@
-.. _decomposers_hybrid:
+.. _hybrid_decomposers:
 
 ===========
 Decomposers

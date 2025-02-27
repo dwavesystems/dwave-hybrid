@@ -1,4 +1,4 @@
-.. _samplers_hybrid:
+.. _hybrid_samplers:
 
 ========
 Samplers

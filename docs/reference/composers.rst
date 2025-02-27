@@ -1,4 +1,4 @@
-.. _composers_hybrid:
+.. _hybrid_composers:
 
 =========
 Composers

@@ -1,4 +1,4 @@
-.. _profiling_hybrid:
+.. _hybrid_profiling:
 
 =========
 Profiling
