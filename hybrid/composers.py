@@ -41,7 +41,7 @@ class IdentityComposer(traits.SubsamplesComposer, traits.SISO, Runnable):
 class SplatComposer(traits.SubsamplesComposer, traits.SISO, Runnable):
     """A composer that overwrites current samples with subproblem samples.
 
-    See :ref:`composers-examples`.
+    See :ref:hybrid_composers_examples`.
     """
 
     def next(self, state, **runopts):
@@ -71,7 +71,7 @@ class GreedyPathMerge(traits.SamplesProcessor, traits.MISO, Runnable):
 
     Note: only the lowest-energy sample, is considered from either input state.
 
-    See :ref:`composers-examples`.
+    See :ref:hybrid_composers_examples`.
 
     References
     ----------

@@ -13,9 +13,8 @@
 # limitations under the License.
 
 """
-Classical and quantum :class:`.Runnable`
-`dimod <https://docs.ocean.dwavesys.com/en/stable/docs_dimod/sdk_index.html>`_
-samplers for problems and subproblems.
+Classical and quantum :class:`.Runnable` `dimod <index_dimod>` samplers for
+problems and subproblems.
 """
 
 import logging
@@ -68,7 +67,7 @@ class QPUSubproblemExternalEmbeddingSampler(traits.SubproblemSampler,
         logical_srt (int, optional, default=False):
             Perform a spin-reversal transform over the logical space.
 
-    See :ref:`samplers-examples`.
+    See :ref:`hybrid_samplers_examples`.
     """
 
     def __init__(self, num_reads=100, qpu_sampler=None, sampling_params=None,
@@ -185,7 +184,7 @@ class QPUSubproblemAutoEmbeddingSampler(traits.SubproblemSampler, traits.SISO, R
             :class:`~dwave.system.composites.AutoEmbeddingComposite` constructor
             as keyword arguments.
 
-    See :ref:`samplers-examples`.
+    See :ref:`hybrid_samplers_examples`.
     """
 
     def __init__(self, num_reads=100, num_retries=0, qpu_sampler=None, sampling_params=None,
@@ -352,7 +351,7 @@ class SimulatedAnnealingSubproblemSampler(traits.SubproblemSampler, traits.SISO,
             for the simulated annealing, if fewer than `num_reads` subsamples are
             present. See :meth:`~dwave.samplers.sa.sampler.SimulatedAnnealingSampler.sample`.
 
-    See :ref:`samplers-examples`.
+    See :ref:`hybrid_samplers_examples`.
     """
 
     def __init__(self, num_reads=None, num_sweeps=1000,
@@ -472,7 +471,7 @@ class TabuSubproblemSampler(traits.SubproblemSampler, traits.SISO, Runnable):
             for the Tabu search, if fewer than `num_reads` subsamples are
             present. See :meth:`~dwave.samplers.tabu.sampler.TabuSampler.sample`.
 
-    See :ref:`samplers-examples`.
+    See :ref:`hybrid_samplers_examples`.
     """
 
     def __init__(self, num_reads=None, tenure=None, timeout=100,
@@ -518,7 +517,7 @@ class TabuProblemSampler(traits.ProblemSampler, traits.SISO, Runnable):
             for the Tabu search, if fewer than `num_reads` samples are
             present. See :meth:`~dwave.samplers.tabu.sampler.TabuSampler.sample`.
 
-    See :ref:`samplers-examples`.
+    See :ref:`hybrid_samplers_examples`.
     """
 
     def __init__(self, num_reads=None, tenure=None, timeout=100,
@@ -571,7 +570,7 @@ class InterruptableTabuSampler(Loop):
         max_time (float, optional, default=None):
             Total running time in milliseconds.
 
-    See :ref:`samplers-examples`.
+    See :ref:`hybrid_samplers_examples`.
     """
 
     def __init__(self, max_time=None, **tabu):
@@ -591,7 +590,7 @@ class SteepestDescentSubproblemSampler(traits.SubproblemSampler, traits.SISO, Ru
             for the steepest descent, if fewer than `num_reads` subsamples are
             present. See :meth:`~dwave.samplers.greedy.sampler.SteepestDescentSolver.sample`.
 
-    See :ref:`samplers-examples`.
+    See :ref:`hybrid_samplers_examples`.
     """
 
     def __init__(self, num_reads=None, initial_states_generator='random', **runopts):

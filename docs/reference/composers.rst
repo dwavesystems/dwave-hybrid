@@ -29,7 +29,7 @@ Primitive Sample Operations
 .. autoclass:: MergeSamples
 .. autoclass:: SliceSamples
 
-.. _composers-examples:
+.. _hybrid_composers_examples:
 
 Examples
 ========
