@@ -39,10 +39,9 @@ release = package_info.__version__
 
 language = 'en'
 
-
 add_module_names = False
 
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'sdk_index.rst']
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 linkcheck_retries = 2
 linkcheck_anchors = False
@@ -74,11 +73,10 @@ html_theme_options = {
 }
 html_sidebars = {"**": ["search-field", "sidebar-nav-bs"]}  # remove ads
 
-# TODO: replace oceandocs & sysdocs_gettingstarted
+# TODO: verify the link to dwave docs
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
     'numpy': ('https://numpy.org/doc/stable/', None),
     'networkx': ('https://networkx.org/documentation/stable/', None),
-    'oceandocs': ('https://docs.ocean.dwavesys.com/en/latest/', None),
-    'sysdocs_gettingstarted': ('https://docs.dwavesys.com/docs/latest/', None),
+    'dwave': ('https://docs.dwavequantum.com/en/latest/', None),
 }

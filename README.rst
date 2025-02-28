@@ -100,7 +100,7 @@ Example
 Documentation
 =============
 
-.. todo:: updat ethis link
+.. todo:: update this link
 
 Documentation for latest stable release included in Ocean is available as part
 of `Ocean docs <https://docs.ocean.dwavesys.com/en/stable/docs_hybrid/>`_.
@@ -113,7 +113,7 @@ Released under the Apache License 2.0. See `<LICENSE>`_ file.
 Contributing
 ============
 
-.. todo:: updat ethis link
+.. todo:: update this link
 
 Ocean's `contributing guide <https://docs.ocean.dwavesys.com/en/stable/contributing.html>`_
 has guidelines for contributing to Ocean packages.
