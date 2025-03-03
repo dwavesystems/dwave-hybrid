@@ -1,8 +1,8 @@
 .. _hybrid_traits:
 
-========
+======
 Traits
-========
+======
 
 .. start_hybrid_traits
 

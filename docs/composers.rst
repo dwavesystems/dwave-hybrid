@@ -73,14 +73,14 @@ By inverting the state of variable :math:`d` and :math:`c` in `samples_d` and th
 the lowest energy sample of `samples_a` (second sample), the composer finds a path between
 these two samples that contains the ground state shown on the right of the top figure.
 
-.. figure:: ../_images/square_problem.png
+.. figure:: _images/square_problem.png
   :name: SquareProblem
   :scale: 70 %
   :alt: Block diagram
 
   Square problem with two ground states.
 
-.. figure:: ../_images/square_problem_path.png
+.. figure:: _images/square_problem_path.png
   :name: SquareProblemPath
   :scale: 70 %
   :alt: Block diagram

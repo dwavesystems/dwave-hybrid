@@ -8,7 +8,7 @@ dwave-hybrid
     :caption: Reference documentation for dwave-hybrid:
     :maxdepth: 1
 
-    reference/api_ref
+    api_ref
 
 
 About dwave-hybrid
