@@ -542,7 +542,7 @@ class HybridSampler(dimod.Sampler):
             model in the input state and produces sample(s) in the output state.
 
     Example:
-        This example produces a :std:doc:`dimod <oceandocs:docs_dimod/sdk_index>`
+        This example produces a :ref:`dimod <index_dimod>`
         sampler from :class:`~hybrid.samplers.TabuProblemSampler` and uses its
         `sample_ising` mixin to solve a simple Ising problem.
 
@@ -643,7 +643,7 @@ class HybridRunnable(Runnable):
 
     Example:
         This example creates a :class:`Runnable` from dimod sampler
-        :std:doc:`TabuSampler <oceandocs:docs_tabu/sdk_index>`, runs it on an Ising model, and
+        :class:`~dwave.samplers.TabuSampler`, runs it on an Ising model, and
         finds the lowest energy.
 
         >>> from dwave.samplers import TabuSampler

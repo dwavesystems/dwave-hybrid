@@ -68,7 +68,7 @@ Install test requirements and run ``unittest``::
 Example
 =======
 
-.. start_hybid_example
+.. start_hybrid_example
 
 .. code-block:: python
 
