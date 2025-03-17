@@ -25,10 +25,9 @@ Example
     :start-after: start_hybrid_example
     :end-before: end_hybrid_example
 
+
 Usage Information
 =================
-
-.. todo:: add the intersphinx prefix to enable these links for self builds
 
 *   :ref:`index_concepts` for terminology
 *   :ref:`opt_dwave_hybrid` for an introduction to using this package
