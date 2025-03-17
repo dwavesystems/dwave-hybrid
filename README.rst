@@ -113,5 +113,5 @@ Released under the Apache License 2.0. See `<LICENSE>`_ file.
 Contributing
 ============
 
-Ocean's `contributing guide <https://docs.dwavequantum.com/en/latest/ocean/ocean_contribute.html>`_
+Ocean's `contributing guide <https://docs.dwavequantum.com/en/latest/ocean/contribute.html>`_
 has guidelines for contributing to Ocean packages.
