@@ -1,11 +1,11 @@
-.. _conversion_hybrid:
+.. _hybrid_conversion:
 
 ================
 Dimod Conversion
 ================
 
-These classes handle conversion between `dwave-hybrid` :class:`~hybrid.core.Runnable`
-classes and :std:doc:`dimod <oceandocs:docs_dimod/sdk_index>` samplers.
+These classes handle conversion between `dwave-hybrid`
+:class:`~hybrid.core.Runnable` classes and :ref:`dimod <index_dimod>` samplers.
 
 Classes
 -------

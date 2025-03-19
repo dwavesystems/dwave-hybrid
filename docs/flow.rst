@@ -1,4 +1,4 @@
-.. _flow_hybrid:
+.. _hybrid_flow:
 
 ================
 Flow Structuring
@@ -38,4 +38,5 @@ Classes
 Methods
 =======
 
-See :ref:`core_hybrid` for methods inherited from the :class:`~hybrid.core.Runnable` superclass.
+See :ref:`hybrid_core` for methods inherited from the
+:class:`~hybrid.core.Runnable` superclass.

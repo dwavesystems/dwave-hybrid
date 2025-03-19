@@ -1,4 +1,4 @@
-.. _utilities_hybrid:
+.. _hybrid_utilities:
 
 =========
 Utilities

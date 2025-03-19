@@ -1,4 +1,4 @@
-.. _samplers_hybrid:
+.. _hybrid_samplers:
 
 ========
 Samplers
@@ -36,7 +36,7 @@ Interruptable Variants
 .. autoclass:: InterruptableSimulatedAnnealingSubproblemSampler
 
 
-.. _samplers-examples:
+.. _hybrid_samplers_examples:
 
 Examples
 ========

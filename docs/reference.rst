@@ -1,4 +1,4 @@
-.. _reference_workflows:
+.. _hybrid_reference_workflows:
 
 ===================
 Reference Workflows

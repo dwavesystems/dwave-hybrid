@@ -15,33 +15,35 @@
     :alt: Supported Python versions
 
 
-=============
-D-Wave Hybrid
-=============
+============
+dwave-hybrid
+============
 
-.. index-start-marker
+.. start_hybrid_about
 
-A general, minimal Python framework for building hybrid asynchronous decomposition
-samplers for quadratic unconstrained binary optimization (QUBO) problems.
+A general, minimal Python framework for building hybrid asynchronous
+decomposition samplers for quadratic unconstrained binary optimization (QUBO)
+problems.
 
 *dwave-hybrid* facilitates three aspects of solution development:
 
 *   Hybrid approaches to combining quantum and classical compute resources
-*   Evaluating a portfolio of algorithmic components and problem-decomposition strategies
-*   Experimenting with workflow structures and parameters to obtain the best application results
+*   Evaluating a portfolio of algorithmic components and problem-decomposition
+    strategies
+*   Experimenting with workflow structures and parameters to obtain the best
+    application results
 
 The framework enables rapid development and insight into expected performance
 of productized versions of its experimental prototypes.
 
-Your optimized algorithmic components and other contributions to this project are welcome!
+Your optimized algorithmic components and other contributions to this project
+are welcome!
 
-.. index-end-marker
+.. end_hybrid_about
 
 
 Installation or Building
 ========================
-
-.. installation-start-marker
 
 Install from a package on PyPI::
 
@@ -52,8 +54,6 @@ or from source in development mode::
     git clone https://github.com/dwavesystems/dwave-hybrid.git
     cd dwave-hybrid
     pip install -e .
-
-.. installation-end-marker
 
 
 Testing
@@ -68,7 +68,7 @@ Install test requirements and run ``unittest``::
 Example
 =======
 
-.. example-start-marker
+.. start_hybrid_example
 
 .. code-block:: python
 
@@ -94,23 +94,24 @@ Example
     # Print results
     print("Solution: sample={.samples.first}".format(final_state))
 
-
-.. example-end-marker
+.. end_hybrid_example
 
 
 Documentation
 =============
 
-Documentation for latest stable release included in Ocean is available as part
-of `Ocean docs <https://docs.ocean.dwavesys.com/en/stable/docs_hybrid/>`_.
+Documentation for latest stable release included in Ocean is available
+`here <https://docs.dwavequantum.com/en/latest/ocean/api_ref_hybrid>`_.
+
 
 License
 =======
 
 Released under the Apache License 2.0. See `<LICENSE>`_ file.
 
+
 Contributing
 ============
 
-Ocean's `contributing guide <https://docs.ocean.dwavesys.com/en/stable/contributing.html>`_
+Ocean's `contributing guide <https://docs.dwavequantum.com/en/latest/ocean/contribute.html>`_
 has guidelines for contributing to Ocean packages.

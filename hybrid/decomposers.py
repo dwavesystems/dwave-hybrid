@@ -78,7 +78,7 @@ class ComponentDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
             If False, raises :exc:`EndOfStream` when resetting/rewinding the
             subproblem generator once all components have been used. 
     
-    See :ref:`decomposers-examples`.
+    See :ref:`hybrid_decomposers_examples`.
 
     """
 
@@ -203,7 +203,7 @@ class EnergyImpactDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
                 impact list, proceeding with the variable on the search boundary
                 that has the highest energy impact.
 
-    See :ref:`decomposers-examples`.
+    See :ref:`hybrid_decomposers_examples`.
     """
 
     @classmethod
@@ -403,7 +403,7 @@ class RandomSubproblemDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable
         size (int):
             Number of variables in the subproblem.
 
-    See :ref:`decomposers-examples`.
+    See :ref:`hybrid_decomposers_examples`.
     """
 
     def __init__(self, size, **runopts):
@@ -468,7 +468,7 @@ class SublatticeDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable):
 
         :class:`~hybrid.decomposers.make_origin_embeddings`
 
-        :ref:`decomposers-examples`
+        :ref:`hybrid_decomposers_examples`
 
         Jack Raymond et al, `Hybrid quantum annealing for larger-than-QPU
         lattice-structured problems <https://arxiv.org/abs/2202.03044>`_
@@ -626,7 +626,7 @@ class TilingChimeraDecomposer(traits.ProblemDecomposer, traits.EmbeddingProducin
         loop (Bool, optional, default=True):
             Cycle continually through the tiles.
 
-    See :ref:`decomposers-examples`.
+    See :ref:`hybrid_decomposers_examples`.
     """
 
     def __init__(self, size=(4,4,4), loop=True, **runopts):
@@ -669,7 +669,7 @@ class RandomConstraintDecomposer(traits.ProblemDecomposer, traits.SISO, Runnable
             Groups of variables in the BQM, as a list of sets, where each set is
             associated with a constraint.
 
-    See :ref:`decomposers-examples`.
+    See :ref:`hybrid_decomposers_examples`.
     """
 
     def __init__(self, size, constraints, **runopts):

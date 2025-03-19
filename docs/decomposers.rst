@@ -1,4 +1,4 @@
-.. _decomposers_hybrid:
+.. _hybrid_decomposers:
 
 ===========
 Decomposers
@@ -26,7 +26,7 @@ Methods
 
    make_origin_embeddings
 
-.. _decomposers-examples:
+.. _hybrid_decomposers_examples:
 
 Examples
 ========
