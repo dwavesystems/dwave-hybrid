@@ -73,7 +73,7 @@ jobs:
         type: string
       xcode:
         type: string
-        default: "16.0.0"
+        default: "16.4.0"
 
     macos:
       xcode: << parameters.xcode >>
@@ -258,7 +258,7 @@ workflows:
           context: &ctx-build "ocean-build"
           matrix:
             parameters:
-              python-version: &python-versions ["3.9", "3.10", "3.11", "3.12", "3.13"]
+              python-version: &python-versions ["3.10", "3.11", "3.12", "3.13", "3.14"]
               pip-constraints:
                 - "dimod==0.12.2 dwave-preprocessing~=0.5.0"
                 - "dimod==0.12.13 dwave-preprocessing~=0.6.0"
@@ -270,9 +270,16 @@ workflows:
                 pip-constraints: "dimod==0.12.2 dwave-preprocessing~=0.5.0"
               - python-version: "3.13"
                 pip-constraints: "dimod==0.12.2 dwave-preprocessing~=0.5.0"
+              - python-version: "3.14"
+                pip-constraints: "dimod==0.12.2 dwave-preprocessing~=0.5.0"
               # dimod<0.12.17 not supported on py313+
               - python-version: "3.13"
                 pip-constraints: "dimod==0.12.13 dwave-preprocessing~=0.6.0"
+              - python-version: "3.14"
+                pip-constraints: "dimod==0.12.13 dwave-preprocessing~=0.6.0"
+              # dimod<0.12.21 not supported before py314
+              - python-version: "3.14"
+                pip-constraints: "dimod==0.12.17 dwave-preprocessing~=0.6.0"
 
       - test-macos: &test-job
           name: test-macos-py<< matrix.python-version >>

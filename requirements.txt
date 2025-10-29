@@ -8,18 +8,22 @@
 dimod==0.12.2; python_version<"3.12"
 dimod==0.12.13; python_version~="3.12.0"
 dimod==0.12.17; python_version~="3.13.0"
+dimod==0.12.21; python_version~="3.14.0"
 dwave-preprocessing==0.5.4; python_version<"3.12"
 dwave-preprocessing==0.6.4; python_version~="3.12.0"
 dwave-preprocessing==0.6.7; python_version~="3.13.0"
+dwave-preprocessing==0.6.11; python_version~="3.14.0"
 numpy>=1.19.1
 
 dwave-samplers==1.0.0; python_version<"3.12"
 dwave-samplers==1.2.0; python_version~="3.12.0"
 dwave-samplers==1.4.0; python_version~="3.13.0"
+dwave-samplers==1.7.0; python_version~="3.14.0"
 
 minorminer==0.2.10; python_version<"3.12"
 minorminer==0.2.13; python_version~="3.12.0"
 minorminer==0.2.16; python_version~="3.13.0"
+minorminer==0.2.20; python_version~="3.14.0"
 
 # >=1.16.0 required as MockDWaveSampler is prohibitively slow in older versions
 dwave-system==1.16.0; python_version<"3.11"
