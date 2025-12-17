@@ -1029,7 +1029,7 @@ def _make_kings_lattice(dimensions: Tuple[int, int],
 
 def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
                            problem_dims=None, reject_small_problems=True,
-                           allow_unyielded_edges=False):
+                           allow_unyielded_edges=False, exclude_dims=set()):
     """Creates optimal embeddings for a lattice.
 
     An embedding is a dictionary specifying the mapping from each lattice
@@ -1329,12 +1329,12 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
                                   for key, value in origin_embedding.items()})
         origin_embeddings.append({(key[1], key[2], key[0]): value
                                   for key, value in origin_embedding.items()})
-        problem_dim_spec = 3
+        num_dimensions = 3
     elif lattice_type == 'kings':
         # A reflection is sufficient for demonstration purposes
         origin_embeddings.append({(key[1], key[0]): value
                                   for key, value in origin_embedding.items()})
-        problem_dim_spec = 2
+        num_dimensions = 2
     elif lattice_type == 'pegasus':
         # A horizontal to vertical flip is sufficient for demonstration purposes.
         # Flip north-east to south-west axis (see draw_pegasus):
@@ -1342,26 +1342,26 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
         origin_embeddings.append(
             {(key[0], L-2-key[2], L-2-key[1], 1-key[3], 3-key[4]): value
              for key,value in origin_embedding.items()})
-        problem_dim_spec = 5
+        num_dimensions = 5
     elif lattice_type in ('chimera', 'zephyr'):
         # A horizontal to vertical flip is sufficient for demonstration purposes:
         origin_embeddings.append({(key[1], key[0], 1-key[2], key[3]): value
                                   for key,value in origin_embedding.items()})
-        problem_dim_spec = 4
+        num_dimensions = 4
     else:
         raise ValueError('Unsupported lattice_type')
 
     if problem_dims is not None:
-        if len(problem_dims) != problem_dim_spec:
+        if len(problem_dims) != num_dimensions:
             raise ValueError('len(problem_dims) is incompatible with'
                              'the lattice type')
         else:
             pass
+        check_dims = set(range(num_dimensions)).difference(exclude_dims)
         for origin_embedding in origin_embeddings:
             rem_list = {key for key in origin_embedding
                         if any(key[idx]>=problem_dims[idx]
-                               for idx in range(problem_dim_spec))}
-
+                               for idx in check_dims)}
             if len(rem_list) > 0:
                 if reject_small_problems:
                     raise ValueError('embedding scale exceeds '

@@ -36,6 +36,12 @@ class TestLatticeLNLS(unittest.TestCase):
             for lattice_type in ['cubic',topology_type]:
                 LatticeLNLS(topology=lattice_type, qpu_sampler=qpu_sampler)
 
+    def test_origin_embeddings_argument(self):
+        placeholder = {0: 1}
+        num_embs = 4
+        sampler = LatticeLNLSSampler(origin_embeddings=[placeholder]*num_embs)
+        self.assertEqual(num_embs, len(sampler.origin_embeddings))
+        self.assertTrue(all(oe==placeholder for oe in sampler.origin_embeddings))
     def test_basic_sampler_operation(self):
         bqm = dimod.BinaryQuadraticModel({(i,j,k) : 0 for i in range(2) for j in range(2) for k in range(2)}, {((0,0,0),(0,0,1)): 1, ((1,1,0),(1,1,1)): 1}, 0, dimod.SPIN)
         sampleset = LatticeLNLSSampler().sample(
