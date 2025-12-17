@@ -183,6 +183,11 @@ class LatticeLNLSSampler(dimod.Sampler):
     For workflow and lattice related arguments, see:
     :class:`~hybrid.reference.lattice_lnls.LatticeLNLS`.
 
+    Args:
+        origin_embeddings:
+            Specify the embedding over the Sampler, by default a 1:1 mapping
+            is created using `make_origin_embeddings`
+
     Examples:
         This example solves a cubic-structured BQM using the default QPU.
         An 18x18x18 cubic-lattice ferromagnet is created, and sampled
@@ -227,12 +232,13 @@ class LatticeLNLSSampler(dimod.Sampler):
     properties = None
     parameters = None
     runnable = None
-    origin_embedding = None
+    origin_embeddings = None
 
-    def __init__(self):
+    def __init__(self, *, origin_embeddings: list[dict] | None = None):
         #Minimum requirements for dimod compatibility are used.
         #Certain parameters might be initialized in principle and
         #shared amongst many sampling processes.
+        self.origin_embeddings = origin_embeddings
         self.parameters = {
             'origin_embeddings': None
         }
@@ -301,17 +307,18 @@ class LatticeLNLSSampler(dimod.Sampler):
 
         if exclude_dims is None:
             if topology == 'chimera':
-                exclude_dims = [2]
+                exclude_dims = [2,3]
             elif topology == 'pegasus':
                 exclude_dims = [0,3,4]
             elif topology == 'zephyr':
-                exclude_dims = [2]
+                exclude_dims = [2,3]
             else:
                 exclude_dims = []
                 #Recreate on each call, no reuse:
-        self.origin_embeddings = hybrid.make_origin_embeddings(
-            qpu_sampler, topology, problem_dims=problem_dims,
-            reject_small_problems=reject_small_problems)
+        if self.origin_embeddings is None:
+            self.origin_embeddings = hybrid.make_origin_embeddings(
+                qpu_sampler, topology, problem_dims=problem_dims,
+                reject_small_problems=reject_small_problems, exclude_dims=exclude_dims)
 
         if callable(init_sample):
             init_state_gen = lambda: hybrid.State.from_sample(
@@ -353,6 +360,7 @@ class LatticeLNLSSampler(dimod.Sampler):
                                         exclude_dims=exclude_dims,
                                         track_qpu_branch=track_qpu_branch,
                                         **kwargs)  # Must be here, or else remembers best state
+
             init_state = init_state_gen()
             final_state = self.runnable.run(init_state)
             # the best sample from each run is one "read"
