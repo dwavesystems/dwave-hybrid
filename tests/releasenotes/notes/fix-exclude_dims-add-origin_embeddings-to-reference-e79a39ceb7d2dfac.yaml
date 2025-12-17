@@ -1,0 +1,7 @@
+---
+features:
+  - |
+    Add origin_embeddings as argument for LNLS reference example
+fixes:
+  - |
+    Fix exclude_dims incorrect enumeration
