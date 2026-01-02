@@ -1029,7 +1029,7 @@ def _make_kings_lattice(dimensions: Tuple[int, int],
 
 def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
                            problem_dims=None, reject_small_problems=True,
-                           allow_unyielded_edges=False, exclude_dims=set()):
+                           allow_unyielded_edges=False, exclude_dims=None):
     """Creates optimal embeddings for a lattice.
 
     An embedding is a dictionary specifying the mapping from each lattice
@@ -1116,6 +1116,10 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
             treated as unyielded. If the argument is set to False then yielded
             chains of incomplete connectivity are returned as part of the
             embedding.
+
+        exclude_dims (tuple, optional, set()):
+            Dimensions that are not subject to displacement modulo
+            `problem_dims` as part of neighborhood iteration.
 
     Returns:
         A list of embeddings. Each embedding is a dictionary, mapping
@@ -1357,6 +1361,14 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
                              'the lattice type')
         else:
             pass
+
+        if exclude_dims is None:
+            exclude_dims = set()
+        else:
+            if not exclude_dims.issubset(set(range(num_dimensions))):
+                raise ValueError('exclude_dims should be a subset of the'
+                                 'indexed dimensions')
+
         check_dims = set(range(num_dimensions)).difference(exclude_dims)
         for origin_embedding in origin_embeddings:
             rem_list = {key for key in origin_embedding
