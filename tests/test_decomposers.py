@@ -506,12 +506,14 @@ class TestSublatticeDecomposer(unittest.TestCase):
             self.assertEqual(len(state.embedding), 4)
             self.assertIn(next(iter(state.embedding.keys())), bqm.variables)
             self.assertIn(next(iter(state.embedding)), state.origin_embeddings[oei])
-            
+
     def test_exclude_dimensions(self):
         """Check exclude_dims parameter at origin_embedding_index=0.
 
         If all dimensions are excluded, ``embedding`` field should match the 
-        ``origin_embedding``.
+        ``origin_embedding``. If the final dimension is excluded we expect to see
+        {0,1,2} represented in the first dimension and only {0,1} represented
+        in the last dimension.
         """
         problem_dims = (3, 3)
         # Vertical edges
@@ -543,6 +545,32 @@ class TestSublatticeDecomposer(unittest.TestCase):
             self.assertEqual(len(state.embedding), 4)
             self.assertIn(next(iter(state.embedding.keys())), bqm.variables)
             self.assertIn(next(iter(state.embedding)), state.origin_embeddings[oei])
+
+
+        seed = 1981  # To avoid rare probabilistic test failures.
+        runnable = SublatticeDecomposer(seed=seed)
+        exclude_dims = {len(problem_dims)-1} # Just the final dimension.
+        state = State.from_sample(min_sample(bqm), bqm,
+                                  origin_embeddings=origin_embeddings,
+                                  problem_dims=problem_dims,
+                                  exclude_dims=exclude_dims,
+                                  origin_embedding_index=oei)
+        all_indices_0 = set()
+        all_indices_1 = set()
+        for _ in range(10):
+            state = runnable.next(state)
+            self.assertEqual(len(state.subproblem.variables), 4)
+            self.assertIn(next(iter(state.subproblem.variables)), bqm.variables)
+            self.assertEqual(len(state.embedding), 4)
+            self.assertIn(next(iter(state.embedding.keys())), bqm.variables)
+            next_embedding = state.embedding
+            all_indices_0.update({i for i,_ in next_embedding})
+            all_indices_1.update({j for _,j in next_embedding})
+        self.assertSetEqual(all_indices_0, set(range(problem_dims[0])), 'Indices unmoved')
+        self.assertSetEqual(all_indices_1, set(range(2)),
+                            'All indices represented (with high probability in general,'
+                            ' deterministically with use of seed.)')
+
 
 class TestConstraintDecomposer(unittest.TestCase):
     def test_typical_construction(self):
