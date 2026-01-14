@@ -1,0 +1,4 @@
+---
+fixes:
+  - |
+    A simple type issue is correcting by casting to set.
