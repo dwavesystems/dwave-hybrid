@@ -1365,7 +1365,7 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
         if exclude_dims is None:
             exclude_dims = set()
         else:
-            if not exclude_dims.issubset(set(range(num_dimensions))):
+            if not set(exclude_dims).issubset(set(range(num_dimensions))):
                 raise ValueError('exclude_dims should be a subset of the'
                                  'indexed dimensions')
 
