@@ -3,12 +3,7 @@
 # binary wheels with supported dependencies, like dwave-preprocessing/dwave-samplers
 # with dimod and numpy)
 
-# >=0.12.0 required by dwave-samplers
-# >=0.12.2 required by dwave-preprocessing
-dimod==0.12.2; python_version<"3.12"
-dimod==0.12.13; python_version~="3.12.0"
-dimod==0.12.17; python_version~="3.13.0"
-dimod==0.12.21; python_version~="3.14.0"
+dimod==0.12.22
 dwave-preprocessing==0.5.4; python_version<"3.12"
 dwave-preprocessing==0.6.4; python_version~="3.12.0"
 dwave-preprocessing==0.6.7; python_version~="3.13.0"
