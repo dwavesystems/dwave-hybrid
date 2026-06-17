@@ -11,13 +11,19 @@ with open(package_info_path, encoding='utf-8') as f:
 
 
 # Package requirements, minimal pinning
-install_requires = ['numpy>=2,<3', 'networkx', 'click>5', 'plucky>=0.4.3',
-                    'dimod>=0.12.22,<0.13',     # lower bound set by dwave-graphs
-                    'dwave-preprocessing>=0.5.4',
-                    'minorminer>=0.1.7', 'dwave-graphs>=1', 'dwave-system>=1.16.0',
-                    'dwave-cloud-client>=0.10.6',   # avoid pydantic 2.0 backward compat break
-                    'dwave-samplers>=1.0.0',    # combines neal, greedy, tabu and orang
-                    ]
+install_requires = [
+    'click>5,<9',
+    'dimod>=0.12.22,<0.13',                 # lower bound set by dwave-graphs
+    'dwave-cloud-client>=0.10.6,<0.15',     # avoid pydantic 2.0 backward compat break
+    'dwave-graphs>=1,<2',
+    'dwave-preprocessing>=0.6.6,<0.7',      # oldest that supports numpy 2
+    'dwave-samplers>=1.3,<2',               # oldest that supports numpy 2
+    'dwave-system>=1.23.0,<2',              # oldest that supports networkx>=3
+    'minorminer>=0.1.7,<0.3',
+    'networkx>=3.2,<4',
+    'numpy>=2,<3',
+    'plucky>=0.4.3,<0.5',
+]
 
 # Package extras requirements
 extras_require = {

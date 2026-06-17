@@ -549,7 +549,7 @@ class HybridSampler(dimod.Sampler):
         >>> hybrid_sampler = TabuProblemSampler()
         >>> dimod_sampler = HybridSampler(hybrid_sampler)
         >>> solution = dimod_sampler.sample_ising({}, {'ab': 0.5, 'bc': 0.5, 'ca': 0.5})
-        >>> solution.first.energy
+        >>> float(solution.first.energy)
         -0.5
     """
 
