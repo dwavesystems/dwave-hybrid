@@ -61,6 +61,10 @@ from hybrid.utils import *
 from hybrid.decomposers import *
 from hybrid.composers import *
 from hybrid.flow import *
+
+# suppress np type for scalars in doctests
+import numpy
+numpy.set_printoptions(legacy="1.25")
 """
 
 # -- Options for HTML output ----------------------------------------------
