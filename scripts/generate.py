@@ -20,7 +20,7 @@ import random
 
 import click
 import dimod
-import dwave_networkx as dnx
+import dwave.graphs
 
 
 def generate_random_chimera_problem(adjacency, h_range, j_range, offset=0, vartype=dimod.BINARY):
@@ -74,7 +74,7 @@ def generate_chimera(size, vartype, count, fmt, outdir):
 
     ext = {'SPIN': 'ising', 'BINARY': 'qubo'}
 
-    adj = dnx.chimera_graph(*size).adj
+    adj = dwave.graphs.chimera_graph(*size).adj
 
     for k in range(1, count+1):
         bqm = generate_random_chimera_problem(adj, (0, 0), (-k, k), vartype=vartype)

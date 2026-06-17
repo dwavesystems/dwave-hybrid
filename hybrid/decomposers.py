@@ -28,7 +28,8 @@ from networkx.algorithms.approximation.vertex_cover import min_weighted_vertex_c
 
 import dimod
 from dimod.traversal import connected_components
-import dwave_networkx as dnx
+from dimod.generators.graph import maximum_weight_independent_set
+import dwave.graphs
 import dwave.preprocessing
 from dwave.samplers import SteepestDescentSolver, TreeDecompositionSolver
 
@@ -732,13 +733,12 @@ def _good_cover(edgelist, brute_force_threshold=16):
     # Attempt to solve by brute force (tree decomposition)
     G = nx.from_edgelist(edgelist)
     tds = TreeDecompositionSolver()
-    Gbqm = nx.from_edgelist(
-        dnx.algorithms.independent_set.maximum_weighted_independent_set_qubo(
-            G, lagrange=2.0).keys())
+    Gbqm = dimod.to_networkx_graph(
+        maximum_weight_independent_set(edgelist, strength_multiplier=2.0))
     tree_width, elimination_order = (
-        dnx.algorithms.elimination_ordering.min_fill_heuristic(Gbqm))
+        dwave.graphs.algorithms.elimination_ordering.min_fill_heuristic(Gbqm))
     if tree_width <= tds.properties['max_treewidth']:
-        coverLTW = dnx.algorithms.cover.min_vertex_cover(
+        coverLTW = dwave.graphs.algorithms.cover.min_vertex_cover(
             G=G, sampler=tds, elimination_order=elimination_order)
         return coverLTW
     else:
@@ -759,7 +759,7 @@ def _good_cover(edgelist, brute_force_threshold=16):
         sds_args = {'initial_states': (np.zeros(G.number_of_nodes()), G.nodes()),
                     'num_reads': 1}
         sds = SteepestDescentSolver()
-        cover2 = dnx.algorithms.cover.min_vertex_cover(
+        cover2 = dwave.graphs.algorithms.cover.min_vertex_cover(
             G=G, sampler=sds, sampler_args=sds_args)
 
         return min((cover1, cover2), key=len)
@@ -906,7 +906,7 @@ def _chimeralike_to_zephyr(coord: Tuple[int, int, int, int],
 
 def _chimeralike_to_linear(coord: Tuple[int, int, int, int], m,
                            t: int=4, half_offset: bool=False) -> int:
-    return dnx.zephyr_coordinates(m,t).zephyr_to_linear(
+    return dwave.graphs.zephyr_coordinates(m,t).zephyr_to_linear(
         _chimeralike_to_zephyr(coord=coord,
                                t=t, half_offset=half_offset))
 
@@ -1180,27 +1180,24 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
 
         if lattice_type == 'zephyr':
             # Trimming (w=0 and w=2*m) nodes, similar to nice-pegasus is an option not pursued.
-            proposed_source = dnx.zephyr_graph(*qpu_shape)
-            l2z = dnx.zephyr_coordinates(*qpu_shape).linear_to_zephyr
+            proposed_source = dwave.graphs.zephyr_graph(*qpu_shape)
+            l2z = dwave.graphs.zephyr_coordinates(*qpu_shape).linear_to_zephyr
             def lin_to_vec(q):
                 return _zephyr_to_chimeralike(l2z(q), t=qpu_shape[1], half_offset=False)
         elif lattice_type == 'pegasus':
             # Trimming to complete nice_coordinate cells is not a unique
             # options, it has some advantages and some disadvantages:
-            proposed_source = dnx.pegasus_graph(qpu_shape[0], nice_coordinates=True)
+            proposed_source = dwave.graphs.pegasus_graph(qpu_shape[0], nice_coordinates=True)
             proposed_source = nx.relabel_nodes(
                 proposed_source,
-                {q: dnx.pegasus_coordinates(*qpu_shape).nice_to_linear(q)
+                {q: dwave.graphs.pegasus_coordinates(*qpu_shape).nice_to_linear(q)
                  for q in proposed_source.nodes()})
-            lin_to_vec = dnx.pegasus_coordinates(*qpu_shape).linear_to_nice
+            lin_to_vec = dwave.graphs.pegasus_coordinates(*qpu_shape).linear_to_nice
         elif lattice_type == 'chimera':
-            proposed_source = dnx.chimera_graph(*qpu_shape)
-            lin_to_vec = dnx.chimera_coordinates(*qpu_shape).linear_to_chimera
+            proposed_source = dwave.graphs.chimera_graph(*qpu_shape)
+            lin_to_vec = dwave.graphs.chimera_coordinates(*qpu_shape).linear_to_chimera
         else:
-            raise ValueError(
-                f'Unsupported native processor topology {qpu_type}. '
-                'Support for Zephyr and other topologies is straightforward to '
-                'add subject to standard dwave_networkx library tool availability.')
+            raise ValueError(f'Unsupported native processor topology {qpu_type}.')
 
     elif lattice_type == 'cubic':
         if qpu_type == 'zephyr':
@@ -1226,7 +1223,7 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
                                 if target.has_edge(*(c := zephyr_chain(*coord)))}
 
         elif qpu_type == 'pegasus':
-            vec_to_lin = dnx.pegasus_coordinates(*qpu_shape).pegasus_to_linear
+            vec_to_lin = dwave.graphs.pegasus_coordinates(*qpu_shape).pegasus_to_linear
             L = qpu_shape[0] - 1
             dimensions = [L, L, 12]
             # See arXiv:2003.00133
@@ -1244,7 +1241,7 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
                                      if target.has_edge(*(c := pegasus_chain2(x, y, z+8)))})
 
         elif qpu_type == 'chimera':
-            vec_to_lin = dnx.chimera_coordinates(*qpu_shape).chimera_to_linear
+            vec_to_lin = dwave.graphs.chimera_coordinates(*qpu_shape).chimera_to_linear
             L = qpu_shape[0] // 2 
             dimensions = [L, L, 8]
             # See arxiv:2009.12479, one choice amongst many
@@ -1282,14 +1279,14 @@ def make_origin_embeddings(qpu_sampler=None, lattice_type=None,
 
     elif lattice_type == 'kings':
         if qpu_type == 'pegasus':
-            vec_to_lin = dnx.pegasus_coordinates(*qpu_shape).pegasus_to_linear
+            vec_to_lin = dwave.graphs.pegasus_coordinates(*qpu_shape).pegasus_to_linear
             L = 3*(qpu_shape[0] - 1)
             dimensions = (L, L)
             to_chain = _kings_node_to_pegasus_chain
         elif qpu_type == 'zephyr':
             if qpu_shape[1] != 4:
                 raise ValueError('Method is suitable for Zephyr[m,t=4] only')
-            vec_to_lin = dnx.zephyr_coordinates(*qpu_shape).zephyr_to_linear
+            vec_to_lin = dwave.graphs.zephyr_coordinates(*qpu_shape).zephyr_to_linear
             L = 4 * qpu_shape[0]
             dimensions = (L, L)
             to_chain = _squarenextneighbor_node_to_zephyr_chain

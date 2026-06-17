@@ -19,8 +19,8 @@ import collections
 from functools import partial
 
 import dimod
+import dwave.graphs
 import networkx as nx
-import dwave_networkx as dnx
 
 from hybrid.decomposers import (
     EnergyImpactDecomposer, RandomSubproblemDecomposer,
@@ -846,16 +846,16 @@ class TestMakeOriginEmbeddings(unittest.TestCase):
                     proposed_source = _make_kings_lattice(kings_dims)
                 elif lattice_type == 'zephyr':
                     # Chimeralike system for geometric interpretation
-                    proposed_source = dnx.zephyr_graph(qpu_scale, coordinates=True)
+                    proposed_source = dwave.graphs.zephyr_graph(qpu_scale, coordinates=True)
                     proposed_source= nx.relabel_nodes(
                         G=proposed_source,
                         mapping={n: _zephyr_to_chimeralike(
                             n, t=qpu_shape[1], half_offset=False) for n in proposed_source})
                 elif lattice_type == 'pegasus':
-                    proposed_source = dnx.pegasus_graph(qpu_scale,
-                                                        nice_coordinates=True)
+                    proposed_source = dwave.graphs.pegasus_graph(qpu_scale,
+                                                                 nice_coordinates=True)
                 else:
-                    proposed_source = dnx.chimera_graph(qpu_scale, coordinates=True)
+                    proposed_source = dwave.graphs.chimera_graph(qpu_scale, coordinates=True)
 
                 qpu_sampler = MockDWaveSampler(
                     topology_type=qpu_top,

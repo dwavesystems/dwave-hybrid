@@ -1,0 +1,5 @@
+---
+fixes:
+  - |
+    Use ``dwave-graphs`` instead of the deprecated ``dwave-networkx``. See
+    `#312 <https://github.com/dwavesystems/dwave-hybrid/pull/312>`_.
