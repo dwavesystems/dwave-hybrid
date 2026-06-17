@@ -86,7 +86,11 @@ jobs:
 
       - run: &brew-install-pyenv
           name: Install pyenv
-          command: brew install pyenv
+          environment:
+            HOMEBREW_NO_ASK: "1"
+          command: |
+            brew update
+            brew install pyenv
 
       - run: &pyenv-install-python
           name: Install python
