@@ -32,6 +32,6 @@ dwave-system==1.18.0; python_version~="3.11.0"
 dwave-system==1.23.0; python_version>="3.12"
 
 networkx
-dwave-networkx>=0.8.10
+dwave-graphs>=1
 click
 plucky>=0.4.3
